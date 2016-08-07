@@ -1,0 +1,14 @@
+{
+	"compilerOptions": {
+        "noImplicitAny": true,
+        "removeComments": true,
+		"target": "ES5",
+		"module": "commonjs",
+		"outDir": "lib"
+	},
+	"exclude": [
+		"node_modules",
+        "lib",
+		"test"
+	]
+}
