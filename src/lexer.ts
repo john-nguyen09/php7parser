@@ -142,3 +142,16 @@ export enum TokenType {
     T_YIELD,
     T_YIELD_FROM
 }
+
+export enum LexerMode {
+    Initial,
+    Scripting,
+    LookingForProperty,
+    DoubleQuotes,
+    NowDoc,
+    HereDoc,
+    EndHereDoc,
+    BackQuote,
+    VarOffset,
+    LookingForVarName
+}
