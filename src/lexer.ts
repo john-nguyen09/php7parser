@@ -144,6 +144,7 @@ export enum TokenType {
 }
 
 export enum LexerMode {
+    None,
     Initial,
     Scripting,
     LookingForProperty,
@@ -154,4 +155,64 @@ export enum LexerMode {
     BackQuote,
     VarOffset,
     LookingForVarName
+}
+
+class LexerState {
+
+    input: string;
+    lexeme: string;
+    mode: LexerMode[];
+    line: number;
+    char: number;
+    lastLexemeEndedWithNewline: boolean;
+    hereDocLabel: string;
+    doubleQuoteScannedLength: number;
+
+    less(n: number = 0) {
+        this.input = this.lexeme.slice(n) + this.input;
+        this.lexeme = this.lexeme.substr(0, n);
+    }
+
+    more(n: number) {
+        this.lexeme += this.input.substr(0, n);
+        this.input = this.input.slice(n);
+    }
+
+    advancePosition(countLines = true) {
+        if (!this.lexeme) {
+            return;
+        }
+
+        if (!countLines) {
+            if (this.lastLexemeEndedWithNewline) {
+                this.char = -1;
+                ++this.line;
+                this.lastLexemeEndedWithNewline = false;
+            }
+            this.char += this.lexeme.length;
+            return;
+        }
+
+        let n = 0;
+        let c: string;
+
+        while (n < this.lexeme.length) {
+            if (this.lastLexemeEndedWithNewline) {
+                this.char = -1;
+                ++this.line;
+                this.lastLexemeEndedWithNewline = false;
+            }
+            ++this.char;
+            c = this.lexeme[n++];
+            if (c === '\n' || c === '\r') {
+                this.lastLexemeEndedWithNewline = true;
+                if (c === '\r' && n < this.lexeme.length && this.lexeme[n] === '\n') {
+                    ++n;
+                    ++this.char;
+                }
+            }
+        }
+
+    }
+
 }
