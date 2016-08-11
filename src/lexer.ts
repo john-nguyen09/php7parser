@@ -917,8 +917,17 @@ export interface Token {
     type: TokenType | string,
     text: string,
     mode: LexerMode[],
-    lineRange: [number, number],
-    charRange: [number, number]
+    range: Range
+}
+
+export interface Position {
+    line:number,
+    char:number
+}
+
+export interface Range {
+    start:Position,
+    end:Position
 }
 
 class Lexer {
@@ -993,8 +1002,10 @@ class Lexer {
                 type: type,
                 text: this._state.lexeme,
                 mode: lexerModeStack,
-                lineRange: [firstLine, this._state.line],
-                charRange: [firstChar, this._state.char]
+                range:{
+                    start:{line:firstLine, char:firstChar},
+                    end:{line:this._state.line, char:this._state.char}
+                }
             });
 
         }
