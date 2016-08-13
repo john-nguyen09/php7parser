@@ -921,13 +921,13 @@ export interface Token {
 }
 
 export interface Position {
-    line:number,
-    char:number
+    line: number,
+    char: number
 }
 
 export interface Range {
-    start:Position,
-    end:Position
+    start: Position,
+    end: Position
 }
 
 class Lexer {
@@ -1002,9 +1002,9 @@ class Lexer {
                 type: type,
                 text: this._state.lexeme,
                 mode: lexerModeStack,
-                range:{
-                    start:{line:firstLine, char:firstChar},
-                    end:{line:this._state.line, char:this._state.char}
+                range: {
+                    start: { line: firstLine, char: firstChar },
+                    end: { line: this._state.line, char: this._state.char }
                 }
             });
 
@@ -1019,6 +1019,65 @@ class Lexer {
             return '(' + v.source + ')';
         }).join('|');
         return new RegExp(src);
+    }
+
+}
+
+class TokenIterator {
+
+    private _tokens: Token[];
+    private _pos: number;
+    private _endToken: Token = {
+        type: TokenType.T_NONE,
+        text: null,
+        mode: null,
+        range: null
+    };
+    private _lastDocComment: Token;
+
+    constructor(tokens: Token[]) {
+        this._tokens = tokens;
+        this._pos = 0;
+    }
+
+    get current() {
+        return this._pos < this._tokens.length ? this._tokens[this._pos] : this._endToken;
+    }
+
+    get lastDocComment() {
+        let t = this._lastDocComment;
+        this._lastDocComment = null;
+        return t;
+    }
+
+    next(): Token {
+        let t = this._pos < this._tokens.length ? this._tokens[this._pos++] : this._endToken;
+        if (t.type === '}') {
+            this._lastDocComment = null;
+        }
+        if (this.shouldSkip(t)) {
+            return this.next();
+        }
+        return t;
+    }
+
+    lookahead(n = 0) {
+        let pos = this._pos + n;
+        return pos < this._tokens.length ? this._tokens[pos] : this._endToken;
+    }
+
+    rewind() {
+        this._pos = 0;
+        this._lastDocComment = null;
+    }
+
+    private shouldSkip(t: Token) {
+        return t.type === TokenType.T_WHITESPACE ||
+            t.type === TokenType.T_COMMENT ||
+            t.type === TokenType.T_DOC_COMMENT ||
+            t.type === TokenType.T_OPEN_TAG ||
+            t.type === TokenType.T_OPEN_TAG_WITH_ECHO ||
+            t.type === TokenType.T_CLOSE_TAG;
     }
 
 }
