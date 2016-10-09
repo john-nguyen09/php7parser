@@ -930,7 +930,7 @@ export interface Range {
     end: Position
 }
 
-class Lexer {
+export class Lexer {
 
     private _state: LexerState;
     private _patterns: RegExp[] = [];
@@ -1023,7 +1023,7 @@ class Lexer {
 
 }
 
-class TokenIterator {
+export class TokenIterator {
 
     private _tokens: Token[];
     private _pos: number;
