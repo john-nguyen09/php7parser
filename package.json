@@ -1,7 +1,7 @@
 {
   "name": "php7parser",
   "version": "1.0.0",
-  "description": "Incremental PHP 7 Parser",
+  "description": "PHP 7 Parser",
   "main": "lib/php7parser.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -11,7 +11,7 @@
   "private": true,
   "devDependencies": {
     "chai": "^3.5.0",
-    "mocha": "^3.0.1",
-    "typescript": "^1.8.10"
+    "mocha": "^3.1.2",
+    "typescript": "^2.0.3"
   }
 }

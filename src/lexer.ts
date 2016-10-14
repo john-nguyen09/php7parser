@@ -5,7 +5,7 @@
 'use strict';
 
 export enum TokenType {
-    T_NONE,
+    T_EOF,
     T_ABSTRACT,
     T_AND_EQUAL,
     T_ARRAY,
@@ -1028,7 +1028,7 @@ export class TokenIterator {
     private _tokens: Token[];
     private _pos: number;
     private _endToken: Token = {
-        type: TokenType.T_NONE,
+        type: TokenType.T_EOF,
         text: null,
         mode: null,
         range: null
