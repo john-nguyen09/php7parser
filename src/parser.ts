@@ -1845,41 +1845,49 @@ export class Parser<T> {
 
     }
 
-    private argumentList() {
+    private argumentList(toks:TokenIterator) {
 
-        let children: (T | Token)[] = [this._lexer.current];
-        let t = this._lexer.next();
+        let children: (T | Token)[] = [];
+        let t = toks.current;
+
+        if(t.type !== '('){
+            //error
+        }
+
+        children.push(t);
+        t = toks.next();
 
         if (t.type === ')') {
             children.push(t);
-            this._lexer.next();
+            toks.next();
             return this._nodeFactory(NodeType.ArgumentList, children);
         }
 
         while (true) {
 
             if (t.type === TokenType.T_ELLIPSIS) {
-                this._lexer.next();
-                let expr = this.expression(0);
-                children.push(this._nodeFactory(NodeType.UnaryOp, [t, expr]));
+                toks.next();
+                children.push(this._nodeFactory(NodeType.UnaryOp, [t, this.expression(toks)]));
             } else {
-                children.push(this.expression(0));
+                children.push(this.expression(toks));
             }
 
-            t = this._lexer.current;
+            t = toks.current;
 
             if (t.type !== ',') {
                 break;
             }
-            t = this._lexer.next();
+
+            children.push(t);
+            t = toks.next();
         }
 
         if (t.type !== ')') {
-            return this._nodeFactory(NodeType.ArgumentList, children, this.parseError(t, [')']));
+            //error
         }
 
         children.push(t);
-        this._lexer.next();
+        toks.next();
         return this._nodeFactory(NodeType.ArgumentList, children);
 
     }
