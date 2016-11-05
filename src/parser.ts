@@ -624,22 +624,31 @@ export class Parser<T> {
 
     private encapsulatedVariable(toks: TokenIterator) {
 
+        let children:(T|Token)[] = [];
+
         switch (toks.current.type) {
             case TokenType.T_VARIABLE:
                 if (toks.lookahead().type === '[') {
                     return this._nodeFactory(NodeType.EncapsulatedVariable, [this.encapsulatedDimension(toks)]);
                 } else if (toks.lookahead().type === TokenType.T_OBJECT_OPERATOR) {
-                    return this.encapsulatedProperty(toks);
+                    return this._nodeFactory(NodeType.EncapsulatedVariable, [this.encapsulatedProperty(toks)]);
                 } else {
                     let node = this._nodeFactory(NodeType.EncapsulatedVariable, [this._nodeFactory(NodeType.Variable, [toks.current])]);
                     toks.next();
                     return node;
                 }
-                break;
             case TokenType.T_DOLLAR_OPEN_CURLY_BRACES:
+                
                 break;
             case TokenType.T_CURLY_OPEN:
-                break;
+                 children.push(toks.current)
+                toks.next();
+                children.push(this.variable(toks));
+                if(toks.current.type !== '}'){
+                    //error
+                }
+                children.push(toks.current);
+                return this._nodeFactory(NodeType.EncapsulatedVariable, children);
             default:
                 //error
                 break;
