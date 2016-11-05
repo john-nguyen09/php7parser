@@ -607,14 +607,32 @@ export class Parser<T> {
 
         while (true) {
 
-            if (toks.current.type === TokenType.T_ENCAPSED_AND_WHITESPACE) {
-                children.push(toks.current);
-                toks.next();
-            } else if ([TokenType.T_VARIABLE, TokenType.T_DOLLAR_OPEN_CURLY_BRACES, TokenType.T_CURLY_OPEN].indexOf(<TokenType>toks.current.type) !== -1) {
-                children.push(this.encapsulatedVariable(toks));
-            } else {
-                break;
+            switch (toks.current.type) {
+                case TokenType.T_ENCAPSED_AND_WHITESPACE:
+                    children.push(toks.current);
+                    toks.next();
+                    continue;
+                case TokenType.T_VARIABLE:
+                    if (toks.lookahead().type === '[') {
+                        children.push(this.encapsulatedDimension(toks));
+                    } else if (toks.lookahead().type === TokenType.T_OBJECT_OPERATOR) {
+                        children.push(this.encapsulatedProperty(toks));
+                    } else {
+                        children.push(this._nodeFactory(NodeType.EncapsulatedVariable, [this._nodeFactory(NodeType.Variable, [toks.current])]));
+                        toks.next();
+                    }
+                    continue;
+                case TokenType.T_DOLLAR_OPEN_CURLY_BRACES:
+                    children.push(this.dollarCurlyOpenEncapsulatedVariable(toks));
+                    continue;
+                case TokenType.T_CURLY_OPEN:
+                    children.push(this.curlyOpenEncapsulatedVariable(toks));
+                    continue;
+                default:
+                    break;
             }
+
+            break;
 
         }
 
@@ -622,74 +640,50 @@ export class Parser<T> {
 
     }
 
-    private encapsulatedVariable(toks: TokenIterator) {
+    private curlyOpenEncapsulatedVariable(toks: TokenIterator) {
 
-        let children:(T|Token)[] = [];
+        let children: (T | Token)[] = [toks.current, this.variable(toks)];
 
-        switch (toks.current.type) {
-            case TokenType.T_VARIABLE:
-                if (toks.lookahead().type === '[') {
-                    return this._nodeFactory(NodeType.EncapsulatedVariable, [this.encapsulatedDimension(toks)]);
-                } else if (toks.lookahead().type === TokenType.T_OBJECT_OPERATOR) {
-                    return this._nodeFactory(NodeType.EncapsulatedVariable, [this.encapsulatedProperty(toks)]);
-                } else {
-                    let node = this._nodeFactory(NodeType.EncapsulatedVariable, [this._nodeFactory(NodeType.Variable, [toks.current])]);
-                    toks.next();
-                    return node;
-                }
-            case TokenType.T_DOLLAR_OPEN_CURLY_BRACES:
-                
-                break;
-            case TokenType.T_CURLY_OPEN:
-                 children.push(toks.current)
-                toks.next();
-                children.push(this.variable(toks));
-                if(toks.current.type !== '}'){
-                    //error
-                }
-                children.push(toks.current);
-                return this._nodeFactory(NodeType.EncapsulatedVariable, children);
-            default:
-                //error
-                break;
+        if (toks.current.type !== '}') {
+            //error
         }
 
+        children.push(toks.current);
+        toks.next();
+        return this._nodeFactory(NodeType.EncapsulatedVariable, children);
 
     }
 
-    private encapsulatedComplexVariable(toks: TokenIterator) {
+    private dollarCurlyOpenEncapsulatedVariable(toks: TokenIterator) {
 
-        let open = toks.current;
-        let children: (T | Token)[] = [open];
-        let t = toks.next();
-        let next = toks.lookahead();
+        let children: (T | Token)[] = [toks.current];
 
-        if (open.type === TokenType.T_CURLY_OPEN) {
-            children.push(this.variable(toks));
-        } else if (t.type === TokenType.T_STRING_VARNAME && next.type === '[') {
-            let dimChildren: (T | Token)[] = [t, toks.next(), this.expression(toks)];
-            t = toks.current;
-            if (t.type !== ']') {
-                //error
+        if (toks.next().type === TokenType.T_STRING_VARNAME) {
+
+            if (toks.lookahead().type === '[') {
+
+                let dimChildren: (T | Token)[] = [this._nodeFactory(NodeType.Variable, [toks.current]), toks.next(), this.expression(toks)];
+                if (toks.current.type !== ']') {
+                    //error
+                }
+                dimChildren.push(toks.current);
+                children.push(this._nodeFactory(NodeType.Dimension, dimChildren));
+            } else {
+                children.push(this._nodeFactory(NodeType.Variable, [toks.current]));
             }
-            dimChildren.push(t);
-            children.push(this._nodeFactory(NodeType.Dimension, dimChildren));
+
             toks.next();
-        } else if (t.type === TokenType.T_STRING_VARNAME) {
-            children.push(t);
-            toks.next();
+
         } else {
             children.push(this.expression(toks));
         }
 
-        t = toks.current;
-
-        if (t.type !== '}') {
+        if (toks.current.type !== '}') {
             //error
         }
-
-        children.push(t);
-        return this._nodeFactory(NodeType.ComplexVariable, children);
+        children.push(toks.current);
+        toks.next();
+        return this._nodeFactory(NodeType.EncapsulatedVariable, children);
 
     }
 
@@ -724,7 +718,7 @@ export class Parser<T> {
 
         children.push(toks.current);
         toks.next();
-        return this._nodeFactory(NodeType.Dimension, children);
+        return this._nodeFactory(NodeType.EncapsulatedVariable, [this._nodeFactory(NodeType.Dimension, children)]);
 
     }
 
@@ -737,7 +731,7 @@ export class Parser<T> {
 
         children.push(toks.current);
         toks.next();
-        return this._nodeFactory(NodeType.Property, children);
+        return this._nodeFactory(NodeType.EncapsulatedVariable, [this._nodeFactory(NodeType.Property, children)]);
     }
 
     private encapsulatedSimpleVariable(toks: TokenIterator): (T | Token) {
