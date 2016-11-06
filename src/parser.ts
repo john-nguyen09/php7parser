@@ -219,20 +219,14 @@ export class Parser<T> {
         return this._semiReserved.indexOf(t.type) !== -1 || this.isReserved(t);
     }
 
-    private topStatementList(toks: TokenIterator) {
+    private topStatementList(toks: TokenIterator, stopOnTokenTypeArray:(TokenType|string)[]) {
 
         let children: (T | Token)[] = [];
-        let stopOn: (TokenType | string)[] = [TokenType.T_EOF];
-
-        if (toks.current.type === '{') {
-            children.push(toks.current);
-            toks.next();
-            stopOn.push('}');
-        }
+        stopOnTokenTypeArray.push(TokenType.T_EOF);
 
         while (true) {
 
-            if (stopOn.indexOf(toks.current.type) !== -1) {
+            if (stopOnTokenTypeArray.indexOf(toks.current.type) !== -1) {
                 break;
             }
 
@@ -240,16 +234,6 @@ export class Parser<T> {
 
         }
 
-        if (stopOn.indexOf('{') === -1) {
-            return this._nodeFactory(NodeType.TopStatementList, children);
-        }
-
-        if (toks.current.type !== '}') {
-            //error
-        }
-
-        children.push(toks.current);
-        toks.next();
         return this._nodeFactory(NodeType.TopStatementList, children);
 
     }
@@ -2441,45 +2425,41 @@ export class Parser<T> {
 
     }
 
-    private namespace() {
+    private namespace(toks:TokenIterator, isEmpty:{isEmpty:boolean}) {
 
-        let node: Node = {
-            type: NodeType.Namespace,
-            children: [null, null]
-        }
+        let children:(T|Token)[] = [toks.current];
+        toks.lastDocComment;
 
-        let start = this._lexer.current.range;
-
-        let t = this._lexer.next();
-        if (t.type === TokenType.T_STRING) {
-            node.children[0] = this.namespaceName();
-        } else if (t.type === ';') {
-            return this.parseError(t, ['T_STRING'], node, start, t.range);
-        }
-
-        node.doc = this.lastDocComment();
-        t = this._lexer.current;
-        if (t.type === ';') {
-            node.location = this.mergeLocation(start, t.range);
-        } else if (t.type === '{') {
-            node.children[1] = this.topStatementList();
-            t = this._lexer.current;
-            if (t.type !== '}') {
-                return this.parseError(t, ['}'], node, start, node.children[1].range);
+        if(toks.current.type == TokenType.T_STRING){
+            children.push(this.namespaceName(toks));
+            if(toks.current.type !== '{'){
+                isEmpty.isEmpty = true;
+                return this._nodeFactory(NodeType.Namespace, children);
             }
-            node.location = this.mergeLocation(start, t.range);
-        } else {
-            return this.parseError(t, [';', '{'], node, start, this._lexer.lookBehind().range);
         }
 
-        return node;
+        if(toks.current.type !== '{'){
+            //error
+        }
+
+        children.push(toks.current);
+        toks.next();
+        children.push(this.topStatementList(toks, ['}']));
+
+        if(toks.current.type !== '}'){
+            //error
+        }
+
+        children.push(toks.current);
+        toks.next();
+        return this._nodeFactory(NodeType.Namespace, children);
+
     }
 
     private namespaceName(toks: TokenIterator) {
 
         let t = toks.current;
         let children: (T | Token)[] = [];
-        let t2: Token;
 
         if (t.type !== TokenType.T_STRING) {
             //error
