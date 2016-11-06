@@ -82,7 +82,8 @@ export enum NodeType {
     ClosureUseVariable,
     ClosureUseList,
     List,
-    Clone
+    Clone,
+    Heredoc
 }
 
 export interface NodeFactory<T> {
@@ -739,7 +740,17 @@ export class Parser<T> {
         return this._nodeFactory(NodeType.EncapsulatedVariable, [this._nodeFactory(NodeType.Property, children)]);
     }
 
-    private heredoc() {
+    private heredoc(toks:TokenIterator) {
+
+        let children:(T|Token)[] = [toks.current];
+        toks.next();
+        children.push(this.encapsulatedVariableList(toks));    
+        if(toks.current.type !== TokenType.T_END_HEREDOC){
+            //error
+        }
+        children.push(toks.current);
+        toks.next();
+        return this._nodeFactory(NodeType.Heredoc, children);
 
     }
 
