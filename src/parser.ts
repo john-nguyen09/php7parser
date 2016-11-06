@@ -80,7 +80,8 @@ export enum NodeType {
     Variable,
     ArrayElementList,
     ClosureUseVariable,
-    ClosureUseList
+    ClosureUseList,
+    List,
 }
 
 export interface NodeFactory<T> {
@@ -1612,7 +1613,23 @@ export class Parser<T> {
 
     private listAssignment(toks:TokenIterator) {
 
-        
+        let children:(T|Token)[] = [toks.current];
+
+        if(toks.next().type !== '('){
+            //error
+        }
+
+        children.push(toks.current);
+        toks.next();
+        children.push(this.arrayElementList(toks, ')'));
+
+        if(toks.current.type !== ')'){
+            //error
+        }
+
+        children.push(toks.current);
+        toks.next();
+        return this._nodeFactory(NodeType.List, children);
 
     }
 
