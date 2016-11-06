@@ -83,7 +83,8 @@ export enum NodeType {
     ClosureUseList,
     List,
     Clone,
-    Heredoc
+    Heredoc,
+    DoubleQuotes
 }
 
 export interface NodeFactory<T> {
@@ -415,7 +416,7 @@ export class Parser<T> {
             case TokenType.T_START_HEREDOC:
                 return this.heredoc(toks);
             case '"':
-                return this.encapsulatedVariableList(toks);
+                return this.doubleQuotesExpression(toks);
             case '`':
                 return this.backticksExpression(toks);
             case TokenType.T_PRINT:
@@ -570,33 +571,25 @@ export class Parser<T> {
 
     }
 
+    private doubleQuotesExpression(toks:TokenIterator){
+
+        let children:(T|Token)[] = [toks.current];
+        toks.next();
+        children.push(this.encapsulatedVariableList(toks));
+        if(toks.current.type !== '"'){
+            //error
+        }
+        children.push(toks.current);
+        toks.next();
+        return this._nodeFactory(NodeType.DoubleQuotes, children);
+
+    }
+
     private backticksExpression(toks: TokenIterator) {
 
         let children: (T | Token)[] = [toks.current];
-
-        switch (toks.next().type) {
-            case '`':
-                //empty
-                break;
-            case TokenType.T_ENCAPSED_AND_WHITESPACE:
-                if ([TokenType.T_VARIABLE,
-                TokenType.T_DOLLAR_OPEN_CURLY_BRACES,
-                TokenType.T_CURLY_OPEN].indexOf(<TokenType>toks.lookahead().type) === -1) {
-                    children.push(toks.current);
-                    toks.next();
-                    break;
-                }
-            //fall through
-            case TokenType.T_VARIABLE:
-            case TokenType.T_DOLLAR_OPEN_CURLY_BRACES:
-            case TokenType.T_CURLY_OPEN:
-                children.push(this.encapsulatedVariableList(toks));
-                break;
-            default:
-                //error
-                break;
-
-        }
+        toks.next();
+        children.push(this.encapsulatedVariableList(toks));
 
         if (toks.current.type !== '`') {
             //error
