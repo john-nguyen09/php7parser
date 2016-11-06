@@ -82,6 +82,7 @@ export enum NodeType {
     ClosureUseVariable,
     ClosureUseList,
     List,
+    Clone
 }
 
 export interface NodeFactory<T> {
@@ -1607,7 +1608,12 @@ export class Parser<T> {
 
     }
 
-    private cloneExpression() {
+    private cloneExpression(toks:TokenIterator) {
+
+        let children:(T|Token)[] = [toks.current];
+        toks.next();
+        children.push(this.expression(toks));
+        return this._nodeFactory(NodeType.Clone, children);
 
     }
 
