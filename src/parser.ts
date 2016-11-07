@@ -84,7 +84,8 @@ export enum NodeType {
     List,
     Clone,
     Heredoc,
-    DoubleQuotes
+    DoubleQuotes,
+    TopStatement
 }
 
 export interface NodeFactory<T> {
@@ -240,20 +241,48 @@ export class Parser<T> {
 
     private topStatement(toks: TokenIterator) {
 
-        switch (toks.current.type) {
+        let lookForSemiColon = true;
+        let children:(T|Token)[] = [];
+        let t = toks.current;
+
+        switch (t.type) {
             case TokenType.T_NAMESPACE:
-                return this.namespace(toks);
+                let isEmpty = {isEmpty:false};
+                children.push(this.namespace(toks, isEmpty));
+                lookForSemiColon = isEmpty.isEmpty;
+                break;
             case TokenType.T_USE:
                 return this.use(toks);
             case TokenType.T_HALT_COMPILER:
-                return this.haltCompiler(toks);
+                children.push(this.haltCompiler(toks));
+                break;
             case TokenType.T_CONST:
-                return this.constDeclarationList(toks);
+                children.push(this.constDeclarationList(toks));
+                break;
             default:
-                return this.statement(toks);
+                if(this.isStatementToken(toks.current)){
+                    children.push(this.statement(toks));
+                    lookForSemiColon = false;
+                } else {
+                    //error
+                }
+                break;
         }
 
+        if(lookForSemiColon){
+            if(toks.current.type !== ';'){
+                //error
+            }
+            children.push(t);
+            toks.next();
+        }
 
+        return this._nodeFactory(NodeType.TopStatement, children);
+
+    }
+
+    private isStatementToken(t:Token){
+        return true;
     }
 
     private constDeclarationList(toks: TokenIterator) {
@@ -270,12 +299,6 @@ export class Parser<T> {
             toks.next();
         }
 
-        if (toks.current.type !== ';') {
-            //error
-        }
-
-        children.push(toks.current);
-        toks.next();
         return this._nodeFactory(NodeType.ConstDeclarationList, children);
 
     }
@@ -2239,28 +2262,23 @@ export class Parser<T> {
         return this._opPrecedenceMap.hasOwnProperty(t.text) && (this._opPrecedenceMap[t.text][2] & OpType.Binary) === OpType.Binary;
     }
 
-    private createBinaryNode(lhs: Node | Token, op: Token, rhs: Node | Token) {
+    private haltCompiler(toks:TokenIterator) {
 
-    }
+        let children:(T|Token)[] = [toks.current];
 
-    private haltCompiler() {
-
-        let node: Node = {
-            type: NodeType.HaltCompiler
-        }
-        let t = this._lexer.current;
-        let start = t.range;
-        let expected = ['(', ')', ';'];
-
-        for (let n = 0; n < expected.length; ++n) {
-            t = this._lexer.next();
-            if (t.type !== expected[n]) {
-                return this.parseError(t, [expected[n]], node, start, this._lexer.lookBehind().range);
-            }
+        if(toks.next().type !== '('){
+            //error
         }
 
-        node.location = this.mergeLocation(start, t.range);
-        return node;
+        children.push(toks.current);
+        
+        if(toks.next().type !== ')'){
+            //error
+        }
+
+        children.push(toks.current);
+        toks.next();
+        return this._nodeFactory(NodeType.HaltCompiler, children);
 
     }
 
