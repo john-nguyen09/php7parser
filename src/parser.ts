@@ -14,6 +14,8 @@ export enum NodeType {
     UseElement,
     UseList,
     UseGroup,
+    MixedUseList,
+    MixedUseGroup,
     HaltCompiler,
     ConstDeclarationList,
     ConstElement,
@@ -252,7 +254,8 @@ export class Parser<T> {
                 lookForSemiColon = isEmpty.isEmpty;
                 break;
             case TokenType.T_USE:
-                return this.use(toks);
+                children.push(this.use(toks));
+                break;
             case TokenType.T_HALT_COMPILER:
                 children.push(this.haltCompiler(toks));
                 break;
@@ -2282,175 +2285,134 @@ export class Parser<T> {
 
     }
 
-    private use() {
+    private use(toks:TokenIterator) {
 
-        let start = this._lexer.current.range;
-        let t = this._lexer.next();
-        let name: Node;
-        let node: Node = { type: NodeType.UseList };
+        let children:(T|Token)[] = [toks.current];
+        let t = toks.next();
+        let isMixed = true;
 
         if (t.type === TokenType.T_FUNCTION || t.type === TokenType.T_CONST) {
-            node.flag = t.type === TokenType.T_FUNCTION ? NodeFlag.UseFunction : NodeFlag.UseConst;
-            t = this._lexer.next();
+            children.push(t);
+            t = toks.next();
+            isMixed = false;
         }
+
+        let useElementParts:(T|Token)[] = [];
 
         if (t.type === TokenType.T_NS_SEPARATOR) {
-            t = this._lexer.next();
+            useElementParts.push(t);
+            t = toks.next();
         }
 
-        if (t.type !== TokenType.T_STRING) {
-            return this.parseError(t, [TokenType.T_STRING], node, start, this._lexer.lookBehind().range);
-        }
-
-        name = this.namespaceName();
-        t = this._lexer.current;
+        useElementParts.push(this.namespaceName(toks));
+        t = toks.current;
 
         if (t.type === TokenType.T_NS_SEPARATOR) {
-            node.type = NodeType.UseGroup;
-            node.children = [name, null];
-            t = this._lexer.next();
-
-            if (t.type !== '{') {
-                return this.parseError(t, ['{'], node, start, this._lexer.lookBehind().range);
-            }
-
-            node.children[1] = this.useList(!node.flag);
-            t = this._lexer.current;
-
-            if (t.type !== '}') {
-                return this.parseError(t, ['}'], node, start, this._lexer.lookBehind().range);
-            }
-
-            node.location = this.mergeLocation(start, t.range);
-            return node;
-
+            children.push(...useElementParts);
+            return this.useGroup(toks, children, isMixed);
         }
 
-        if (!node.flag) {
-            node.flag = NodeFlag.UseClassNamespaceInterface;
-        }
-        let useElem: Node = { type: NodeType.UseElement, children: [name, null] };
-        node.children = [useElem]
+        //must be use list
+        
+        children.push(this.useElement(toks, useElementParts, false, true));
+        t = toks.current;
 
-        //should be T_AS | , | ;
-        if (t.type === TokenType.T_AS) {
-            t = this._lexer.next();
-
-            if (t.type !== TokenType.T_STRING) {
-                this.parseError(t, [TokenType.T_STRING], useElem, start, this._lexer.lookBehind().range);
-                node.location = useElem.location;
-                return node;
-            }
-
-            node.children[1] = t;
-            t = this._lexer.next();
+        if(t.type !== ','){
+            return this._nodeFactory(NodeType.UseList, children);
         }
 
-        if (t.type === ',') {
-            this.useList(false, node);
-        }
+        children.push(t);
+        toks.next();
 
-        if (t.type !== ';') {
-            return this.parseError(t, [';'], node, start, this._lexer.lookBehind().range);
-        }
+        while(true){
 
-        node.location = this.mergeLocation(start, node.children[node.children.length - 1].range);
-        return node;
-
-    }
-
-    private useList(isMixed: boolean, node: Node = null) {
-        if (!node) {
-            node = {
-                type: NodeType.UseList,
-                children: [],
-            };
-        }
-        let t: Token;
-        let elem: Node;
-
-        while (true) {
-            elem = isMixed ? this.kindUseElement() : this.useElement();
-            node.children.push(elem);
-            t = this._lexer.current;
-            if (t.type !== ',') {
+            children.push(this.useElement(toks, [], false, true));
+            if(toks.current.type !== ','){
                 break;
             }
-            t = this._lexer.next();
+            children.push(toks.current);
+            toks.next();
+
         }
 
-        node.location = this.mergeLocation(node.children[0].range, node.children[node.children.length - 1].range);
-        return node;
+        return this._nodeFactory(NodeType.UseList, children);
 
     }
 
-    private kindUseElement() {
+    private useGroup(toks:TokenIterator, children:(T|Token)[], isMixed:boolean){
 
-        let t = this._lexer.current;
-        let start = t.range;
-        let flag = NodeFlag.UseClassNamespaceInterface;
+        //current will be T_NS_SEPARATOR
+        children.push(toks.current);
 
-        if (t.type === TokenType.T_FUNCTION) {
-            flag = NodeFlag.UseFunction;
-            this._lexer.next();
-        } else if (t.type === TokenType.T_CONST) {
-            flag = NodeFlag.UseConst;
-            this._lexer.next();
+        if(toks.next().type !== '{'){
+            //error
         }
 
-        let node = this.useElement();
-        node.flag = flag;
-        node.location = this.mergeLocation(start, node.location);
-        return node;
+        children.push(toks.current);
+        toks.next();
+
+        while(true){
+
+            children.push(this.useElement(toks, [], isMixed, false));
+            if(toks.current.type !== ','){
+                break;
+            }
+            children.push(toks.current);
+            toks.next();
+
+        }
+
+        if(toks.current.type !== '}'){
+            //errror
+        }
+
+        children.push(toks.current);
+        toks.next();
+        return this._nodeFactory(NodeType.UseGroup, children);
 
     }
 
-    private useElement() {
+    private useElement(toks:TokenIterator, children:(T|Token)[], isMixed:boolean, lookForPrefix:boolean) {
 
-        let node: Node = {
-            type: NodeType.UseElement,
-            children: [null, null]
-        };
-        let t = this._lexer.current;
-        let start = t.range;
+        //if children not empty then it contains tokens to left of T_AS
 
-        if (t.type === TokenType.T_NS_SEPARATOR) {
-            t = this._lexer.next();
+        if(!children.length){
+
+            if((isMixed && [TokenType.T_FUNCTION, TokenType.T_CONST].indexOf(<TokenType>toks.current.type)) ||
+                (lookForPrefix && toks.current.type === TokenType.T_NS_SEPARATOR)){
+                children.push(toks.current);
+                toks.next();
+            }
+
+            children.push(this.namespaceName(toks));
         }
 
-        if (t.type !== TokenType.T_STRING) {
-            return this.parseError(t, [TokenType.T_STRING], node, start, this._lexer.lookBehind().range);
+        if(toks.current.type !== TokenType.T_AS){
+            return this._nodeFactory(NodeType.UseElement, children);
         }
 
-        node.children[0] = this.namespaceName();
-
-        if (t.type !== TokenType.T_AS) {
-            node.location = this.mergeLocation(start, node.children[0].range);
-            return node;
+        children.push(toks.current);
+        
+        if(toks.next().type !== TokenType.T_STRING){
+            //error
         }
 
-        t = this._lexer.next();
-
-        if (t.type !== TokenType.T_STRING) {
-            return this.parseError(t, [TokenType.T_STRING], node, start, this._lexer.lookBehind().range);
-        }
-
-        node.children[1] = t;
-        node.location = this.mergeLocation(start, t.range);
-        this._lexer.next();
-
-        return node;
+        children.push(toks.current);
+        toks.next();
+        return this._nodeFactory(NodeType.UseElement, children);
 
     }
 
     private namespace(toks:TokenIterator, isEmpty:{isEmpty:boolean}) {
 
         let children:(T|Token)[] = [toks.current];
+        let t = toks.next();
         toks.lastDocComment;
 
-        if(toks.current.type == TokenType.T_STRING){
+        if(t.type == TokenType.T_STRING){
             children.push(this.namespaceName(toks));
-            if(toks.current.type !== '{'){
+            t = toks.current;
+            if(t.type !== '{'){
                 isEmpty.isEmpty = true;
                 return this._nodeFactory(NodeType.Namespace, children);
             }
