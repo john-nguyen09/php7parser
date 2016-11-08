@@ -262,6 +262,24 @@ export class Parser<T> {
             case TokenType.T_CONST:
                 children.push(this.constDeclarationList(toks));
                 break;
+            case TokenType.T_FUNCTION:
+                children.push(this.functionDeclaration(toks));
+                lookForSemiColon = false;
+                break;
+            case TokenType.T_CLASS:
+            case TokenType.T_ABSTRACT:
+            case TokenType.T_FINAL:
+                children.push(this.classDeclaration(toks));
+                lookForSemiColon = false;
+                break;
+            case TokenType.T_TRAIT:
+                children.push(this.traitDeclaration(toks));
+                lookForSemiColon = false;
+                break;
+            case TokenType.T_INTERFACE:
+                children.push(this.interfaceDeclaration(toks));
+                lookForSemiColon = false;
+                break;
             default:
                 if(this.isStatementToken(toks.current)){
                     children.push(this.statement(toks));
