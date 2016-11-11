@@ -93,6 +93,8 @@ export enum NodeType {
     IfStatement,
     WhileStatement,
     DoWhileStatement,
+    ExpressionList,
+    ForStatement
 }
 
 export interface NodeFactory<T> {
@@ -1339,6 +1341,88 @@ export class Parser<T> {
     }
 
     private isExpressionStartToken(t: Token) {
+
+    }
+
+    private forStatement(toks:TokenIterator){
+
+        let children:(T|Token)[] = [toks.current];
+        let t = toks.next();
+
+        if(t.type !== '('){
+            //error
+        }
+
+        children.push(t);
+        t = toks.next();
+
+        for(let n = 0; n < 2; ++n){
+            if(t.type !== ';' && this.isExpressionStartToken(t)) {
+                children.push(this.expressionList(toks));
+                t = toks.current;
+            }
+
+            if(t.type !== ';'){
+                //error
+            }
+
+            children.push(t);
+            t = toks.next();
+        }
+
+        if(t.type !== ')' && this.isExpressionStartToken(t)){
+            children.push(this.expression(toks));
+            t = toks.current;
+        }
+
+        if(t.type !== ')'){
+            //error
+        }
+
+        children.push(t);
+        t = toks.next();
+
+        if(t.type === ':'){
+            children.push(t);
+            t = toks.next();
+            children.push(this.innerStatementList(toks, [TokenType.T_ENDFOR]));
+            t = toks.current;
+            if(t.type !== TokenType.T_ENDFOR){
+                //error
+            }
+            children.push(t);
+            t = toks.next();
+            if(t.type !== ';'){
+                //error
+            }
+            children.push(t);
+            t = toks.next();
+        } else if(this.isStatementToken(t)){
+            children.push(this.statement(toks))
+        } else {
+            //error
+        }
+
+        return this._nodeFactory(NodeType.ForStatement, children);
+
+
+
+    }
+
+    private expressionList(toks:TokenIterator){
+
+        let children:(T|Token)[] = [];
+
+        while(true){
+            children.push(this.expression(toks));
+            if(toks.current.type !== ','){
+                break;
+            }
+            children.push(toks.current);
+            toks.next();
+        }
+
+        return this._nodeFactory(NodeType.ExpressionList, children);
 
     }
 
