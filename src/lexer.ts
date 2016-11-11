@@ -1071,13 +1071,10 @@ export class TokenIterator {
         }
     }
 
-    expectCurrent(tokenType: TokenType | string, pushToArray: Token[], callNextOnExpected: boolean) {
+    expectCurrent(tokenType: TokenType | string, pushToArray: Token[]) {
         let t = this.current;
         if (t.type === tokenType) {
             pushToArray.push(t);
-            if (callNextOnExpected) {
-                this.next();
-            }
             return true;
         } else {
             return false;

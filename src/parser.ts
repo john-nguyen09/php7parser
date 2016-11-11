@@ -103,7 +103,9 @@ export enum NodeType {
     StaticVariable,
     EchoStatement,
     UnsetStatement,
-    ThrowStatement
+    ThrowStatement,
+    GotoStatement,
+    LabelStatement
 }
 
 export interface NodeFactory<T> {
@@ -1349,15 +1351,44 @@ export class Parser<T> {
 
     }
 
+    private labelStatement(toks:TokenIterator){
+
+        let children:(T|Token)[]  =[toks.current];
+        if(!toks.expectNext(':', children)){
+            //error
+        }
+        toks.next();
+        return this._nodeFactory(NodeType.LabelStatement, children);
+
+    }
+
+    private gotoStatement(toks:TokenIterator){
+
+        let children:(T|Token)[] = [toks.current];
+
+        if(!toks.expectNext(TokenType.T_STRING, children)){
+            //error
+        }
+
+        if(!toks.expectNext(';', children)){
+            //error
+        }
+
+        toks.next();
+        return this._nodeFactory(NodeType.GotoStatement, children);
+
+    }
+
     private throwStatement(toks:TokenIterator){
 
         let children:(T|Token)[] = [toks.current];
         toks.next();
         children.push(this.expression(toks));
         
-        if(!toks.expectCurrent(';', children, true)){
+        if(!toks.expectCurrent(';', children)){
             //error
         }
+        toks.next();
 
         return this._nodeFactory(NodeType.ThrowStatement, children);
     }
