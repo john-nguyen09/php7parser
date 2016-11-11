@@ -94,7 +94,8 @@ export enum NodeType {
     WhileStatement,
     DoWhileStatement,
     ExpressionList,
-    ForStatement
+    ForStatement,
+    BreakStatement,
 }
 
 export interface NodeFactory<T> {
@@ -1337,6 +1338,31 @@ export class Parser<T> {
                 }
 
         }
+
+    }
+
+    private breakStatement(toks:TokenIterator){
+
+        let children:(T|Token)[] = [toks.current];
+        let t = toks.current;
+
+        if(t.type !== ';' && this.isExpressionStartToken(t)){
+            if(this.isExpressionStartToken(t)){
+                children.push(this.expression(toks));
+                t = toks.current;
+            } else {
+                //error
+            }
+        }
+
+        if(t.type !== ';'){
+            //error
+        }
+
+        children.push(t);
+        toks.next();
+        return this._nodeFactory(NodeType.BreakStatement, children);
+        
 
     }
 
