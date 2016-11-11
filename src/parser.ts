@@ -96,6 +96,8 @@ export enum NodeType {
     ExpressionList,
     ForStatement,
     BreakStatement,
+    ContinueStatement,
+    ReturnStatement
 }
 
 export interface NodeFactory<T> {
@@ -1291,11 +1293,11 @@ export class Parser<T> {
             case TokenType.T_SWITCH:
                 return this.switchStatement(toks);
             case TokenType.T_BREAK:
-                return this.breakStatement(toks);
+                return this.keywordOptionalExpressionStatement(toks, NodeType.BreakStatement);
             case TokenType.T_CONTINUE:
-                return this.continueStatement(toks);
+                return this.keywordOptionalExpressionStatement(toks, NodeType.ContinueStatement);
             case TokenType.T_RETURN:
-                return this.returnStatement(toks);
+                return this.keywordOptionalExpressionStatement(toks, NodeType.ReturnStatement);
             case TokenType.T_GLOBAL:
                 return this.globalVarList(toks);
             case TokenType.T_STATIC:
@@ -1341,8 +1343,7 @@ export class Parser<T> {
 
     }
 
-    private breakStatement(toks:TokenIterator){
-
+    private keywordOptionalExpressionStatement(toks:TokenIterator, nodeType:NodeType){
         let children:(T|Token)[] = [toks.current];
         let t = toks.current;
 
@@ -1361,9 +1362,7 @@ export class Parser<T> {
 
         children.push(t);
         toks.next();
-        return this._nodeFactory(NodeType.BreakStatement, children);
-        
-
+        return this._nodeFactory(nodeType, children);
     }
 
     private isExpressionStartToken(t: Token) {
