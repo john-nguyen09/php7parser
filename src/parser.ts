@@ -4,7 +4,86 @@
 
 'use strict';
 
-import { Token, Lexer, TokenIterator, TokenType } from './lexer';
+import { Token, Lexer, TokenType } from './lexer';
+
+export class TokenIterator {
+
+    private _tokens: Token[];
+    private _pos: number;
+    private _endToken: Token = {
+        type: TokenType.T_EOF,
+        text: null,
+        mode: null,
+        range: null
+    };
+    private _lastDocComment: Token;
+
+    constructor(tokens: Token[]) {
+        this._tokens = tokens;
+        this._pos = 0;
+    }
+
+    get current() {
+        return this._pos < this._tokens.length ? this._tokens[this._pos] : this._endToken;
+    }
+
+    get lastDocComment() {
+        let t = this._lastDocComment;
+        this._lastDocComment = null;
+        return t;
+    }
+
+    next(): Token {
+        let t = this._pos < this._tokens.length ? this._tokens[this._pos++] : this._endToken;
+        if (t.type === '}') {
+            this._lastDocComment = null;
+        }
+        if (this.shouldSkip(t)) {
+            return this.next();
+        }
+        return t;
+    }
+
+    expectNext(tokenType: TokenType | string, pushToArray: Token[]) {
+        let t = this.next();
+        if (t.type === tokenType) {
+            pushToArray.push(t);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    expectCurrent(tokenType: TokenType | string, pushToArray: Token[]) {
+        let t = this.current;
+        if (t.type === tokenType) {
+            pushToArray.push(t);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    lookahead(n = 0) {
+        let pos = this._pos + n;
+        return pos < this._tokens.length ? this._tokens[pos] : this._endToken;
+    }
+
+    rewind() {
+        this._pos = 0;
+        this._lastDocComment = null;
+    }
+
+    private shouldSkip(t: Token) {
+        return t.type === TokenType.T_WHITESPACE ||
+            t.type === TokenType.T_COMMENT ||
+            t.type === TokenType.T_DOC_COMMENT ||
+            t.type === TokenType.T_OPEN_TAG ||
+            t.type === TokenType.T_OPEN_TAG_WITH_ECHO ||
+            t.type === TokenType.T_CLOSE_TAG;
+    }
+
+}
 
 export enum NodeType {
     None = 0,
@@ -1349,6 +1428,15 @@ export class Parser<T> {
                 }
 
         }
+
+    }
+
+    private switchStatement(toks:TokenIterator){
+
+        let children:(T|Token)[] = [toks.current];
+
+        
+
 
     }
 
