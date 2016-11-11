@@ -103,6 +103,7 @@ export enum NodeType {
     StaticVariable,
     EchoStatement,
     UnsetStatement,
+    ThrowStatement
 }
 
 export interface NodeFactory<T> {
@@ -1345,6 +1346,25 @@ export class Parser<T> {
                 }
 
         }
+
+    }
+
+    private throwStatement(toks:TokenIterator){
+
+        let children:(T|Token)[] = [toks.current];
+        toks.next();
+        children.push(this.expression(toks));
+        
+        if(!toks.expectCurrent(';', children, true)){
+            //error
+        }
+
+        return this._nodeFactory(NodeType.ThrowStatement, children);
+    }
+
+    private foreachStatement(toks:TokenIterator){
+
+
 
     }
 
