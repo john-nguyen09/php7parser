@@ -90,7 +90,9 @@ export enum NodeType {
     TopStatement,
     Statement,
     IfStatementList,
-    IfStatement
+    IfStatement,
+    WhileStatement,
+    DoWhileStatement,
 }
 
 export interface NodeFactory<T> {
@@ -1340,6 +1342,85 @@ export class Parser<T> {
 
     }
 
+    private doWhileStatement(toks:TokenIterator){
+
+        let children: (T | Token)[] = [toks.current];
+        let t = toks.next();
+
+        children.push(this.statement(toks));
+        t = toks.current;
+
+        if(t.type !== TokenType.T_WHILE){
+            //error
+        }
+
+        children.push(t);
+        t = toks.next();
+        if(t.type !== '('){
+            //error
+        }
+        children.push(t);
+        t = toks.next();
+        children.push(this.expression(toks));
+        t = toks.current;
+        if(t.type !== ')'){
+            //error
+        }
+        children.push(t);
+        t = toks.next();
+        if(t.type !== ';'){
+            //error
+        }
+        children.push(t);
+        toks.next();
+        return this._nodeFactory(NodeType.DoWhileStatement, children);
+
+    }
+
+    private whileStatement(toks: TokenIterator) {
+
+        let children: (T | Token)[] = [toks.current];
+        let t = toks.next();
+
+        if (t.type !== '(') {
+            //error
+        }
+
+        children.push(t);
+        t = toks.next();
+        children.push(this.expression(toks));
+
+        t = toks.current;
+        if (t.type !== ')') {
+            //error
+        }
+
+        children.push(t);
+        t = toks.next();
+
+        if (t.type === ':') {
+            children.push(t);
+            toks.next();
+            children.push(this.innerStatementList(toks, [TokenType.T_ENDWHILE]));
+            t = toks.current;
+            if (t.type !== TokenType.T_ENDWHILE) {
+                //error
+            }
+            children.push(t);
+            t = toks.next();
+            if (t.type !== ';') {
+                //error
+            }
+            children.push(t);
+            toks.next();
+        } else {
+            children.push(this.statement(toks));
+        }
+
+        return this._nodeFactory(NodeType.WhileStatement, children);
+
+    }
+
     private ifStatementList(toks: TokenIterator) {
 
         let children: (T | Token)[] = [];
@@ -1360,18 +1441,18 @@ export class Parser<T> {
 
         }
 
-        if(t.type === TokenType.T_ELSE){
+        if (t.type === TokenType.T_ELSE) {
             children.push(this.ifStatement(toks, discoverAlt.isAlt));
             t = toks.current;
         }
 
-        if(discoverAlt.isAlt){
+        if (discoverAlt.isAlt) {
 
-            if(t.type !== TokenType.T_ENDIF){
+            if (t.type !== TokenType.T_ENDIF) {
                 //error
             }
 
-            let endIfchildren:(T|Token)[] = [t];
+            let endIfchildren: (T | Token)[] = [t];
             t = toks.next();
             if (t.type !== ';') {
                 //error
