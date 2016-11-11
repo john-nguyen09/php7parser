@@ -101,7 +101,8 @@ export enum NodeType {
     GlobalVariableListStatement,
     StaticVariableListStatement,
     StaticVariable,
-    EchoStatement
+    EchoStatement,
+    UnsetStatement,
 }
 
 export interface NodeFactory<T> {
@@ -1344,6 +1345,37 @@ export class Parser<T> {
                 }
 
         }
+
+    }
+
+    private unsetVarList(toks:TokenIterator){
+
+        let children:(T|Token)[] = [toks.current];
+        
+        if(!toks.expectNext('(', <Token[]>children)){
+            //error
+        }
+        
+        while(true){
+
+            children.push(this.variable(toks));
+            if(toks.current.type !== ','){
+                break;
+            }
+            children.push(toks.current);
+            toks.next();
+
+        }
+
+        if(!toks.expectCurrent(')', children)){
+            //error
+        }
+
+        if(!toks.expectNext(';', children)){
+            //error
+        }
+
+        return this._nodeFactory(NodeType.UnsetStatement, children);
 
     }
 

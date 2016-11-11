@@ -1061,6 +1061,26 @@ export class TokenIterator {
         return t;
     }
 
+    expectNext(tokenType:TokenType|string, pushToArray:Token[]){
+        let t = this.next();
+        if(t.type === tokenType){
+            pushToArray.push(t);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    expectCurrent(tokenType:TokenType|string, pushToArray:Token[]){
+        let t = this.current;
+        if(t.type === tokenType){
+            pushToArray.push(t);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     lookahead(n = 0) {
         let pos = this._pos + n;
         return pos < this._tokens.length ? this._tokens[pos] : this._endToken;
