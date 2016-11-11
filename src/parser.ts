@@ -105,7 +105,8 @@ export enum NodeType {
     UnsetStatement,
     ThrowStatement,
     GotoStatement,
-    LabelStatement
+    LabelStatement,
+    ForeachStatement
 }
 
 export interface NodeFactory<T> {
@@ -1395,7 +1396,81 @@ export class Parser<T> {
 
     private foreachStatement(toks:TokenIterator){
 
+        let children:(T|Token)[] = [toks.current];
 
+        if(!toks.expectNext('(', children)){
+            //error
+        }
+        toks.next();
+        children.push(this.expression(toks));
+        if(!toks.expectCurrent(TokenType.T_AS, children)){
+            //error
+        }
+        toks.next();
+        children.push(this.foreachVariable(toks));
+
+        if(toks.current.type === TokenType.T_DOUBLE_ARROW){
+            children.push(toks.current);
+            toks.next();
+            children.push(this.foreachVariable(toks));
+        }
+
+        if(!toks.expectCurrent(')', children)){
+            //error
+        }
+
+
+        if(toks.next().type === ':'){
+
+            children.push(toks.current);
+            toks.next();
+            children.push(this.innerStatementList(toks, [TokenType.T_ENDFOREACH]));
+
+            if(!toks.expectCurrent(TokenType.T_ENDFOREACH, children)){
+                //error
+            }
+
+            if(!toks.expectNext(';', children)){
+                //error
+            }
+
+            toks.next();
+
+        } else if(this.isStatementToken(toks.current)) {
+            children.push(this.statement(toks));
+        } else {
+            //error
+        }
+
+        return this._nodeFactory(NodeType.ForeachStatement, children);
+
+
+    }
+
+    private foreachVariable(toks:TokenIterator){
+
+        let t = toks.current;
+        switch(t.type){
+
+            case '&':
+                toks.next();
+                return this._nodeFactory(NodeType.UnaryOp, [t, this.variable(toks)]);
+            case TokenType.T_LIST:
+                return this.listAssignment(toks);
+            case '[':
+                return this.shortArray(toks);
+            default:
+                if(this.isVariableStartToken(t)){
+                    return this.variable(toks);
+                } else {
+                    //error
+                }
+
+        }
+
+    }
+
+    private isVariableStartToken(t:Token){
 
     }
 
