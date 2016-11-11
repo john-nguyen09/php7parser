@@ -930,7 +930,11 @@ export interface Range {
     end: Position
 }
 
-export class Lexer {
+export interface Iterator<T> {
+    next(): T
+}
+
+export class Lexer implements Iterator<Token>{
 
     private _state: LexerState;
     private _patterns: RegExp[] = [];
@@ -943,12 +947,19 @@ export class Lexer {
         }
     }
 
-    lex(text: string, mode: LexerMode[] = null) {
-        this._state.clear();
+    set input(text: string) {
         this._state.input = text;
-        if (mode) {
-            this._state.mode = mode;
-        }
+    }
+
+    set mode(modeArray: LexerMode[]) {
+        this._state.mode = modeArray;
+    }
+
+    clear() {
+        this._state.clear();
+    }
+
+    next(): Token {
 
         let firstLine: number, firstChar: number;
         let match: RegExpMatchArray;
@@ -957,60 +968,54 @@ export class Lexer {
         let action: TokenType | LexerAction;
         let lexerMode: LexerMode;
         let lexerModeStack: LexerMode[];
-        let tokens: Token[] = [];
 
-        while (true) {
-
-            if (!this._state.input.length) {
-                break;
-            }
-
-            firstLine = this._state.line;
-            firstChar = this._state.char + 1;
-
-            if (this._state.lastLexemeEndedWithNewline) {
-                ++firstLine;
-                firstChar = 0;
-            }
-
-            lexerModeStack = this._state.mode;
-            lexerMode = this._state.mode[this._state.mode.length - 1];
-            match = this._state.input.match(this._patterns[lexerMode]);
-
-            //skip first element which is the matched string
-            for (let n = 1; n < match.length; ++n) {
-                if (match[n]) {
-                    actionIndex = n - 1;
-                    break;
-                }
-            }
-
-            this._state.more(match[0].length);
-            action = this._table[lexerMode][actionIndex][1];
-            if (typeof action === 'function') {
-                type = action(this._state);
-            } else {
-                type = action;
-                this._state.advancePosition(false);
-            }
-
-            if (type === -1) {
-                continue;
-            }
-
-            tokens.push({
-                type: type,
-                text: this._state.lexeme,
-                mode: lexerModeStack,
-                range: {
-                    start: { line: firstLine, char: firstChar },
-                    end: { line: this._state.line, char: this._state.char }
-                }
-            });
-
+        if (!this._state.input.length) {
+            return null;
         }
 
-        return tokens;
+        firstLine = this._state.line;
+        firstChar = this._state.char + 1;
+
+        if (this._state.lastLexemeEndedWithNewline) {
+            ++firstLine;
+            firstChar = 0;
+        }
+
+        lexerModeStack = this._state.mode;
+        lexerMode = this._state.mode[this._state.mode.length - 1];
+        match = this._state.input.match(this._patterns[lexerMode]);
+
+        //skip first element which is the matched string
+        for (let n = 1; n < match.length; ++n) {
+            if (match[n]) {
+                actionIndex = n - 1;
+                break;
+            } else {
+                throw new Error('Failed to find action index');
+            }
+        }
+
+        this._state.more(match[0].length);
+        action = this._table[lexerMode][actionIndex][1];
+        if (typeof action === 'function') {
+            type = action(this._state);
+            if (type === -1) {
+                return this.next();
+            }
+        } else {
+            type = action;
+            this._state.advancePosition(false);
+        }
+
+        return {
+            type: type,
+            text: this._state.lexeme,
+            mode: lexerModeStack,
+            range: {
+                start: { line: firstLine, char: firstChar },
+                end: { line: this._state.line, char: this._state.char }
+            }
+        };
 
     }
 
