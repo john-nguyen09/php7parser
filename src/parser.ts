@@ -97,7 +97,10 @@ export enum NodeType {
     ForStatement,
     BreakStatement,
     ContinueStatement,
-    ReturnStatement
+    ReturnStatement,
+    GlobalVariableListStatement,
+    StaticVariableListStatement,
+    StaticVariable
 }
 
 export interface NodeFactory<T> {
@@ -1340,6 +1343,63 @@ export class Parser<T> {
                 }
 
         }
+
+    }
+
+    private staticVarList(toks:TokenIterator){
+
+        let children:(T|Token)[] = [toks.current];
+        let t = toks.next();
+
+        while(true){
+
+            children.push(this.staticVariable(toks));
+            if(toks.current.type !== ','){
+                break;
+            }
+            children.push(toks.current);
+            toks.next();
+
+        }
+
+        return this._nodeFactory(NodeType.StaticVariableListStatement, children);
+
+    }
+
+
+
+    private globalVarList(toks:TokenIterator){
+
+        let children:(T|Token)[] = [toks.current];
+        let t = toks.next();
+
+        while(true){
+
+            children.push(this.simpleVariable(toks));
+            if(toks.current.type !== ','){
+                break;
+            }
+            children.push(toks.current);
+            toks.next();
+
+        }
+
+        return this._nodeFactory(NodeType.GlobalVariableListStatement, children);
+
+    }
+
+    private staticVariable(toks:TokenIterator){
+
+        let children:(T|Token)[] = [toks.current];
+
+        if(toks.next().type !== '='){
+            return this._nodeFactory(NodeType.StaticVariable, children);
+        }
+
+        children.push(toks.current);
+        toks.next();
+        children.push(this.expression(toks));
+        return this._nodeFactory(NodeType.StaticVariable, children);
 
     }
 
