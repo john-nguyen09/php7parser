@@ -100,7 +100,8 @@ export enum NodeType {
     ReturnStatement,
     GlobalVariableListStatement,
     StaticVariableListStatement,
-    StaticVariable
+    StaticVariable,
+    EchoStatement
 }
 
 export interface NodeFactory<T> {
@@ -1346,6 +1347,32 @@ export class Parser<T> {
 
     }
 
+    private echoExpressionList(toks:TokenIterator){
+
+       let children:(T|Token)[] = [toks.current];
+        let t = toks.next();
+
+        while(true){
+
+            children.push(this.expression(toks));
+            if(toks.current.type !== ','){
+                break;
+            }
+            children.push(toks.current);
+            toks.next();
+
+        }
+
+        if(toks.current.type !== ';'){
+            //error
+        }
+        children.push(toks.current);
+        toks.next();
+
+        return this._nodeFactory(NodeType.EchoStatement, children);
+
+    }
+
     private staticVarList(toks:TokenIterator){
 
         let children:(T|Token)[] = [toks.current];
@@ -1361,6 +1388,12 @@ export class Parser<T> {
             toks.next();
 
         }
+
+        if(toks.current.type !== ';'){
+            //error
+        }
+        children.push(toks.current);
+        toks.next();
 
         return this._nodeFactory(NodeType.StaticVariableListStatement, children);
 
@@ -1383,6 +1416,12 @@ export class Parser<T> {
             toks.next();
 
         }
+
+        if(toks.current.type !== ';'){
+            //error
+        }
+        children.push(toks.current);
+        toks.next();
 
         return this._nodeFactory(NodeType.GlobalVariableListStatement, children);
 
