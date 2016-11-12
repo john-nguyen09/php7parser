@@ -180,6 +180,7 @@ export enum NodeType {
     CaseList,
     Switch,
     Case,
+    DeclareStatement
 }
 
 export interface NodeFactory<T> {
@@ -1444,6 +1445,43 @@ export class Parser<T> {
                 }
 
         }
+
+    }
+
+    private declareStatement(){
+
+        let children:(T|Token)[] = [this._tokens.current];
+
+        if(!this._expectNext('(', children)){
+            //error
+        }
+
+        children.push(this.constDeclarationList());
+
+        if(!this._expectCurrent(')', children)){
+            //error
+        }
+
+        let t = this._tokens.next();
+        if(t.type === ':'){
+            children.push(t);
+            this._tokens.next();
+            children.push(this.innerStatementList());
+            if(!this._expectCurrent(TokenType.T_ENDDECLARE, children)){
+                //error
+            }
+            if(!this._expectNext(';', children)){
+                //error
+            }
+            this._tokens.next();
+
+        } else if(this.isStatementToken(t)){
+            children.push(this.statement());
+        } else {
+            //error
+        }
+
+        return this._nodeFactory(NodeType.DeclareStatement, children);
 
     }
 
