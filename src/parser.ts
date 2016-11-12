@@ -303,15 +303,14 @@ var semiReservedTokens: (TokenType | string)[] = [
 
 export class Parser<T> {
 
-    private _lexer: Lexer;
     private _nodeFactory: NodeFactory<T>;
     private _errors: ParseError[];
     private _opPrecedenceMap = opPrecedenceMap;
     private _reserved = reservedTokens;
     private _semiReserved = semiReservedTokens;
+    private _tokens:TokenIterator
 
-    constructor(lexer: Lexer, nodeFactory: NodeFactory<T>) {
-        this._lexer = lexer;
+    constructor(nodeFactory: NodeFactory<T>) {
         this._nodeFactory = nodeFactory;
     }
 
@@ -319,8 +318,11 @@ export class Parser<T> {
         return this._errors;
     }
 
-    hasErrors() {
-        return this._errors.length !== 0;
+    parse(tokens:Iterator<Token>){
+
+        this._tokens = new TokenIterator(tokens);
+        return this.topStatementList([]);
+
     }
 
     private isReserved(t: Token) {
