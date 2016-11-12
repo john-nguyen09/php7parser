@@ -49,26 +49,6 @@ class TokenIterator implements Iterator<Token> {
 
     }
 
-    expectNext(tokenType: TokenType | string, pushToArray: Token[]) {
-        let t = this.next();
-        if (t.type === tokenType) {
-            pushToArray.push(t);
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    expectCurrent(tokenType: TokenType | string, pushToArray: Token[]) {
-        let t = this.current;
-        if (t.type === tokenType) {
-            pushToArray.push(t);
-            return true;
-        } else {
-            return false;
-        }
-    }
-
     lookahead(n = 0) {
 
         let t: Token;
@@ -323,6 +303,26 @@ export class Parser<T> {
         this._tokens = new TokenIterator(tokens);
         return this.topStatementList([]);
 
+    }
+
+    private _expectNext(tokenType: TokenType | string, pushToArray: (T|Token)[]) {
+        let t = this._tokens.next();
+        if (t.type === tokenType) {
+            pushToArray.push(t);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private _expectCurrent(tokenType: TokenType | string, pushToArray: (T|Token)[]) {
+        let t = this._tokens.current;
+        if (t.type === tokenType) {
+            pushToArray.push(t);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     private isReserved(t: Token) {
