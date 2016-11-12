@@ -180,7 +180,12 @@ export enum NodeType {
     CaseList,
     Switch,
     Case,
-    DeclareStatement
+    DeclareStatement,
+    TryStatement,
+    TryCatchFinallyStatement,
+    Catch,
+    CatchNameList,
+    FinallyStatement
 }
 
 export interface NodeFactory<T> {
@@ -1416,9 +1421,9 @@ export class Parser<T> {
             case TokenType.T_FOREACH:
                 return this.foreachStatement(toks);
             case TokenType.T_DECLARE:
-                return this.declareStatement(toks);
+                return this.declareStatement();
             case TokenType.T_TRY:
-                return this.tryBlock(toks);
+                return this._tryCatchFinallyStatement();
             case TokenType.T_THROW:
                 return this.throwStatement(toks);
             case TokenType.T_GOTO:
@@ -1445,6 +1450,118 @@ export class Parser<T> {
                 }
 
         }
+
+    }
+
+    private _tryStatement(){
+
+        let children:(T|Token)[] = [this._tokens.current];
+
+        if(!this._expectNext('{', children)){
+            //error
+        }
+
+        children.push(this.innerStatementList());
+
+        if(!this._expectCurrent('}', children)){
+            //error
+        }
+
+        this._tokens.next();
+        return this._nodeFactory(NodeType.TryStatement, children);
+
+    }
+
+    private _tryCatchFinallyStatement(){
+
+        let children:(T|Token)[] = [];
+       
+        children.push(this._tryStatement());
+
+        while(true){
+
+            if(this._tokens.current.type !== TokenType.T_CATCH){
+                break;
+            } 
+
+            children.push(this._catchStatement());
+
+        }
+
+
+
+        return this._nodeFactory(NodeType.CatchList, children);
+
+    }
+
+    private _finallyStatement(){
+
+        let children:(T|Token)[]  =[this._tokens.current];
+
+        if(!this._expectNext('{', children)){
+            //error
+        }
+
+        this._tokens.next();
+        children.push(this.innerStatementList());
+
+        if(!this._expectCurrent('{', children)){
+            //error
+        }
+        this._tokens.next();
+        return this._nodeFactory(NodeType.FinallyStatement, children);
+
+    }
+
+    private _catchStatement(){
+
+        let children:(T|Token)[]  =[this._tokens.current];
+
+        if(!this._expectNext('(', children)){
+            //error
+        }
+
+        children.push(this._catchNameList());
+
+        if(!this._expectCurrent(TokenType.T_VARIABLE, children)){
+            //error
+        }
+
+        if(!this._expectNext(')', children)){
+            //error
+        }
+
+        if(!this._expectNext('{', children)){
+            //error
+        }
+
+        children.push(this.innerStatementList());
+
+        if(!this._expectCurrent('}', children)){
+            //error
+        }
+
+        this._tokens.next();
+        return this._nodeFactory(NodeType.Catch, children);
+
+    }
+
+    private _catchNameList(){
+
+        let children:(T|Token)[] = [];
+
+        while(true){
+
+            children.push(this.name());
+            if(this._tokens.current.type !== '|'){
+                break;
+            }
+            children.push(this._tokens.current)
+            this._tokens.next();
+
+        }
+
+        return this._nodeFactory(NodeType.CatchNameList, children);
 
     }
 
