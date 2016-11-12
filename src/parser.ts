@@ -342,18 +342,18 @@ export class Parser<T> {
         return this._semiReserved.indexOf(t.type) !== -1 || this.isReserved(t);
     }
 
-    private topStatementList(toks: TokenIterator, stopOnTokenTypeArray: (TokenType | string)[]) {
+    private topStatementList(stopOnTokenTypeArray: (TokenType | string)[]) {
 
         let children: (T | Token)[] = [];
         stopOnTokenTypeArray.push(TokenType.T_EOF);
 
         while (true) {
 
-            if (stopOnTokenTypeArray.indexOf(toks.current.type) !== -1) {
+            if (stopOnTokenTypeArray.indexOf(this._tokens.current.type) !== -1) {
                 break;
             }
 
-            children.push(this.topStatement(toks));
+            children.push(this.topStatement(this._tokens));
 
         }
 
@@ -361,48 +361,48 @@ export class Parser<T> {
 
     }
 
-    private topStatement(toks: TokenIterator) {
+    private topStatement(this._tokens: TokenIterator) {
 
         let lookForSemiColon = true;
         let children: (T | Token)[] = [];
-        let t = toks.current;
+        let t = this._tokens.current;
 
         switch (t.type) {
             case TokenType.T_NAMESPACE:
                 let isEmpty = { isEmpty: false };
-                children.push(this.namespace(toks, isEmpty));
+                children.push(this.namespace(this._tokens, isEmpty));
                 lookForSemiColon = isEmpty.isEmpty;
                 break;
             case TokenType.T_USE:
-                children.push(this.use(toks));
+                children.push(this.use(this._tokens));
                 break;
             case TokenType.T_HALT_COMPILER:
-                children.push(this.haltCompiler(toks));
+                children.push(this.haltCompiler(this._tokens));
                 break;
             case TokenType.T_CONST:
-                children.push(this.constDeclarationList(toks));
+                children.push(this.constDeclarationList(this._tokens));
                 break;
             case TokenType.T_FUNCTION:
-                children.push(this.functionDeclaration(toks));
+                children.push(this.functionDeclaration(this._tokens));
                 lookForSemiColon = false;
                 break;
             case TokenType.T_CLASS:
             case TokenType.T_ABSTRACT:
             case TokenType.T_FINAL:
-                children.push(this.classDeclaration(toks));
+                children.push(this.classDeclaration(this._tokens));
                 lookForSemiColon = false;
                 break;
             case TokenType.T_TRAIT:
-                children.push(this.traitDeclaration(toks));
+                children.push(this.traitDeclaration(this._tokens));
                 lookForSemiColon = false;
                 break;
             case TokenType.T_INTERFACE:
-                children.push(this.interfaceDeclaration(toks));
+                children.push(this.interfaceDeclaration(this._tokens));
                 lookForSemiColon = false;
                 break;
             default:
-                if (this.isStatementToken(toks.current)) {
-                    children.push(this.statement(toks));
+                if (this.isStatementToken(this._tokens.current)) {
+                    children.push(this.statement(this._tokens));
                     lookForSemiColon = false;
                 } else {
                     //error
@@ -411,11 +411,11 @@ export class Parser<T> {
         }
 
         if (lookForSemiColon) {
-            if (toks.current.type !== ';') {
+            if (this._tokens.current.type !== ';') {
                 //error
             }
             children.push(t);
-            toks.next();
+            this._tokens.next();
         }
 
         return this._nodeFactory(NodeType.TopStatement, children);
@@ -426,56 +426,56 @@ export class Parser<T> {
         return true;
     }
 
-    private constDeclarationList(toks: TokenIterator) {
+    private constDeclarationList(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
+        let children: (T | Token)[] = [this._tokens.current];
 
         while (true) {
 
-            children.push(this.constElement(toks));
-            if (toks.current.type !== ',') {
+            children.push(this.constElement(this._tokens));
+            if (this._tokens.current.type !== ',') {
                 break;
             }
-            children.push(toks.current);
-            toks.next();
+            children.push(this._tokens.current);
+            this._tokens.next();
         }
 
         return this._nodeFactory(NodeType.ConstDeclarationList, children);
 
     }
 
-    private constElement(toks: TokenIterator) {
+    private constElement(this._tokens: TokenIterator) {
 
         let children: (T | Token)[] = [];
-        let doc = toks.lastDocComment;
+        let doc = this._tokens.lastDocComment;
 
-        if (toks.current.type !== TokenType.T_CONST) {
+        if (this._tokens.current.type !== TokenType.T_CONST) {
             //error
         }
 
-        children.push(toks.current);
+        children.push(this._tokens.current);
 
-        if (toks.next().type !== '=') {
+        if (this._tokens.next().type !== '=') {
             //error
         }
 
-        children.push(toks.current);
-        children.push(this.expression(toks));
+        children.push(this._tokens.current);
+        children.push(this.expression(this._tokens));
 
-        if (toks.current.type !== ';') {
+        if (this._tokens.current.type !== ';') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
 
         return this._nodeFactory(NodeType.ConstElement, children, doc);
 
     }
 
-    private expression(toks: TokenIterator, minPrecedence = 0) {
+    private expression(this._tokens: TokenIterator, minPrecedence = 0) {
 
-        let lhs = this.atom(toks);
+        let lhs = this.atom(this._tokens);
         let precedence: number;
         let associativity: Associativity;
         let op: Token;
@@ -483,7 +483,7 @@ export class Parser<T> {
 
         while (true) {
 
-            op = toks.current;
+            op = this._tokens.current;
 
             if (!this.isBinaryOp(op)) {
                 break;
@@ -499,8 +499,8 @@ export class Parser<T> {
                 ++precedence;
             }
 
-            toks.next();
-            rhs = this.expression(toks, precedence);
+            this._tokens.next();
+            rhs = this.expression(this._tokens, precedence);
             lhs = this._nodeFactory(NodeType.BinaryExpression, [lhs, op, rhs]);
 
         }
@@ -510,9 +510,9 @@ export class Parser<T> {
 
     }
 
-    private atom(toks: TokenIterator) {
+    private atom(this._tokens: TokenIterator) {
 
-        switch (toks.current.type) {
+        switch (this._tokens.current.type) {
             case TokenType.T_VARIABLE:
             case '$':
             case TokenType.T_ARRAY:
@@ -522,12 +522,12 @@ export class Parser<T> {
             case TokenType.T_STRING:
             case TokenType.T_NAMESPACE:
             case '(':
-                return this.variable(toks);
+                return this.variable(this._tokens);
             case TokenType.T_STATIC:
-                if (toks.lookahead().type === TokenType.T_FUNCTION) {
-                    return this.closure(toks);
+                if (this._tokens.lookahead().type === TokenType.T_FUNCTION) {
+                    return this.closure(this._tokens);
                 } else {
-                    return this.variable(toks);
+                    return this.variable(this._tokens);
                 }
             case TokenType.T_INC:
             case TokenType.T_DEC:
@@ -543,13 +543,13 @@ export class Parser<T> {
             case TokenType.T_OBJECT_CAST:
             case TokenType.T_BOOL_CAST:
             case TokenType.T_UNSET_CAST:
-                return this.unaryExpression(toks);
+                return this.unaryExpression(this._tokens);
             case TokenType.T_LIST:
-                return this.listAssignment(toks);
+                return this.listAssignment(this._tokens);
             case TokenType.T_CLONE:
-                return this.cloneExpression(toks);
+                return this.cloneExpression(this._tokens);
             case TokenType.T_NEW:
-                return this.newExpression(toks);
+                return this.newExpression(this._tokens);
             case TokenType.T_DNUMBER:
             case TokenType.T_LNUMBER:
             case TokenType.T_LINE:
@@ -560,32 +560,32 @@ export class Parser<T> {
             case TokenType.T_FUNC_C:
             case TokenType.T_NS_C:
             case TokenType.T_CLASS_C:
-                return toks.current;
+                return this._tokens.current;
             case TokenType.T_START_HEREDOC:
-                return this.heredoc(toks);
+                return this.heredoc(this._tokens);
             case '"':
-                return this.doubleQuotesExpression(toks);
+                return this.doubleQuotesExpression(this._tokens);
             case '`':
-                return this.backticksExpression(toks);
+                return this.backticksExpression(this._tokens);
             case TokenType.T_PRINT:
-                return this.printExpression(toks);
+                return this.printExpression(this._tokens);
             case TokenType.T_YIELD:
-                return this.yieldExpression(toks);
+                return this.yieldExpression(this._tokens);
             case TokenType.T_YIELD_FROM:
-                return this.yieldFromExpression(toks);
+                return this.yieldFromExpression(this._tokens);
             case TokenType.T_FUNCTION:
-                return this.closure(toks);
+                return this.closure(this._tokens);
             case TokenType.T_INCLUDE:
             case TokenType.T_INCLUDE_ONCE:
             case TokenType.T_REQUIRE:
             case TokenType.T_REQUIRE_ONCE:
-                return this.includeExpression(toks);
+                return this.includeExpression(this._tokens);
             case TokenType.T_EVAL:
-                return this.evalExpression(toks);
+                return this.evalExpression(this._tokens);
             case TokenType.T_EMPTY:
-                return this.emptyExpression(toks);
+                return this.emptyExpression(this._tokens);
             case TokenType.T_ISSET:
-                return this.issetExpression(toks);
+                return this.issetExpression(this._tokens);
             default:
                 //error
                 break;
@@ -593,98 +593,98 @@ export class Parser<T> {
 
     }
 
-    private issetExpression(toks: TokenIterator) {
+    private issetExpression(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
+        let children: (T | Token)[] = [this._tokens.current];
 
-        if (toks.next().type !== '(') {
+        if (this._tokens.next().type !== '(') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
 
         while (true) {
 
-            children.push(this.expression(toks));
-            if (toks.current.type !== ',') {
+            children.push(this.expression(this._tokens));
+            if (this._tokens.current.type !== ',') {
                 break;
             }
 
-            children.push(toks.current);
+            children.push(this._tokens.current);
         }
 
-        if (toks.current.type !== ')') {
+        if (this._tokens.current.type !== ')') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.Isset, children);
 
     }
 
-    private emptyExpression(toks: TokenIterator) {
+    private emptyExpression(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
+        let children: (T | Token)[] = [this._tokens.current];
 
-        if (toks.next().type !== '(') {
+        if (this._tokens.next().type !== '(') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
-        children.push(this.expression(toks));
+        children.push(this._tokens.current);
+        this._tokens.next();
+        children.push(this.expression(this._tokens));
 
-        if (toks.current.type !== ')') {
+        if (this._tokens.current.type !== ')') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.Empty, children);
 
     }
 
-    private evalExpression(toks: TokenIterator) {
+    private evalExpression(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
+        let children: (T | Token)[] = [this._tokens.current];
 
-        if (toks.next().type !== '(') {
+        if (this._tokens.next().type !== '(') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
-        children.push(this.expression(toks));
+        children.push(this._tokens.current);
+        this._tokens.next();
+        children.push(this.expression(this._tokens));
 
-        if (toks.current.type !== ')') {
+        if (this._tokens.current.type !== ')') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.Eval, children);
 
     }
 
-    private includeExpression(toks: TokenIterator) {
+    private includeExpression(this._tokens: TokenIterator) {
 
-        return this.keywordExpression(NodeType.Include, toks);
-
-    }
-
-    private yieldFromExpression(toks: TokenIterator) {
-
-        return this.keywordExpression(NodeType.YieldFrom, toks);
+        return this.keywordExpression(NodeType.Include, this._tokens);
 
     }
 
-    private keywordExpression(nodeType: NodeType, toks: TokenIterator) {
+    private yieldFromExpression(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        toks.next();
-        children.push(this.expression(toks));
+        return this.keywordExpression(NodeType.YieldFrom, this._tokens);
+
+    }
+
+    private keywordExpression(nodeType: NodeType, this._tokens: TokenIterator) {
+
+        let children: (T | Token)[] = [this._tokens.current];
+        this._tokens.next();
+        children.push(this.expression(this._tokens));
         return this._nodeFactory(nodeType, children);
     }
 
@@ -692,88 +692,88 @@ export class Parser<T> {
 
     }
 
-    private yieldExpression(toks: TokenIterator) {
+    private yieldExpression(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
+        let children: (T | Token)[] = [this._tokens.current];
 
-        if (!this.isExpressionStartToken(toks.next())) {
+        if (!this.isExpressionStartToken(this._tokens.next())) {
             return this._nodeFactory(NodeType.Yield, children);
         }
 
-        children.push(this.expression(toks));
+        children.push(this.expression(this._tokens));
 
-        if (toks.current.type !== TokenType.T_DOUBLE_ARROW) {
+        if (this._tokens.current.type !== TokenType.T_DOUBLE_ARROW) {
             return this._nodeFactory(NodeType.Yield, children);
         }
 
-        children.push(toks.current);
-        toks.next();
-        children.push(this.expression(toks));
+        children.push(this._tokens.current);
+        this._tokens.next();
+        children.push(this.expression(this._tokens));
         return this._nodeFactory(NodeType.Yield, children);
 
     }
 
-    private printExpression(toks: TokenIterator) {
+    private printExpression(this._tokens: TokenIterator) {
 
-        return this.keywordExpression(NodeType.Print, toks);
+        return this.keywordExpression(NodeType.Print, this._tokens);
 
     }
 
-    private doubleQuotesExpression(toks: TokenIterator) {
+    private doubleQuotesExpression(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        toks.next();
-        children.push(this.encapsulatedVariableList(toks));
-        if (toks.current.type !== '"') {
+        let children: (T | Token)[] = [this._tokens.current];
+        this._tokens.next();
+        children.push(this.encapsulatedVariableList(this._tokens));
+        if (this._tokens.current.type !== '"') {
             //error
         }
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.DoubleQuotes, children);
 
     }
 
-    private backticksExpression(toks: TokenIterator) {
+    private backticksExpression(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        toks.next();
-        children.push(this.encapsulatedVariableList(toks));
+        let children: (T | Token)[] = [this._tokens.current];
+        this._tokens.next();
+        children.push(this.encapsulatedVariableList(this._tokens));
 
-        if (toks.current.type !== '`') {
+        if (this._tokens.current.type !== '`') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.BackticksExpression, children);
     }
 
-    private encapsulatedVariableList(toks: TokenIterator) {
+    private encapsulatedVariableList(this._tokens: TokenIterator) {
 
         let children: (T | Token)[] = [];
 
         while (true) {
 
-            switch (toks.current.type) {
+            switch (this._tokens.current.type) {
                 case TokenType.T_ENCAPSED_AND_WHITESPACE:
-                    children.push(toks.current);
-                    toks.next();
+                    children.push(this._tokens.current);
+                    this._tokens.next();
                     continue;
                 case TokenType.T_VARIABLE:
-                    if (toks.lookahead().type === '[') {
-                        children.push(this.encapsulatedDimension(toks));
-                    } else if (toks.lookahead().type === TokenType.T_OBJECT_OPERATOR) {
-                        children.push(this.encapsulatedProperty(toks));
+                    if (this._tokens.lookahead().type === '[') {
+                        children.push(this.encapsulatedDimension(this._tokens));
+                    } else if (this._tokens.lookahead().type === TokenType.T_OBJECT_OPERATOR) {
+                        children.push(this.encapsulatedProperty(this._tokens));
                     } else {
-                        children.push(this._nodeFactory(NodeType.EncapsulatedVariable, [this._nodeFactory(NodeType.Variable, [toks.current])]));
-                        toks.next();
+                        children.push(this._nodeFactory(NodeType.EncapsulatedVariable, [this._nodeFactory(NodeType.Variable, [this._tokens.current])]));
+                        this._tokens.next();
                     }
                     continue;
                 case TokenType.T_DOLLAR_OPEN_CURLY_BRACES:
-                    children.push(this.dollarCurlyOpenEncapsulatedVariable(toks));
+                    children.push(this.dollarCurlyOpenEncapsulatedVariable(this._tokens));
                     continue;
                 case TokenType.T_CURLY_OPEN:
-                    children.push(this.curlyOpenEncapsulatedVariable(toks));
+                    children.push(this.curlyOpenEncapsulatedVariable(this._tokens));
                     continue;
                 default:
                     break;
@@ -787,71 +787,71 @@ export class Parser<T> {
 
     }
 
-    private curlyOpenEncapsulatedVariable(toks: TokenIterator) {
+    private curlyOpenEncapsulatedVariable(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current, this.variable(toks)];
+        let children: (T | Token)[] = [this._tokens.current, this.variable(this._tokens)];
 
-        if (toks.current.type !== '}') {
+        if (this._tokens.current.type !== '}') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.EncapsulatedVariable, children);
 
     }
 
-    private dollarCurlyOpenEncapsulatedVariable(toks: TokenIterator) {
+    private dollarCurlyOpenEncapsulatedVariable(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
+        let children: (T | Token)[] = [this._tokens.current];
 
-        if (toks.next().type === TokenType.T_STRING_VARNAME) {
+        if (this._tokens.next().type === TokenType.T_STRING_VARNAME) {
 
-            if (toks.lookahead().type === '[') {
+            if (this._tokens.lookahead().type === '[') {
 
-                let dimChildren: (T | Token)[] = [this._nodeFactory(NodeType.Variable, [toks.current]), toks.next(), this.expression(toks)];
-                if (toks.current.type !== ']') {
+                let dimChildren: (T | Token)[] = [this._nodeFactory(NodeType.Variable, [this._tokens.current]), this._tokens.next(), this.expression(this._tokens)];
+                if (this._tokens.current.type !== ']') {
                     //error
                 }
-                dimChildren.push(toks.current);
+                dimChildren.push(this._tokens.current);
                 children.push(this._nodeFactory(NodeType.Dimension, dimChildren));
             } else {
-                children.push(this._nodeFactory(NodeType.Variable, [toks.current]));
+                children.push(this._nodeFactory(NodeType.Variable, [this._tokens.current]));
             }
 
-            toks.next();
+            this._tokens.next();
 
         } else {
-            children.push(this.expression(toks));
+            children.push(this.expression(this._tokens));
         }
 
-        if (toks.current.type !== '}') {
+        if (this._tokens.current.type !== '}') {
             //error
         }
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.EncapsulatedVariable, children);
 
     }
 
-    private encapsulatedDimension(toks: TokenIterator) {
+    private encapsulatedDimension(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [this._nodeFactory(NodeType.Variable, [toks.current]), toks.next()];
+        let children: (T | Token)[] = [this._nodeFactory(NodeType.Variable, [this._tokens.current]), this._tokens.next()];
 
-        switch (toks.next().type) {
+        switch (this._tokens.next().type) {
             case TokenType.T_STRING:
             case TokenType.T_NUM_STRING:
-                children.push(toks.current);
+                children.push(this._tokens.current);
                 break;
             case TokenType.T_VARIABLE:
-                children.push(this._nodeFactory(NodeType.Variable, [toks.current]));
+                children.push(this._nodeFactory(NodeType.Variable, [this._tokens.current]));
                 break;
             case '-':
-                let unaryNodeChildren = [toks.current];
-                if (toks.next().type !== TokenType.T_NUM_STRING) {
+                let unaryNodeChildren = [this._tokens.current];
+                if (this._tokens.next().type !== TokenType.T_NUM_STRING) {
                     //error
                 }
-                unaryNodeChildren.push(toks.current);
+                unaryNodeChildren.push(this._tokens.current);
                 children.push(this._nodeFactory(NodeType.UnaryOp, unaryNodeChildren));
                 break;
             default:
@@ -859,75 +859,75 @@ export class Parser<T> {
                 break;
         }
 
-        if (toks.next().type !== ']') {
+        if (this._tokens.next().type !== ']') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.EncapsulatedVariable, [this._nodeFactory(NodeType.Dimension, children)]);
 
     }
 
-    private encapsulatedProperty(toks: TokenIterator) {
-        let children: (T | Token)[] = [this._nodeFactory(NodeType.Variable, [toks.current]), toks.next()];
+    private encapsulatedProperty(this._tokens: TokenIterator) {
+        let children: (T | Token)[] = [this._nodeFactory(NodeType.Variable, [this._tokens.current]), this._tokens.next()];
 
-        if (toks.next().type !== TokenType.T_STRING) {
+        if (this._tokens.next().type !== TokenType.T_STRING) {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.EncapsulatedVariable, [this._nodeFactory(NodeType.Property, children)]);
     }
 
-    private heredoc(toks: TokenIterator) {
+    private heredoc(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        toks.next();
-        children.push(this.encapsulatedVariableList(toks));
-        if (toks.current.type !== TokenType.T_END_HEREDOC) {
+        let children: (T | Token)[] = [this._tokens.current];
+        this._tokens.next();
+        children.push(this.encapsulatedVariableList(this._tokens));
+        if (this._tokens.current.type !== TokenType.T_END_HEREDOC) {
             //error
         }
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.Heredoc, children);
 
     }
 
-    private anonymousClassDeclaration(toks: TokenIterator) {
+    private anonymousClassDeclaration(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        let doc = toks.lastDocComment;
-        let t = toks.next();
+        let children: (T | Token)[] = [this._tokens.current];
+        let doc = this._tokens.lastDocComment;
+        let t = this._tokens.next();
 
         if (doc) {
             children.unshift(doc);
         }
 
         if (t.type === '(') {
-            children.push(this.argumentList(toks));
-            t = toks.current;
+            children.push(this.argumentList(this._tokens));
+            t = this._tokens.current;
         }
 
         if (t.type === TokenType.T_EXTENDS) {
-            children.push(this.extendsClass(toks));
-            t = toks.current;
+            children.push(this.extendsClass(this._tokens));
+            t = this._tokens.current;
         }
 
         if (t.type === TokenType.T_IMPLEMENTS) {
-            children.push(this.implementsInterfaces(toks));
-            t = toks.current;
+            children.push(this.implementsInterfaces(this._tokens));
+            t = this._tokens.current;
         }
 
-        children.push(this.classStatementList(toks));
+        children.push(this.classStatementList(this._tokens));
         return this._nodeFactory(NodeType.AnonymousClass, children);
 
     }
 
-    private classStatementList(toks: TokenIterator) {
+    private classStatementList(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
         let children: (T | Token)[] = [];
 
         if (t.type !== '{') {
@@ -935,7 +935,7 @@ export class Parser<T> {
         }
 
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
         while (true) {
 
@@ -943,8 +943,8 @@ export class Parser<T> {
                 break;
             }
 
-            children.push(this.classStatement(toks));
-            t = toks.current;
+            children.push(this.classStatement(this._tokens));
+            t = this._tokens.current;
         }
 
         if (t.type !== '}') {
@@ -952,15 +952,15 @@ export class Parser<T> {
         }
 
         children.push(t);
-        toks.next();
+        this._tokens.next();
 
         return this._nodeFactory(NodeType.ClassStatementList, children);
 
     }
 
-    private classStatement(toks: TokenIterator) {
+    private classStatement(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
 
         switch (t.type) {
             case TokenType.T_PUBLIC:
@@ -969,26 +969,26 @@ export class Parser<T> {
             case TokenType.T_STATIC:
             case TokenType.T_ABSTRACT:
             case TokenType.T_FINAL:
-                let modifierList = this.memberModifierList(toks);
-                t = toks.current;
+                let modifierList = this.memberModifierList(this._tokens);
+                t = this._tokens.current;
                 if (t.type === TokenType.T_VARIABLE) {
-                    return this.propertyDeclarationList(toks, modifierList);
+                    return this.propertyDeclarationList(this._tokens, modifierList);
                 } else if (t.type === TokenType.T_FUNCTION) {
-                    return this.methodDeclaration(toks, modifierList);
+                    return this.methodDeclaration(this._tokens, modifierList);
                 } else if (t.type === TokenType.T_CONST) {
-                    return this.classConstantDeclarationList(toks, modifierList);
+                    return this.classConstantDeclarationList(this._tokens, modifierList);
                 } else {
                     //error
                 }
             case TokenType.T_FUNCTION:
-                return this.methodDeclaration(toks);
+                return this.methodDeclaration(this._tokens);
             case TokenType.T_VAR:
-                toks.next();
-                return this.propertyDeclarationList(toks, t);
+                this._tokens.next();
+                return this.propertyDeclarationList(this._tokens, t);
             case TokenType.T_CONST:
-                return this.classConstantDeclarationList(toks);
+                return this.classConstantDeclarationList(this._tokens);
             case TokenType.T_USE:
-                return this.useTrait(toks);
+                return this.useTrait(this._tokens);
             default:
                 //error
                 break;
@@ -997,17 +997,17 @@ export class Parser<T> {
 
     }
 
-    private useTrait(toks: TokenIterator) {
+    private useTrait(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        let t = toks.next();
+        let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
-        children.push(this.nameList(toks));
-        t = toks.current;
+        children.push(this.nameList(this._tokens));
+        t = this._tokens.current;
 
         if (t.type === ';') {
             children.push(t);
-            toks.next();
+            this._tokens.next();
             return this._nodeFactory(NodeType.UseTrait, children);
         }
 
@@ -1015,22 +1015,22 @@ export class Parser<T> {
             //error
         }
 
-        children.push(this.traitAdaptationList(toks));
+        children.push(this.traitAdaptationList(this._tokens));
         return this._nodeFactory(NodeType.TraitAdaptationList, children);
 
     }
 
-    private traitAdaptationList(toks: TokenIterator) {
+    private traitAdaptationList(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        let t = toks.next();
+        let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
         while (true) {
             if (t.type === '}' || t.type === TokenType.T_EOF) {
                 break;
             }
-            children.push(this.traitAdaptation(toks));
-            t = toks.current;
+            children.push(this.traitAdaptation(this._tokens));
+            t = this._tokens.current;
         }
 
         if (t.type !== '}') {
@@ -1038,41 +1038,41 @@ export class Parser<T> {
         }
 
         children.push(t);
-        toks.next();
+        this._tokens.next();
         return this._nodeFactory(NodeType.TraitAdaptationList, children);
     }
 
-    private traitAdaptation(toks: TokenIterator) {
+    private traitAdaptation(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
         let methodRefOrIdent: T | Token;
-        let t2 = toks.lookahead();
+        let t2 = this._tokens.lookahead();
 
         if (t.type === TokenType.T_NAMESPACE ||
             t.type === TokenType.T_NS_SEPARATOR ||
             (t.type === TokenType.T_STRING &&
                 (t2.type === TokenType.T_PAAMAYIM_NEKUDOTAYIM || t2.type === TokenType.T_NS_SEPARATOR))) {
 
-            methodRefOrIdent = this.methodReference(toks);
+            methodRefOrIdent = this.methodReference(this._tokens);
 
             if (t.type === TokenType.T_INSTEADOF) {
-                return this.traitPrecedence(toks, methodRefOrIdent);
+                return this.traitPrecedence(this._tokens, methodRefOrIdent);
             }
 
         } else if (t.type === TokenType.T_STRING || this.isSemiReserved(t)) {
             methodRefOrIdent = t;
-            toks.next();
+            this._tokens.next();
         } else {
             //error
         }
 
-        return this.traitAlias(toks, methodRefOrIdent);
+        return this.traitAlias(this._tokens, methodRefOrIdent);
 
 
     }
 
-    private traitAlias(toks: TokenIterator, methodReferenceOrIdentifier: T | Token) {
-        let t = toks.current;
+    private traitAlias(this._tokens: TokenIterator, methodReferenceOrIdentifier: T | Token) {
+        let t = this._tokens.current;
         let children: (T | Token)[] = [methodReferenceOrIdentifier];
 
         if (t.type !== TokenType.T_AS) {
@@ -1080,17 +1080,17 @@ export class Parser<T> {
         }
 
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
         if (t.type === TokenType.T_STRING || this.isReserved(t)) {
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
         } else if (t.type === TokenType.T_PUBLIC || t.type === TokenType.T_PROTECTED || t.type === TokenType.T_PRIVATE) {
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
             if (t.type === TokenType.T_STRING || this.isSemiReserved(t)) {
                 children.push(t);
-                t = toks.next();
+                t = this._tokens.next();
             }
         } else {
             //error
@@ -1101,68 +1101,68 @@ export class Parser<T> {
         }
 
         children.push(t);
-        toks.next();
+        this._tokens.next();
         return this._nodeFactory(NodeType.TraitAlias, children);
     }
 
-    private traitPrecedence(toks: TokenIterator, methodReference: T) {
+    private traitPrecedence(this._tokens: TokenIterator, methodReference: T) {
 
-        let children: (T | Token)[] = [methodReference, toks.current];
-        toks.next();
-        children.push(this.nameList(toks));
-        let t = toks.current;
+        let children: (T | Token)[] = [methodReference, this._tokens.current];
+        this._tokens.next();
+        children.push(this.nameList(this._tokens));
+        let t = this._tokens.current;
 
         if (t.type !== ';') {
             //error
         }
 
         children.push(t);
-        toks.next();
+        this._tokens.next();
         return this._nodeFactory(NodeType.TraitPrecendence, children);
 
     }
 
-    private methodReference(toks: TokenIterator) {
+    private methodReference(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
         let children: (T | Token)[] = [];
 
-        children.push(this.name(toks));
-        t = toks.current;
+        children.push(this.name(this._tokens));
+        t = this._tokens.current;
 
         if (t.type !== TokenType.T_PAAMAYIM_NEKUDOTAYIM) {
             //error
         }
 
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
         if (t.type !== TokenType.T_STRING || !this.isSemiReserved(t)) {
             //error
         }
 
         children.push(t);
-        toks.next();
+        this._tokens.next();
         return this._nodeFactory(NodeType.MethodReference, children);
 
     }
 
-    private methodDeclaration(toks: TokenIterator, modifiers: T = null) {
+    private methodDeclaration(this._tokens: TokenIterator, modifiers: T = null) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
         let children: (T | Token)[] = [];
-        let doc = toks.lastDocComment;
+        let doc = this._tokens.lastDocComment;
 
         if (modifiers) {
             children.push(modifiers);
         }
 
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
         if (t.type === '&') {
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
         }
 
         if (t.type !== TokenType.T_STRING && !this.isSemiReserved(t)) {
@@ -1170,23 +1170,23 @@ export class Parser<T> {
         }
 
         children.push(t);
-        t = toks.next();
-        children.push(this.parameterList(toks));
-        t = toks.current;
+        t = this._tokens.next();
+        children.push(this.parameterList(this._tokens));
+        t = this._tokens.current;
 
         if (t.type === ':') {
-            children.push(this.returnType(toks));
-            t = toks.current;
+            children.push(this.returnType(this._tokens));
+            t = this._tokens.current;
         }
 
-        children.push(this.parenthesisedInnerStatementList(toks));
+        children.push(this.parenthesisedInnerStatementList(this._tokens));
         return this._nodeFactory(NodeType.MethodDeclaration, children);
 
     }
 
-    private parenthesisedInnerStatementList(toks: TokenIterator) {
+    private parenthesisedInnerStatementList(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
         let children: (T | Token)[] = [];
 
         if (t.type !== '{') {
@@ -1194,8 +1194,8 @@ export class Parser<T> {
         }
 
         children.push(t);
-        children.push(this.innerStatementList(toks, [TokenType.T_EOF, '}']));
-        t = toks.current;
+        children.push(this.innerStatementList(this._tokens, [TokenType.T_EOF, '}']));
+        t = this._tokens.current;
 
         if (t.type !== '}') {
             //error
@@ -1206,98 +1206,98 @@ export class Parser<T> {
 
     }
 
-    private innerStatementList(toks: TokenIterator, stopTokenTypeArray: (TokenType | string)[]) {
+    private innerStatementList(this._tokens: TokenIterator, stopTokenTypeArray: (TokenType | string)[]) {
 
         let children: (T | Token)[] = [];
 
         while (true) {
-            if (stopTokenTypeArray.indexOf(toks.current.type) !== -1) {
+            if (stopTokenTypeArray.indexOf(this._tokens.current.type) !== -1) {
                 break;
             }
-            children.push(this.innerStatement(toks));
+            children.push(this.innerStatement(this._tokens));
         }
 
         return this._nodeFactory(NodeType.InnerStatementList, children);
     }
 
-    private innerStatement(toks: TokenIterator) {
+    private innerStatement(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
 
         switch (t.type) {
             case TokenType.T_FUNCTION:
-                return this.functionDeclaration(toks);
+                return this.functionDeclaration(this._tokens);
             case TokenType.T_ABSTRACT:
             case TokenType.T_FINAL:
             case TokenType.T_CLASS:
-                return this.classDeclaration(toks);
+                return this.classDeclaration(this._tokens);
             case TokenType.T_TRAIT:
-                return this.traitDeclaration(toks);
+                return this.traitDeclaration(this._tokens);
             case TokenType.T_INTERFACE:
-                return this.interfaceDeclaration(toks);
+                return this.interfaceDeclaration(this._tokens);
             default:
-                return this.statement(toks);
+                return this.statement(this._tokens);
         }
 
     }
 
-    private interfaceDeclaration(toks: TokenIterator) {
+    private interfaceDeclaration(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        let doc = toks.lastDocComment;
-        let t = toks.next();
+        let children: (T | Token)[] = [this._tokens.current];
+        let doc = this._tokens.lastDocComment;
+        let t = this._tokens.next();
 
         if (t.type !== TokenType.T_STRING) {
             //error
         }
 
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
         if (t.type === TokenType.T_EXTENDS) {
-            children.push(this.extendsInterface(toks));
+            children.push(this.extendsInterface(this._tokens));
         }
 
-        children.push(this.classStatementList(toks));
+        children.push(this.classStatementList(this._tokens));
         return this._nodeFactory(NodeType.InterfaceDeclaration, children, doc);
 
     }
 
-    private extendsInterface(toks: TokenIterator) {
+    private extendsInterface(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        toks.next();
-        children.push(this.nameList(toks));
+        let children: (T | Token)[] = [this._tokens.current];
+        this._tokens.next();
+        children.push(this.nameList(this._tokens));
         return this._nodeFactory(NodeType.InterfaceExtends, children);
 
     }
 
-    private traitDeclaration(toks: TokenIterator) {
+    private traitDeclaration(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        let doc = toks.lastDocComment;
-        let t = toks.next();
+        let children: (T | Token)[] = [this._tokens.current];
+        let doc = this._tokens.lastDocComment;
+        let t = this._tokens.next();
 
         if (t.type !== TokenType.T_STRING) {
             //error
         }
 
         children.push(t);
-        toks.next();
-        children.push(this.classStatementList(toks));
+        this._tokens.next();
+        children.push(this.classStatementList(this._tokens));
         return this._nodeFactory(NodeType.TraitDeclaration, children, doc);
 
     }
 
-    private functionDeclaration(toks: TokenIterator) {
+    private functionDeclaration(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        let doc = toks.lastDocComment;
-        let t = toks.next();
+        let children: (T | Token)[] = [this._tokens.current];
+        let doc = this._tokens.lastDocComment;
+        let t = this._tokens.next();
 
         if (t.type === '&') {
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
         }
 
         if (t.type !== TokenType.T_STRING) {
@@ -1305,145 +1305,145 @@ export class Parser<T> {
         }
 
         children.push(t);
-        children.push(this.parameterList(toks));
-        t = toks.current;
+        children.push(this.parameterList(this._tokens));
+        t = this._tokens.current;
 
         if (t.type === ':') {
-            children.push(this.returnType(toks));
-            t = toks.current;
+            children.push(this.returnType(this._tokens));
+            t = this._tokens.current;
         }
 
-        children.push(this.parenthesisedInnerStatementList(toks));
+        children.push(this.parenthesisedInnerStatementList(this._tokens));
         return this._nodeFactory(NodeType.FunctionDeclaration, children);
 
     }
 
-    private classDeclaration(toks: TokenIterator) {
+    private classDeclaration(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
         let children: (T | Token)[] = [];
-        let doc = toks.lastDocComment;
+        let doc = this._tokens.lastDocComment;
 
         if (t.type === TokenType.T_ABSTRACT || t.type === TokenType.T_FINAL) {
-            children.push(this.classModifiers(toks));
+            children.push(this.classModifiers(this._tokens));
         }
 
-        t = toks.current;
+        t = this._tokens.current;
         if (t.type !== TokenType.T_CLASS) {
             //error
         }
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
         if (t.type !== TokenType.T_STRING) {
             //error
         }
 
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
         if (t.type === TokenType.T_EXTENDS) {
-            children.push(this.extendsClass(toks));
-            t = toks.current;
+            children.push(this.extendsClass(this._tokens));
+            t = this._tokens.current;
         }
 
         if (t.type === TokenType.T_IMPLEMENTS) {
-            children.push(this.implementsInterfaces(toks));
-            t = toks.current;
+            children.push(this.implementsInterfaces(this._tokens));
+            t = this._tokens.current;
         }
 
-        children.push(this.classStatementList(toks));
+        children.push(this.classStatementList(this._tokens));
         return this._nodeFactory(NodeType.ClassDeclaration, children, doc);
 
     }
 
-    private classModifiers(toks: TokenIterator) {
+    private classModifiers(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        let t = toks.next();
+        let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
         while (true) {
             if (t.type !== TokenType.T_ABSTRACT && t.type !== TokenType.T_FINAL) {
                 break;
             }
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
         }
 
         return this._nodeFactory(NodeType.ClassModifiers, children);
 
     }
 
-    private statement(toks: TokenIterator) {
+    private statement(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
 
         switch (t.type) {
             case '{':
                 let children: (T | Token)[] = [t];
-                toks.next();
-                children.push(this.innerStatementList(toks, [TokenType.T_EOF, '}']));
-                t = toks.current;
+                this._tokens.next();
+                children.push(this.innerStatementList(this._tokens, [TokenType.T_EOF, '}']));
+                t = this._tokens.current;
 
                 if (t.type !== '}') {
                     //error
                 }
 
                 children.push(t);
-                toks.next();
+                this._tokens.next();
                 return this._nodeFactory(NodeType.Statement, children);
             case TokenType.T_IF:
-                return this.ifStatementList(toks);
+                return this.ifStatementList(this._tokens);
             case TokenType.T_WHILE:
-                return this.whileStatement(toks);
+                return this.whileStatement(this._tokens);
             case TokenType.T_DO:
-                return this.doWhileStatement(toks);
+                return this.doWhileStatement(this._tokens);
             case TokenType.T_FOR:
-                return this.forStatement(toks);
+                return this.forStatement(this._tokens);
             case TokenType.T_SWITCH:
-                return this.switchStatement(toks);
+                return this.switchStatement(this._tokens);
             case TokenType.T_BREAK:
-                return this.keywordOptionalExpressionStatement(toks, NodeType.BreakStatement);
+                return this.keywordOptionalExpressionStatement(this._tokens, NodeType.BreakStatement);
             case TokenType.T_CONTINUE:
-                return this.keywordOptionalExpressionStatement(toks, NodeType.ContinueStatement);
+                return this.keywordOptionalExpressionStatement(this._tokens, NodeType.ContinueStatement);
             case TokenType.T_RETURN:
-                return this.keywordOptionalExpressionStatement(toks, NodeType.ReturnStatement);
+                return this.keywordOptionalExpressionStatement(this._tokens, NodeType.ReturnStatement);
             case TokenType.T_GLOBAL:
-                return this.globalVarList(toks);
+                return this.globalVarList(this._tokens);
             case TokenType.T_STATIC:
-                return this.staticVarList(toks);
+                return this.staticVarList(this._tokens);
             case TokenType.T_ECHO:
-                return this.echoExpressionList(toks);
+                return this.echoExpressionList(this._tokens);
             case TokenType.T_INLINE_HTML:
                 return t;
             case TokenType.T_UNSET:
-                return this.unsetVarList(toks);
+                return this.unsetVarList(this._tokens);
             case TokenType.T_FOREACH:
-                return this.foreachStatement(toks);
+                return this.foreachStatement(this._tokens);
             case TokenType.T_DECLARE:
                 return this.declareStatement();
             case TokenType.T_TRY:
                 return this._tryCatchFinallyStatement();
             case TokenType.T_THROW:
-                return this.throwStatement(toks);
+                return this.throwStatement(this._tokens);
             case TokenType.T_GOTO:
-                return this.gotoStatement(toks);
+                return this.gotoStatement(this._tokens);
             case TokenType.T_STRING:
-                return this.labelStatement(toks);
+                return this.labelStatement(this._tokens);
             case ';':
-                toks.next();
+                this._tokens.next();
                 return this._nodeFactory(NodeType.Statement, [t]);
             default:
                 if (this.isExpressionStartToken(t)) {
-                    let children: (T | Token)[] = [this.expression(toks)];
-                    let t = toks.current;
+                    let children: (T | Token)[] = [this.expression(this._tokens)];
+                    let t = this._tokens.current;
 
                     if (t.type !== ';') {
                         //error
                     }
 
                     children.push(t);
-                    toks.next();
+                    this._tokens.next();
                     return this._nodeFactory(NodeType.Statement, children);
                 } else {
                     //error
@@ -1685,92 +1685,92 @@ export class Parser<T> {
 
     }
 
-    private labelStatement(toks: TokenIterator) {
+    private labelStatement(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        if (!toks.expectNext(':', children)) {
+        let children: (T | Token)[] = [this._tokens.current];
+        if (!this._tokens.expectNext(':', children)) {
             //error
         }
-        toks.next();
+        this._tokens.next();
         return this._nodeFactory(NodeType.LabelStatement, children);
 
     }
 
-    private gotoStatement(toks: TokenIterator) {
+    private gotoStatement(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
+        let children: (T | Token)[] = [this._tokens.current];
 
-        if (!toks.expectNext(TokenType.T_STRING, children)) {
+        if (!this._tokens.expectNext(TokenType.T_STRING, children)) {
             //error
         }
 
-        if (!toks.expectNext(';', children)) {
+        if (!this._tokens.expectNext(';', children)) {
             //error
         }
 
-        toks.next();
+        this._tokens.next();
         return this._nodeFactory(NodeType.GotoStatement, children);
 
     }
 
-    private throwStatement(toks: TokenIterator) {
+    private throwStatement(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        toks.next();
-        children.push(this.expression(toks));
+        let children: (T | Token)[] = [this._tokens.current];
+        this._tokens.next();
+        children.push(this.expression(this._tokens));
 
-        if (!toks.expectCurrent(';', children)) {
+        if (!this._tokens.expectCurrent(';', children)) {
             //error
         }
-        toks.next();
+        this._tokens.next();
 
         return this._nodeFactory(NodeType.ThrowStatement, children);
     }
 
-    private foreachStatement(toks: TokenIterator) {
+    private foreachStatement(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
+        let children: (T | Token)[] = [this._tokens.current];
 
-        if (!toks.expectNext('(', children)) {
+        if (!this._tokens.expectNext('(', children)) {
             //error
         }
-        toks.next();
-        children.push(this.expression(toks));
-        if (!toks.expectCurrent(TokenType.T_AS, children)) {
+        this._tokens.next();
+        children.push(this.expression(this._tokens));
+        if (!this._tokens.expectCurrent(TokenType.T_AS, children)) {
             //error
         }
-        toks.next();
-        children.push(this.foreachVariable(toks));
+        this._tokens.next();
+        children.push(this.foreachVariable(this._tokens));
 
-        if (toks.current.type === TokenType.T_DOUBLE_ARROW) {
-            children.push(toks.current);
-            toks.next();
-            children.push(this.foreachVariable(toks));
+        if (this._tokens.current.type === TokenType.T_DOUBLE_ARROW) {
+            children.push(this._tokens.current);
+            this._tokens.next();
+            children.push(this.foreachVariable(this._tokens));
         }
 
-        if (!toks.expectCurrent(')', children)) {
+        if (!this._tokens.expectCurrent(')', children)) {
             //error
         }
 
 
-        if (toks.next().type === ':') {
+        if (this._tokens.next().type === ':') {
 
-            children.push(toks.current);
-            toks.next();
-            children.push(this.innerStatementList(toks, [TokenType.T_ENDFOREACH]));
+            children.push(this._tokens.current);
+            this._tokens.next();
+            children.push(this.innerStatementList(this._tokens, [TokenType.T_ENDFOREACH]));
 
-            if (!toks.expectCurrent(TokenType.T_ENDFOREACH, children)) {
+            if (!this._tokens.expectCurrent(TokenType.T_ENDFOREACH, children)) {
                 //error
             }
 
-            if (!toks.expectNext(';', children)) {
+            if (!this._tokens.expectNext(';', children)) {
                 //error
             }
 
-            toks.next();
+            this._tokens.next();
 
-        } else if (this.isStatementToken(toks.current)) {
-            children.push(this.statement(toks));
+        } else if (this.isStatementToken(this._tokens.current)) {
+            children.push(this.statement(this._tokens));
         } else {
             //error
         }
@@ -1780,21 +1780,21 @@ export class Parser<T> {
 
     }
 
-    private foreachVariable(toks: TokenIterator) {
+    private foreachVariable(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
         switch (t.type) {
 
             case '&':
-                toks.next();
-                return this._nodeFactory(NodeType.UnaryOp, [t, this.variable(toks)]);
+                this._tokens.next();
+                return this._nodeFactory(NodeType.UnaryOp, [t, this.variable(this._tokens)]);
             case TokenType.T_LIST:
-                return this.listAssignment(toks);
+                return this.listAssignment(this._tokens);
             case '[':
-                return this.shortArray(toks);
+                return this.shortArray(this._tokens);
             default:
                 if (this.isVariableStartToken(t)) {
-                    return this.variable(toks);
+                    return this.variable(this._tokens);
                 } else {
                     //error
                 }
@@ -1807,30 +1807,30 @@ export class Parser<T> {
 
     }
 
-    private unsetVarList(toks: TokenIterator) {
+    private unsetVarList(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
+        let children: (T | Token)[] = [this._tokens.current];
 
-        if (!toks.expectNext('(', <Token[]>children)) {
+        if (!this._tokens.expectNext('(', <Token[]>children)) {
             //error
         }
 
         while (true) {
 
-            children.push(this.variable(toks));
-            if (toks.current.type !== ',') {
+            children.push(this.variable(this._tokens));
+            if (this._tokens.current.type !== ',') {
                 break;
             }
-            children.push(toks.current);
-            toks.next();
+            children.push(this._tokens.current);
+            this._tokens.next();
 
         }
 
-        if (!toks.expectCurrent(')', children)) {
+        if (!this._tokens.expectCurrent(')', children)) {
             //error
         }
 
-        if (!toks.expectNext(';', children)) {
+        if (!this._tokens.expectNext(';', children)) {
             //error
         }
 
@@ -1838,53 +1838,53 @@ export class Parser<T> {
 
     }
 
-    private echoExpressionList(toks: TokenIterator) {
+    private echoExpressionList(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        let t = toks.next();
+        let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
         while (true) {
 
-            children.push(this.expression(toks));
-            if (toks.current.type !== ',') {
+            children.push(this.expression(this._tokens));
+            if (this._tokens.current.type !== ',') {
                 break;
             }
-            children.push(toks.current);
-            toks.next();
+            children.push(this._tokens.current);
+            this._tokens.next();
 
         }
 
-        if (toks.current.type !== ';') {
+        if (this._tokens.current.type !== ';') {
             //error
         }
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
 
         return this._nodeFactory(NodeType.EchoStatement, children);
 
     }
 
-    private staticVarList(toks: TokenIterator) {
+    private staticVarList(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        let t = toks.next();
+        let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
         while (true) {
 
-            children.push(this.staticVariable(toks));
-            if (toks.current.type !== ',') {
+            children.push(this.staticVariable(this._tokens));
+            if (this._tokens.current.type !== ',') {
                 break;
             }
-            children.push(toks.current);
-            toks.next();
+            children.push(this._tokens.current);
+            this._tokens.next();
 
         }
 
-        if (toks.current.type !== ';') {
+        if (this._tokens.current.type !== ';') {
             //error
         }
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
 
         return this._nodeFactory(NodeType.StaticVariableListStatement, children);
 
@@ -1892,55 +1892,55 @@ export class Parser<T> {
 
 
 
-    private globalVarList(toks: TokenIterator) {
+    private globalVarList(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        let t = toks.next();
+        let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
         while (true) {
 
-            children.push(this.simpleVariable(toks));
-            if (toks.current.type !== ',') {
+            children.push(this.simpleVariable(this._tokens));
+            if (this._tokens.current.type !== ',') {
                 break;
             }
-            children.push(toks.current);
-            toks.next();
+            children.push(this._tokens.current);
+            this._tokens.next();
 
         }
 
-        if (toks.current.type !== ';') {
+        if (this._tokens.current.type !== ';') {
             //error
         }
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
 
         return this._nodeFactory(NodeType.GlobalVariableListStatement, children);
 
     }
 
-    private staticVariable(toks: TokenIterator) {
+    private staticVariable(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
+        let children: (T | Token)[] = [this._tokens.current];
 
-        if (toks.next().type !== '=') {
+        if (this._tokens.next().type !== '=') {
             return this._nodeFactory(NodeType.StaticVariable, children);
         }
 
-        children.push(toks.current);
-        toks.next();
-        children.push(this.expression(toks));
+        children.push(this._tokens.current);
+        this._tokens.next();
+        children.push(this.expression(this._tokens));
         return this._nodeFactory(NodeType.StaticVariable, children);
 
     }
 
-    private keywordOptionalExpressionStatement(toks: TokenIterator, nodeType: NodeType) {
-        let children: (T | Token)[] = [toks.current];
-        let t = toks.current;
+    private keywordOptionalExpressionStatement(this._tokens: TokenIterator, nodeType: NodeType) {
+        let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.current;
 
         if (t.type !== ';' && this.isExpressionStartToken(t)) {
             if (this.isExpressionStartToken(t)) {
-                children.push(this.expression(toks));
-                t = toks.current;
+                children.push(this.expression(this._tokens));
+                t = this._tokens.current;
             } else {
                 //error
             }
@@ -1951,7 +1951,7 @@ export class Parser<T> {
         }
 
         children.push(t);
-        toks.next();
+        this._tokens.next();
         return this._nodeFactory(nodeType, children);
     }
 
@@ -1959,22 +1959,22 @@ export class Parser<T> {
 
     }
 
-    private forStatement(toks: TokenIterator) {
+    private forStatement(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        let t = toks.next();
+        let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
         if (t.type !== '(') {
             //error
         }
 
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
         for (let n = 0; n < 2; ++n) {
             if (t.type !== ';' && this.isExpressionStartToken(t)) {
-                children.push(this.expressionList(toks));
-                t = toks.current;
+                children.push(this.expressionList(this._tokens));
+                t = this._tokens.current;
             }
 
             if (t.type !== ';') {
@@ -1982,12 +1982,12 @@ export class Parser<T> {
             }
 
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
         }
 
         if (t.type !== ')' && this.isExpressionStartToken(t)) {
-            children.push(this.expression(toks));
-            t = toks.current;
+            children.push(this.expression(this._tokens));
+            t = this._tokens.current;
         }
 
         if (t.type !== ')') {
@@ -1995,25 +1995,25 @@ export class Parser<T> {
         }
 
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
         if (t.type === ':') {
             children.push(t);
-            t = toks.next();
-            children.push(this.innerStatementList(toks, [TokenType.T_ENDFOR]));
-            t = toks.current;
+            t = this._tokens.next();
+            children.push(this.innerStatementList(this._tokens, [TokenType.T_ENDFOR]));
+            t = this._tokens.current;
             if (t.type !== TokenType.T_ENDFOR) {
                 //error
             }
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
             if (t.type !== ';') {
                 //error
             }
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
         } else if (this.isStatementToken(t)) {
-            children.push(this.statement(toks))
+            children.push(this.statement(this._tokens))
         } else {
             //error
         }
@@ -2024,110 +2024,110 @@ export class Parser<T> {
 
     }
 
-    private expressionList(toks: TokenIterator) {
+    private expressionList(this._tokens: TokenIterator) {
 
         let children: (T | Token)[] = [];
 
         while (true) {
-            children.push(this.expression(toks));
-            if (toks.current.type !== ',') {
+            children.push(this.expression(this._tokens));
+            if (this._tokens.current.type !== ',') {
                 break;
             }
-            children.push(toks.current);
-            toks.next();
+            children.push(this._tokens.current);
+            this._tokens.next();
         }
 
         return this._nodeFactory(NodeType.ExpressionList, children);
 
     }
 
-    private doWhileStatement(toks: TokenIterator) {
+    private doWhileStatement(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        let t = toks.next();
+        let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
-        children.push(this.statement(toks));
-        t = toks.current;
+        children.push(this.statement(this._tokens));
+        t = this._tokens.current;
 
         if (t.type !== TokenType.T_WHILE) {
             //error
         }
 
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
         if (t.type !== '(') {
             //error
         }
         children.push(t);
-        t = toks.next();
-        children.push(this.expression(toks));
-        t = toks.current;
+        t = this._tokens.next();
+        children.push(this.expression(this._tokens));
+        t = this._tokens.current;
         if (t.type !== ')') {
             //error
         }
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
         if (t.type !== ';') {
             //error
         }
         children.push(t);
-        toks.next();
+        this._tokens.next();
         return this._nodeFactory(NodeType.DoWhileStatement, children);
 
     }
 
-    private whileStatement(toks: TokenIterator) {
+    private whileStatement(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        let t = toks.next();
+        let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
         if (t.type !== '(') {
             //error
         }
 
         children.push(t);
-        t = toks.next();
-        children.push(this.expression(toks));
+        t = this._tokens.next();
+        children.push(this.expression(this._tokens));
 
-        t = toks.current;
+        t = this._tokens.current;
         if (t.type !== ')') {
             //error
         }
 
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
         if (t.type === ':') {
             children.push(t);
-            toks.next();
-            children.push(this.innerStatementList(toks, [TokenType.T_ENDWHILE]));
-            t = toks.current;
+            this._tokens.next();
+            children.push(this.innerStatementList(this._tokens, [TokenType.T_ENDWHILE]));
+            t = this._tokens.current;
             if (t.type !== TokenType.T_ENDWHILE) {
                 //error
             }
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
             if (t.type !== ';') {
                 //error
             }
             children.push(t);
-            toks.next();
+            this._tokens.next();
         } else {
-            children.push(this.statement(toks));
+            children.push(this.statement(this._tokens));
         }
 
         return this._nodeFactory(NodeType.WhileStatement, children);
 
     }
 
-    private ifStatementList(toks: TokenIterator) {
+    private ifStatementList(this._tokens: TokenIterator) {
 
         let children: (T | Token)[] = [];
-        let t = toks.current;
+        let t = this._tokens.current;
         let discoverAlt = { isAlt: false };
 
-        children.push(this.ifStatement(toks, false, discoverAlt));
-        t = toks.current;
+        children.push(this.ifStatement(this._tokens, false, discoverAlt));
+        t = this._tokens.current;
 
         while (true) {
 
@@ -2135,14 +2135,14 @@ export class Parser<T> {
                 break;
             }
 
-            children.push(this.ifStatement(toks, discoverAlt.isAlt));
-            t = toks.current;
+            children.push(this.ifStatement(this._tokens, discoverAlt.isAlt));
+            t = this._tokens.current;
 
         }
 
         if (t.type === TokenType.T_ELSE) {
-            children.push(this.ifStatement(toks, discoverAlt.isAlt));
-            t = toks.current;
+            children.push(this.ifStatement(this._tokens, discoverAlt.isAlt));
+            t = this._tokens.current;
         }
 
         if (discoverAlt.isAlt) {
@@ -2152,12 +2152,12 @@ export class Parser<T> {
             }
 
             let endIfchildren: (T | Token)[] = [t];
-            t = toks.next();
+            t = this._tokens.next();
             if (t.type !== ';') {
                 //error
             }
             endIfchildren.push(t);
-            toks.next();
+            this._tokens.next();
             children.push(this._nodeFactory(NodeType.IfStatement, endIfchildren));
         }
 
@@ -2165,34 +2165,34 @@ export class Parser<T> {
 
     }
 
-    private ifStatement(toks: TokenIterator, isAlt: boolean, discoverAlt: { isAlt: boolean } = null) {
+    private ifStatement(this._tokens: TokenIterator, isAlt: boolean, discoverAlt: { isAlt: boolean } = null) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
         let children: (T | Token)[] = [t];
 
         if (t.type === TokenType.T_IF || t.type === TokenType.T_ELSEIF) {
 
-            t = toks.next();
+            t = this._tokens.next();
 
             if (t.type !== '(') {
                 //error
             }
 
             children.push(t);
-            toks.next();
-            children.push(this.expression(toks));
-            t = toks.current;
+            this._tokens.next();
+            children.push(this.expression(this._tokens));
+            t = this._tokens.current;
 
             if (t.type !== ')') {
                 //error
             }
 
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
         } else {
             //must be else
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
         }
 
         if ((isAlt || discoverAlt) && t.type === ':') {
@@ -2201,10 +2201,10 @@ export class Parser<T> {
             }
 
             children.push(t);
-            t = toks.next();
-            children.push(this.innerStatementList(toks, [TokenType.T_ELSEIF, TokenType.T_ELSE, TokenType.T_ENDIF]));
+            t = this._tokens.next();
+            children.push(this.innerStatementList(this._tokens, [TokenType.T_ELSEIF, TokenType.T_ELSE, TokenType.T_ENDIF]));
         } else if (this.isStatementToken(t)) {
-            children.push(this.statement(toks));
+            children.push(this.statement(this._tokens));
         } else {
             //error
 
@@ -2214,50 +2214,50 @@ export class Parser<T> {
 
     }
 
-    private expressionStatement(toks: TokenIterator) {
+    private expressionStatement(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [this.expression(toks)];
-        let t = toks.current;
+        let children: (T | Token)[] = [this.expression(this._tokens)];
+        let t = this._tokens.current;
 
         if (t.type !== ';') {
             //error
         }
 
         children.push(t);
-        toks.next();
+        this._tokens.next();
         return this._nodeFactory(NodeType.ExpressionStatement, children);
 
     }
 
-    private returnType(toks: TokenIterator) {
+    private returnType(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        toks.next();
-        children.push(this.typeExpression(toks));
+        let children: (T | Token)[] = [this._tokens.current];
+        this._tokens.next();
+        children.push(this.typeExpression(this._tokens));
         return this._nodeFactory(NodeType.ReturnType, children);
 
     }
 
-    private typeExpression(toks: TokenIterator) {
+    private typeExpression(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
         let children: (T | Token)[] = [];
 
         if (t.type === '?') {
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
         }
 
         switch (t.type) {
             case TokenType.T_CALLABLE:
             case TokenType.T_ARRAY:
                 children.push(t);
-                toks.next();
+                this._tokens.next();
                 break;
             case TokenType.T_STRING:
             case TokenType.T_NAMESPACE:
             case TokenType.T_NS_SEPARATOR:
-                children.push(this.name(toks));
+                children.push(this.name(this._tokens));
                 break;
             default:
                 //error
@@ -2268,8 +2268,8 @@ export class Parser<T> {
 
     }
 
-    private classConstantDeclarationList(toks: TokenIterator, modifiers: T = null) {
-        let t = toks.current;
+    private classConstantDeclarationList(this._tokens: TokenIterator, modifiers: T = null) {
+        let t = this._tokens.current;
         let children: (T | Token)[] = [];
 
         if (modifiers) {
@@ -2277,17 +2277,17 @@ export class Parser<T> {
         }
 
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
         while (true) {
-            children.push(this.classConstantDeclaration(toks));
-            t = toks.current;
+            children.push(this.classConstantDeclaration(this._tokens));
+            t = this._tokens.current;
 
             if (t.type !== ',') {
                 break;
             } else {
                 children.push(t);
-                t = toks.next();
+                t = this._tokens.next();
             }
         }
 
@@ -2296,48 +2296,48 @@ export class Parser<T> {
         }
 
         children.push(t);
-        toks.next();
+        this._tokens.next();
         return this._nodeFactory(NodeType.ClassConstantDeclarationList, children);
     }
 
-    private classConstantDeclaration(toks: TokenIterator) {
-        let t = toks.current;
+    private classConstantDeclaration(this._tokens: TokenIterator) {
+        let t = this._tokens.current;
         let children: (T | Token)[] = [];
-        let doc = toks.lastDocComment;
+        let doc = this._tokens.lastDocComment;
 
         if (t.type !== TokenType.T_STRING && !this.isSemiReserved(t)) {
             //error
         }
 
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
         if (t.type !== '=') {
             //error
         }
 
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
-        children.push(this.expression(toks));
+        children.push(this.expression(this._tokens));
         return this._nodeFactory(NodeType.ClassConstantDeclaration, children, doc);
 
     }
 
-    private propertyDeclarationList(toks: TokenIterator, modifiersOrVar: T | Token) {
-        let t = toks.current;
+    private propertyDeclarationList(this._tokens: TokenIterator, modifiersOrVar: T | Token) {
+        let t = this._tokens.current;
         let children: (T | Token)[] = [modifiersOrVar];
 
         while (true) {
 
-            children.push(this.propertyDeclaration(toks));
-            t = toks.current;
+            children.push(this.propertyDeclaration(this._tokens));
+            t = this._tokens.current;
 
             if (t.type !== ',') {
                 break;
             } else {
                 children.push(t);
-                t = toks.next();
+                t = this._tokens.next();
             }
 
         }
@@ -2347,42 +2347,42 @@ export class Parser<T> {
         }
 
         children.push(t);
-        toks.next();
+        this._tokens.next();
         return this._nodeFactory(NodeType.PropertyDeclarationList, children);
 
     }
 
-    private propertyDeclaration(toks: TokenIterator) {
-        let t = toks.current;
+    private propertyDeclaration(this._tokens: TokenIterator) {
+        let t = this._tokens.current;
         let children: (T | Token)[] = [];
-        let doc = toks.lastDocComment;
+        let doc = this._tokens.lastDocComment;
 
         if (t.type !== TokenType.T_VARIABLE) {
             //error
         }
 
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
         if (t.type !== '=') {
             return this._nodeFactory(NodeType.PropertyDeclaration, children, doc);
         }
 
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
-        children.push(this.expression(toks));
+        children.push(this.expression(this._tokens));
         return this._nodeFactory(NodeType.PropertyDeclaration, children, doc);
 
     }
 
-    private memberModifierList(toks: TokenIterator) {
+    private memberModifierList(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
         let children: (T | Token)[] = [t];
 
         while (true) {
-            t = toks.next();
+            t = this._tokens.next();
             if (t.type === TokenType.T_PUBLIC ||
                 t.type === TokenType.T_PROTECTED ||
                 t.type === TokenType.T_PRIVATE ||
@@ -2399,74 +2399,74 @@ export class Parser<T> {
 
     }
 
-    private extendsClass(toks: TokenIterator) {
+    private extendsClass(this._tokens: TokenIterator) {
 
-        let t = toks.current;
-        toks.next();
-        return this._nodeFactory(NodeType.ClassExtends, [t, this.name(toks)]);
-
-    }
-
-    private implementsInterfaces(toks: TokenIterator) {
-
-        let t = toks.current;
-        toks.next();
-        return this._nodeFactory(NodeType.Implements, [t, this.nameList(toks)]);
+        let t = this._tokens.current;
+        this._tokens.next();
+        return this._nodeFactory(NodeType.ClassExtends, [t, this.name(this._tokens)]);
 
     }
 
-    private nameList(toks: TokenIterator) {
+    private implementsInterfaces(this._tokens: TokenIterator) {
+
+        let t = this._tokens.current;
+        this._tokens.next();
+        return this._nodeFactory(NodeType.Implements, [t, this.nameList(this._tokens)]);
+
+    }
+
+    private nameList(this._tokens: TokenIterator) {
 
         let children: (T | Token)[] = [];
         let t: Token;
 
         while (true) {
-            children.push(this.name(toks));
-            t = toks.current;
+            children.push(this.name(this._tokens));
+            t = this._tokens.current;
             if (t.type !== ',') {
                 break;
             }
             children.push(t);
-            toks.next();
+            this._tokens.next();
         }
 
         return this._nodeFactory(NodeType.NameList, children);
 
     }
 
-    private newExpression(toks: TokenIterator) {
+    private newExpression(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
         let children: (T | Token)[] = [t];
-        t = toks.next();
+        t = this._tokens.next();
 
         if (t.type === TokenType.T_CLASS) {
-            children.push(this.anonymousClassDeclaration(toks));
+            children.push(this.anonymousClassDeclaration(this._tokens));
             return this._nodeFactory(NodeType.New, children);
         }
 
-        let name = this.newVariablePart(toks);
+        let name = this.newVariablePart(this._tokens);
 
-        t = toks.current;
+        t = this._tokens.current;
         if (t.type === '[' || t.type === '{' || t.type === TokenType.T_OBJECT_OPERATOR || t.type === TokenType.T_PAAMAYIM_NEKUDOTAYIM) {
-            name = this.newVariable(toks, name);
-            t = toks.current;
+            name = this.newVariable(this._tokens, name);
+            t = this._tokens.current;
         }
 
         children.push(name);
 
         if (t.type === '(') {
-            children.push(this.argumentList(toks));
+            children.push(this.argumentList(this._tokens));
         }
 
         return this._nodeFactory(NodeType.New, children);
 
     }
 
-    private newVariable(toks: TokenIterator, part: T | Token = null) {
+    private newVariable(this._tokens: TokenIterator, part: T | Token = null) {
 
         if (!part) {
-            part = this.newVariablePart(toks);
+            part = this.newVariablePart(this._tokens);
         }
 
         let t: Token;
@@ -2475,20 +2475,20 @@ export class Parser<T> {
 
         while (true) {
 
-            t = toks.current;
+            t = this._tokens.current;
 
             switch (t.type) {
                 case '[':
                 case '{':
-                    part = this.dimension(toks, part);
+                    part = this.dimension(this._tokens, part);
                     continue;
                 case TokenType.T_OBJECT_OPERATOR:
-                    toks.next();
-                    part = this._nodeFactory(NodeType.Property, [part, t, this.propertyName(toks)]);
+                    this._tokens.next();
+                    part = this._nodeFactory(NodeType.Property, [part, t, this.propertyName(this._tokens)]);
                     continue;
                 case TokenType.T_PAAMAYIM_NEKUDOTAYIM:
-                    next = toks.next();
-                    part = this._nodeFactory(NodeType.StaticProperty, [part, t, this.simpleVariable(toks)]);
+                    next = this._tokens.next();
+                    part = this._nodeFactory(NodeType.StaticProperty, [part, t, this.simpleVariable(this._tokens)]);
                     continue;
                 default:
                     break;
@@ -2502,24 +2502,24 @@ export class Parser<T> {
 
     }
 
-    private newVariablePart(toks: TokenIterator) {
+    private newVariablePart(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
         let newVariablePart: T | Token = null;
 
         switch (t.type) {
             case TokenType.T_STATIC:
                 newVariablePart = t;
-                toks.next();
+                this._tokens.next();
                 break;
             case TokenType.T_VARIABLE:
             case '$':
-                newVariablePart = this.simpleVariable(toks);
+                newVariablePart = this.simpleVariable(this._tokens);
                 break;
             case TokenType.T_STRING:
             case TokenType.T_NAMESPACE:
             case TokenType.T_NS_SEPARATOR:
-                newVariablePart = this.name(toks);
+                newVariablePart = this.name(this._tokens);
                 break;
             default:
                 //error
@@ -2531,173 +2531,173 @@ export class Parser<T> {
 
     }
 
-    private cloneExpression(toks: TokenIterator) {
+    private cloneExpression(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        toks.next();
-        children.push(this.expression(toks));
+        let children: (T | Token)[] = [this._tokens.current];
+        this._tokens.next();
+        children.push(this.expression(this._tokens));
         return this._nodeFactory(NodeType.Clone, children);
 
     }
 
-    private listAssignment(toks: TokenIterator) {
+    private listAssignment(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
+        let children: (T | Token)[] = [this._tokens.current];
 
-        if (toks.next().type !== '(') {
+        if (this._tokens.next().type !== '(') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
-        children.push(this.arrayElementList(toks, ')'));
+        children.push(this._tokens.current);
+        this._tokens.next();
+        children.push(this.arrayElementList(this._tokens, ')'));
 
-        if (toks.current.type !== ')') {
+        if (this._tokens.current.type !== ')') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.List, children);
 
     }
 
-    private unaryExpression(toks: TokenIterator) {
+    private unaryExpression(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
         let children: (T | Token)[] = [t];
-        toks.next();
-        children.push(this.expression(toks, this._opPrecedenceMap[t.text][0]));
+        this._tokens.next();
+        children.push(this.expression(this._tokens, this._opPrecedenceMap[t.text][0]));
         return this._nodeFactory(NodeType.UnaryOp, children);
 
     }
 
-    private closure(toks: TokenIterator) {
+    private closure(this._tokens: TokenIterator) {
 
         let children: (T | Token)[] = [];
-        let doc = toks.lastDocComment;
+        let doc = this._tokens.lastDocComment;
 
-        if (toks.current.type === TokenType.T_STATIC) {
-            children.push(toks.current);
-            toks.next();
+        if (this._tokens.current.type === TokenType.T_STATIC) {
+            children.push(this._tokens.current);
+            this._tokens.next();
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
 
-        if (toks.current.type === '&') {
-            children.push(toks.current);
-            toks.next();
+        if (this._tokens.current.type === '&') {
+            children.push(this._tokens.current);
+            this._tokens.next();
         }
 
-        children.push(this.parameterList(toks));
+        children.push(this.parameterList(this._tokens));
 
-        if (toks.current.type === TokenType.T_USE) {
-            children.push(this.closureUseList(toks));
+        if (this._tokens.current.type === TokenType.T_USE) {
+            children.push(this.closureUseList(this._tokens));
         }
 
-        if (toks.current.type === ':') {
-            children.push(this.returnType(toks));
+        if (this._tokens.current.type === ':') {
+            children.push(this.returnType(this._tokens));
         }
 
-        if (toks.current.type !== '{') {
+        if (this._tokens.current.type !== '{') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
-        children.push(this.innerStatementList(toks, ['}']));
+        children.push(this._tokens.current);
+        this._tokens.next();
+        children.push(this.innerStatementList(this._tokens, ['}']));
 
-        if (toks.current.type !== '}') {
+        if (this._tokens.current.type !== '}') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.Closure, children);
 
     }
 
-    private closureUseList(toks: TokenIterator) {
+    private closureUseList(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
+        let children: (T | Token)[] = [this._tokens.current];
 
-        if (toks.next().type !== '(') {
+        if (this._tokens.next().type !== '(') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
 
         while (true) {
 
-            children.push(this.closureUseVariable(toks));
+            children.push(this.closureUseVariable(this._tokens));
 
-            if (toks.current.type !== ',') {
+            if (this._tokens.current.type !== ',') {
                 break;
             }
 
-            children.push(toks.current);
-            toks.next();
+            children.push(this._tokens.current);
+            this._tokens.next();
 
         }
 
-        if (toks.current.type !== ')') {
+        if (this._tokens.current.type !== ')') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.ClosureUseList, children);
 
     }
 
-    private closureUseVariable(toks: TokenIterator) {
+    private closureUseVariable(this._tokens: TokenIterator) {
 
         let children: (T | Token)[] = [];
 
-        if (toks.current.type === '&') {
-            children.push(toks.current);
-            toks.next();
+        if (this._tokens.current.type === '&') {
+            children.push(this._tokens.current);
+            this._tokens.next();
         }
 
-        if (toks.current.type !== TokenType.T_VARIABLE) {
+        if (this._tokens.current.type !== TokenType.T_VARIABLE) {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.ClosureUseVariable, children);
 
     }
 
-    private parameterList(toks: TokenIterator) {
+    private parameterList(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
         let children: (T | Token)[] = [];
 
         if (t.type !== '(') {
             //error
         }
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
         if (t.type === ')') {
             children.push(t);
-            toks.next();
+            this._tokens.next();
             return this._nodeFactory(NodeType.ParameterList, children);
         }
 
         while (true) {
 
             children.push(this.parameter());
-            t = toks.current;
+            t = this._tokens.current;
 
             if (t.type !== ',') {
                 break;
             }
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
         }
 
         if (t.type !== ')') {
@@ -2705,7 +2705,7 @@ export class Parser<T> {
         }
 
         children.push(t);
-        toks.next();
+        this._tokens.next();
         return this._nodeFactory(NodeType.ParameterList, children);
 
     }
@@ -2755,25 +2755,25 @@ export class Parser<T> {
 
     }
 
-    private variable(toks: TokenIterator) {
+    private variable(this._tokens: TokenIterator) {
 
-        let variableAtom = this.variableAtom(toks);
+        let variableAtom = this.variableAtom(this._tokens);
 
         while (true) {
 
-            switch (toks.current.type) {
+            switch (this._tokens.current.type) {
                 case TokenType.T_PAAMAYIM_NEKUDOTAYIM:
-                    variableAtom = this.staticMember(toks, variableAtom);
+                    variableAtom = this.staticMember(this._tokens, variableAtom);
                     continue;
                 case TokenType.T_OBJECT_OPERATOR:
-                    variableAtom = this.instanceMember(toks, variableAtom);
+                    variableAtom = this.instanceMember(this._tokens, variableAtom);
                     continue;
                 case '[':
                 case '{':
-                    variableAtom = this.dimension(toks, variableAtom);
+                    variableAtom = this.dimension(this._tokens, variableAtom);
                     continue;
                 case '(':
-                    variableAtom = this._nodeFactory(NodeType.Call, [variableAtom, this.argumentList(toks)]);
+                    variableAtom = this._nodeFactory(NodeType.Call, [variableAtom, this.argumentList(this._tokens)]);
                     continue;
                 default:
                     break;
@@ -2785,30 +2785,30 @@ export class Parser<T> {
         return variableAtom;
     }
 
-    private staticMember(toks: TokenIterator, lhs: T | Token) {
+    private staticMember(this._tokens: TokenIterator, lhs: T | Token) {
 
-        let children: (T | Token)[] = [lhs, toks.current];
-        let t = toks.next();
+        let children: (T | Token)[] = [lhs, this._tokens.current];
+        let t = this._tokens.next();
         let nodeType = NodeType.StaticMethodCall;
 
         switch (t.type) {
             case '{':
-                children.push(this.parenthesisedExpression(toks));
+                children.push(this.parenthesisedExpression(this._tokens));
                 break;
             case '$':
             case TokenType.T_VARIABLE:
-                children.push(this.simpleVariable(toks));
+                children.push(this.simpleVariable(this._tokens));
                 nodeType = NodeType.StaticProperty;
                 break;
             case TokenType.T_STRING:
                 children.push(t);
-                toks.next();
+                this._tokens.next();
                 nodeType = NodeType.ClassConstant;
                 break;
             default:
                 if (this.isSemiReserved(t)) {
                     children.push(t);
-                    toks.next();
+                    this._tokens.next();
                     nodeType = NodeType.ClassConstant;
                 } else {
                     //error
@@ -2816,10 +2816,10 @@ export class Parser<T> {
                 break;
         }
 
-        t = toks.current;
+        t = this._tokens.current;
 
         if (t.type === '(') {
-            children.push(this.argumentList(toks));
+            children.push(this.argumentList(this._tokens));
             return this._nodeFactory(NodeType.StaticMethodCall, children);
         } else if (nodeType !== NodeType.StaticMethodCall) {
             return this._nodeFactory(nodeType, children);
@@ -2829,11 +2829,11 @@ export class Parser<T> {
 
     }
 
-    private instanceMember(toks: TokenIterator, lhs: T | Token) {
+    private instanceMember(this._tokens: TokenIterator, lhs: T | Token) {
 
-        let children: (T | Token)[] = [lhs, toks.current];
-        toks.next();
-        let name = this.propertyName(toks);
+        let children: (T | Token)[] = [lhs, this._tokens.current];
+        this._tokens.next();
+        let name = this.propertyName(this._tokens);
 
         if (!name) {
             //error
@@ -2841,8 +2841,8 @@ export class Parser<T> {
 
         children.push(name);
 
-        if (toks.current.type === '(') {
-            children.push(this.argumentList(toks));
+        if (this._tokens.current.type === '(') {
+            children.push(this.argumentList(this._tokens));
             return this._nodeFactory(NodeType.MethodCall, children);
         }
 
@@ -2850,19 +2850,19 @@ export class Parser<T> {
 
     }
 
-    private propertyName(toks: TokenIterator): T | Token {
+    private propertyName(this._tokens: TokenIterator): T | Token {
 
-        let t = toks.current;
+        let t = this._tokens.current;
 
         switch (t.type) {
             case TokenType.T_STRING:
-                toks.next();
+                this._tokens.next();
                 return t;
             case '{':
-                return this.parenthesisedExpression(toks);
+                return this.parenthesisedExpression(this._tokens);
             case '$':
             case TokenType.T_VARIABLE:
-                return this.simpleVariable(toks);
+                return this.simpleVariable(this._tokens);
             default:
                 //error
                 break;
@@ -2870,15 +2870,15 @@ export class Parser<T> {
 
     }
 
-    private dimension(toks: TokenIterator, lhs: T | Token) {
-        let t = toks.current;
+    private dimension(this._tokens: TokenIterator, lhs: T | Token) {
+        let t = this._tokens.current;
         let close = t.type === '[' ? ']' : '}';
         let children: (T | Token)[] = [lhs, t];
 
-        t = toks.next();
+        t = this._tokens.next();
         if (t.type !== close) {
-            children.push(this.expression(toks));
-            t = toks.current;
+            children.push(this.expression(this._tokens));
+            t = this._tokens.current;
         }
 
         if (t.type !== close) {
@@ -2886,46 +2886,46 @@ export class Parser<T> {
         }
 
         children.push(t);
-        toks.next();
+        this._tokens.next();
         return this._nodeFactory(NodeType.Dimension, children);
 
     }
 
-    private argumentList(toks: TokenIterator) {
+    private argumentList(this._tokens: TokenIterator) {
 
         let children: (T | Token)[] = [];
-        let t = toks.current;
+        let t = this._tokens.current;
 
         if (t.type !== '(') {
             //error
         }
 
         children.push(t);
-        t = toks.next();
+        t = this._tokens.next();
 
         if (t.type === ')') {
             children.push(t);
-            toks.next();
+            this._tokens.next();
             return this._nodeFactory(NodeType.ArgumentList, children);
         }
 
         while (true) {
 
             if (t.type === TokenType.T_ELLIPSIS) {
-                toks.next();
-                children.push(this._nodeFactory(NodeType.UnaryOp, [t, this.expression(toks)]));
+                this._tokens.next();
+                children.push(this._nodeFactory(NodeType.UnaryOp, [t, this.expression(this._tokens)]));
             } else {
-                children.push(this.expression(toks));
+                children.push(this.expression(this._tokens));
             }
 
-            t = toks.current;
+            t = this._tokens.current;
 
             if (t.type !== ',') {
                 break;
             }
 
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
         }
 
         if (t.type !== ')') {
@@ -2933,7 +2933,7 @@ export class Parser<T> {
         }
 
         children.push(t);
-        toks.next();
+        this._tokens.next();
         return this._nodeFactory(NodeType.ArgumentList, children);
 
     }
@@ -2953,10 +2953,10 @@ export class Parser<T> {
                 subAtom = this.simpleVariable();
                 break;
             case TokenType.T_ARRAY:
-                subAtom = this.longArray(toks);
+                subAtom = this.longArray(this._tokens);
                 break;
             case '[':
-                subAtom = this.shortArray(toks);
+                subAtom = this.shortArray(this._tokens);
                 break;
             case TokenType.T_NS_SEPARATOR:
             case TokenType.T_STRING:
@@ -2975,91 +2975,91 @@ export class Parser<T> {
 
     }
 
-    private name(toks: TokenIterator) {
+    private name(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
         let children: (T | Token)[] = [];
 
         if (t.type === TokenType.T_NS_SEPARATOR) {
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
         } else if (t.type === TokenType.T_NAMESPACE) {
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
             if (t.type === TokenType.T_NS_SEPARATOR) {
                 children.push(t);
-                t = toks.next();
+                t = this._tokens.next();
             } else {
                 //error
             }
         }
 
-        children.push(this.namespaceName(toks));
+        children.push(this.namespaceName(this._tokens));
 
         return this._nodeFactory(NodeType.Name, children);
 
     }
 
-    private shortArray(toks: TokenIterator) {
+    private shortArray(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
+        let children: (T | Token)[] = [this._tokens.current];
 
-        if (toks.next().type === ']') {
-            children.push(toks.current);
-            toks.next();
+        if (this._tokens.next().type === ']') {
+            children.push(this._tokens.current);
+            this._tokens.next();
             return this._nodeFactory(NodeType.ArrayDeclaration, children);
         }
 
-        children.push(this.arrayElementList(toks, ']'));
+        children.push(this.arrayElementList(this._tokens, ']'));
 
-        if (toks.current.type !== ']') {
+        if (this._tokens.current.type !== ']') {
             //error
         }
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.ArrayDeclaration, children);
 
     }
 
-    private longArray(toks: TokenIterator) {
+    private longArray(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
+        let children: (T | Token)[] = [this._tokens.current];
 
-        if (toks.next().type !== '(') {
+        if (this._tokens.next().type !== '(') {
             //error
         }
 
-        children.push(toks.current);
-        if (toks.next().type === ')') {
-            children.push(toks.current);
-            toks.next();
+        children.push(this._tokens.current);
+        if (this._tokens.next().type === ')') {
+            children.push(this._tokens.current);
+            this._tokens.next();
             return this._nodeFactory(NodeType.ArrayDeclaration, children);
         }
 
-        children.push(this.arrayElementList(toks, ')'));
+        children.push(this.arrayElementList(this._tokens, ')'));
 
-        if (toks.current.type !== ')') {
+        if (this._tokens.current.type !== ')') {
             //error
         }
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.ArrayDeclaration, children);
 
     }
 
-    private arrayElementList(toks: TokenIterator, closeTokenType: string) {
+    private arrayElementList(this._tokens: TokenIterator, closeTokenType: string) {
 
         let children: (T | Token)[] = [];
 
         while (true) {
 
-            children.push(this.arrayElement(toks));
-            if (toks.current.type !== ',') {
+            children.push(this.arrayElement(this._tokens));
+            if (this._tokens.current.type !== ',') {
                 break;
             }
 
-            children.push(toks.current);
-            if (toks.next().type === closeTokenType) {
+            children.push(this._tokens.current);
+            if (this._tokens.next().type === closeTokenType) {
                 break;
             }
 
@@ -3069,58 +3069,58 @@ export class Parser<T> {
 
     }
 
-    private arrayElement(toks: TokenIterator) {
+    private arrayElement(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
 
         if (t.type === '&') {
-            toks.next();
-            return this._nodeFactory(NodeType.UnaryOp, [t, this.variable(toks)]);
+            this._tokens.next();
+            return this._nodeFactory(NodeType.UnaryOp, [t, this.variable(this._tokens)]);
         }
 
-        let expr = this.expression(toks);
-        t = toks.current;
+        let expr = this.expression(this._tokens);
+        t = this._tokens.current;
 
         if (t.type !== TokenType.T_DOUBLE_ARROW) {
             return expr;
         }
 
         let children: (T | Token)[] = [expr, t];
-        t = toks.next();
+        t = this._tokens.next();
 
         if (t.type === '&') {
-            toks.next();
-            children.push(this._nodeFactory(NodeType.UnaryOp, [t, this.variable(toks)]));
+            this._tokens.next();
+            children.push(this._nodeFactory(NodeType.UnaryOp, [t, this.variable(this._tokens)]));
             return this._nodeFactory(NodeType.ArrayPair, children);
         }
 
-        children.push(this.expression(toks));
+        children.push(this.expression(this._tokens));
         return this._nodeFactory(NodeType.ArrayPair, children);
 
     }
 
 
-    private variableAtom(toks: TokenIterator) {
-        let t = toks.current;
+    private variableAtom(this._tokens: TokenIterator) {
+        let t = this._tokens.current;
 
         switch (t.type) {
             case TokenType.T_VARIABLE:
             case '$':
-                return this.simpleVariable(toks);
+                return this.simpleVariable(this._tokens);
             case '(':
-                return this.parenthesisedExpression(toks);
+                return this.parenthesisedExpression(this._tokens);
             case TokenType.T_ARRAY:
-                return this.longArray(toks);
+                return this.longArray(this._tokens);
             case '[':
-                return this.shortArray(toks);
+                return this.shortArray(this._tokens);
             case TokenType.T_CONSTANT_ENCAPSED_STRING:
             case TokenType.T_STATIC:
-                toks.next();
+                this._tokens.next();
                 return t;
             case TokenType.T_STRING:
             case TokenType.T_NAMESPACE:
             case TokenType.T_NS_SEPARATOR:
-                return this.name(toks);
+                return this.name(this._tokens);
             default:
                 //error
                 break;
@@ -3128,28 +3128,28 @@ export class Parser<T> {
 
     }
 
-    private simpleVariable(toks: TokenIterator) {
+    private simpleVariable(this._tokens: TokenIterator) {
 
         let children: (T | Token)[] = [];
-        let t = toks.current;
+        let t = this._tokens.current;
 
         if (t.type === TokenType.T_VARIABLE) {
-            children.push(toks.current);
-            toks.next();
+            children.push(this._tokens.current);
+            this._tokens.next();
         } else if (t.type === '$') {
-            children.push(toks.current);
-            t = toks.next();
+            children.push(this._tokens.current);
+            t = this._tokens.next();
             if (t.type === '{') {
                 children.push(t);
-                toks.next();
-                children.push(this.expression(toks));
-                if (toks.current.type !== '}') {
+                this._tokens.next();
+                children.push(this.expression(this._tokens));
+                if (this._tokens.current.type !== '}') {
                     //error
                 }
-                children.push(toks.current);
-                toks.next();
+                children.push(this._tokens.current);
+                this._tokens.next();
             } else if (t.type === '$' || t.type === TokenType.T_VARIABLE) {
-                children.push(this.simpleVariable(toks));
+                children.push(this.simpleVariable(this._tokens));
             } else {
                 //error
             }
@@ -3161,27 +3161,27 @@ export class Parser<T> {
 
     }
 
-    private parenthesisedExpression(toks: TokenIterator) {
+    private parenthesisedExpression(this._tokens: TokenIterator) {
 
         let map: { [id: string]: string } = {
             '(': ')',
             '{': '}',
             '[': ']'
         };
-        let t = toks.current;
+        let t = this._tokens.current;
         let close = map[t.type];
         let children: (T | Token)[] = [t];
 
-        toks.next();
-        children.push(this.expression(toks));
-        t = toks.current;
+        this._tokens.next();
+        children.push(this.expression(this._tokens));
+        t = this._tokens.current;
 
         if (t.type !== close) {
             //error
         }
 
         children.push(t);
-        toks.next();
+        this._tokens.next();
         return this._nodeFactory(NodeType.ParenthesisedExpression, children);
     }
 
@@ -3189,35 +3189,35 @@ export class Parser<T> {
         return this._opPrecedenceMap.hasOwnProperty(t.text) && (this._opPrecedenceMap[t.text][2] & OpType.Binary) === OpType.Binary;
     }
 
-    private haltCompiler(toks: TokenIterator) {
+    private haltCompiler(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
+        let children: (T | Token)[] = [this._tokens.current];
 
-        if (toks.next().type !== '(') {
+        if (this._tokens.next().type !== '(') {
             //error
         }
 
-        children.push(toks.current);
+        children.push(this._tokens.current);
 
-        if (toks.next().type !== ')') {
+        if (this._tokens.next().type !== ')') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.HaltCompiler, children);
 
     }
 
-    private use(toks: TokenIterator) {
+    private use(this._tokens: TokenIterator) {
 
-        let children: (T | Token)[] = [toks.current];
-        let t = toks.next();
+        let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
         let isMixed = true;
 
         if (t.type === TokenType.T_FUNCTION || t.type === TokenType.T_CONST) {
             children.push(t);
-            t = toks.next();
+            t = this._tokens.next();
             isMixed = false;
         }
 
@@ -3225,37 +3225,37 @@ export class Parser<T> {
 
         if (t.type === TokenType.T_NS_SEPARATOR) {
             useElementParts.push(t);
-            t = toks.next();
+            t = this._tokens.next();
         }
 
-        useElementParts.push(this.namespaceName(toks));
-        t = toks.current;
+        useElementParts.push(this.namespaceName(this._tokens));
+        t = this._tokens.current;
 
         if (t.type === TokenType.T_NS_SEPARATOR) {
             children.push(...useElementParts);
-            return this.useGroup(toks, children, isMixed);
+            return this.useGroup(this._tokens, children, isMixed);
         }
 
         //must be use list
 
-        children.push(this.useElement(toks, useElementParts, false, true));
-        t = toks.current;
+        children.push(this.useElement(this._tokens, useElementParts, false, true));
+        t = this._tokens.current;
 
         if (t.type !== ',') {
             return this._nodeFactory(NodeType.UseList, children);
         }
 
         children.push(t);
-        toks.next();
+        this._tokens.next();
 
         while (true) {
 
-            children.push(this.useElement(toks, [], false, true));
-            if (toks.current.type !== ',') {
+            children.push(this.useElement(this._tokens, [], false, true));
+            if (this._tokens.current.type !== ',') {
                 break;
             }
-            children.push(toks.current);
-            toks.next();
+            children.push(this._tokens.current);
+            this._tokens.next();
 
         }
 
@@ -3263,106 +3263,106 @@ export class Parser<T> {
 
     }
 
-    private useGroup(toks: TokenIterator, children: (T | Token)[], isMixed: boolean) {
+    private useGroup(this._tokens: TokenIterator, children: (T | Token)[], isMixed: boolean) {
 
         //current will be T_NS_SEPARATOR
-        children.push(toks.current);
+        children.push(this._tokens.current);
 
-        if (toks.next().type !== '{') {
+        if (this._tokens.next().type !== '{') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
 
         while (true) {
 
-            children.push(this.useElement(toks, [], isMixed, false));
-            if (toks.current.type !== ',') {
+            children.push(this.useElement(this._tokens, [], isMixed, false));
+            if (this._tokens.current.type !== ',') {
                 break;
             }
-            children.push(toks.current);
-            toks.next();
+            children.push(this._tokens.current);
+            this._tokens.next();
 
         }
 
-        if (toks.current.type !== '}') {
+        if (this._tokens.current.type !== '}') {
             //errror
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.UseGroup, children);
 
     }
 
-    private useElement(toks: TokenIterator, children: (T | Token)[], isMixed: boolean, lookForPrefix: boolean) {
+    private useElement(this._tokens: TokenIterator, children: (T | Token)[], isMixed: boolean, lookForPrefix: boolean) {
 
         //if children not empty then it contains tokens to left of T_AS
 
         if (!children.length) {
 
-            if ((isMixed && [TokenType.T_FUNCTION, TokenType.T_CONST].indexOf(<TokenType>toks.current.type)) ||
-                (lookForPrefix && toks.current.type === TokenType.T_NS_SEPARATOR)) {
-                children.push(toks.current);
-                toks.next();
+            if ((isMixed && [TokenType.T_FUNCTION, TokenType.T_CONST].indexOf(<TokenType>this._tokens.current.type)) ||
+                (lookForPrefix && this._tokens.current.type === TokenType.T_NS_SEPARATOR)) {
+                children.push(this._tokens.current);
+                this._tokens.next();
             }
 
-            children.push(this.namespaceName(toks));
+            children.push(this.namespaceName(this._tokens));
         }
 
-        if (toks.current.type !== TokenType.T_AS) {
+        if (this._tokens.current.type !== TokenType.T_AS) {
             return this._nodeFactory(NodeType.UseElement, children);
         }
 
-        children.push(toks.current);
+        children.push(this._tokens.current);
 
-        if (toks.next().type !== TokenType.T_STRING) {
+        if (this._tokens.next().type !== TokenType.T_STRING) {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.UseElement, children);
 
     }
 
-    private namespace(toks: TokenIterator, isEmpty: { isEmpty: boolean }) {
+    private namespace(this._tokens: TokenIterator, isEmpty: { isEmpty: boolean }) {
 
-        let children: (T | Token)[] = [toks.current];
-        let t = toks.next();
-        toks.lastDocComment;
+        let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
+        this._tokens.lastDocComment;
 
         if (t.type == TokenType.T_STRING) {
-            children.push(this.namespaceName(toks));
-            t = toks.current;
+            children.push(this.namespaceName(this._tokens));
+            t = this._tokens.current;
             if (t.type !== '{') {
                 isEmpty.isEmpty = true;
                 return this._nodeFactory(NodeType.Namespace, children);
             }
         }
 
-        if (toks.current.type !== '{') {
+        if (this._tokens.current.type !== '{') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
-        children.push(this.topStatementList(toks, ['}']));
+        children.push(this._tokens.current);
+        this._tokens.next();
+        children.push(this.topStatementList(this._tokens, ['}']));
 
-        if (toks.current.type !== '}') {
+        if (this._tokens.current.type !== '}') {
             //error
         }
 
-        children.push(toks.current);
-        toks.next();
+        children.push(this._tokens.current);
+        this._tokens.next();
         return this._nodeFactory(NodeType.Namespace, children);
 
     }
 
-    private namespaceName(toks: TokenIterator) {
+    private namespaceName(this._tokens: TokenIterator) {
 
-        let t = toks.current;
+        let t = this._tokens.current;
         let children: (T | Token)[] = [];
 
         if (t.type !== TokenType.T_STRING) {
@@ -3373,12 +3373,12 @@ export class Parser<T> {
 
         while (true) {
 
-            t = toks.next();
-            if (t.type !== TokenType.T_NS_SEPARATOR || toks.lookahead().type !== TokenType.T_STRING) {
+            t = this._tokens.next();
+            if (t.type !== TokenType.T_NS_SEPARATOR || this._tokens.lookahead().type !== TokenType.T_STRING) {
                 break;
             }
 
-            children.push(t, toks.next());
+            children.push(t, this._tokens.next());
         }
 
         return this._nodeFactory(NodeType.NamespaceName, children);
