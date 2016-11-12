@@ -176,7 +176,10 @@ export enum NodeType {
     ThrowStatement,
     GotoStatement,
     LabelStatement,
-    ForeachStatement
+    ForeachStatement,
+    CaseList,
+    Switch,
+    Case,
 }
 
 export interface NodeFactory<T> {
@@ -288,7 +291,7 @@ export class Parser<T> {
     private _opPrecedenceMap = opPrecedenceMap;
     private _reserved = reservedTokens;
     private _semiReserved = semiReservedTokens;
-    private _tokens:TokenIterator
+    private _tokens: TokenIterator
 
     constructor(nodeFactory: NodeFactory<T>) {
         this._nodeFactory = nodeFactory;
@@ -298,14 +301,14 @@ export class Parser<T> {
         return this._errors;
     }
 
-    parse(tokens:Iterator<Token>){
+    parse(tokens: Iterator<Token>) {
 
         this._tokens = new TokenIterator(tokens);
         return this.topStatementList([]);
 
     }
 
-    private _expectNext(tokenType: TokenType | string, pushToArray: (T|Token)[]) {
+    private _expectNext(tokenType: TokenType | string, pushToArray: (T | Token)[]) {
         let t = this._tokens.next();
         if (t.type === tokenType) {
             pushToArray.push(t);
@@ -315,7 +318,7 @@ export class Parser<T> {
         }
     }
 
-    private _expectCurrent(tokenType: TokenType | string, pushToArray: (T|Token)[]) {
+    private _expectCurrent(tokenType: TokenType | string, pushToArray: (T | Token)[]) {
         let t = this._tokens.current;
         if (t.type === tokenType) {
             pushToArray.push(t);
@@ -1444,12 +1447,86 @@ export class Parser<T> {
 
     }
 
-    private switchStatement(toks: TokenIterator) {
+    private switchStatement() {
 
-        let children: (T | Token)[] = [toks.current];
+        let children: (T | Token)[] = [this._tokens.current];
 
+        if (!this._expectNext('(', children)) {
+            //error
+        }
 
+        children.push(this.expression());
 
+        if (!this._expectCurrent(')', children)) {
+            //error
+        }
+
+        children.push(this._caseList());
+
+        return this._nodeFactory(NodeType.Switch, children);
+
+    }
+
+    private _caseList() {
+
+        let children: (T | Token)[] = [];
+        let t = this._tokens.current;
+        let close: TokenType | string = '}';
+
+        if (t.type === ':') {
+            close = TokenType.T_ENDSWITCH;
+        } else if (t.type !== '{') {
+            //error
+        }
+
+        children.push(t);
+        t = this._tokens.next();
+        if (t.type === ';') {
+            children.push(t);
+            t = this._tokens.next();
+        }
+
+        while (true) {
+
+            if(t.type === TokenType.T_CASE || t.type === TokenType.T_DEFAULT){
+                children.push(this._caseStatement());
+            } else if (this._tokens.current.type === close) {
+                children.push(this._tokens.current);
+                this._tokens.next();
+                break;
+            } else {
+                //error
+            }
+
+        }
+
+        if (close === TokenType.T_ENDSWITCH) {
+
+            if (!this._expectCurrent(';', children)) {
+                //error
+            }
+            this._tokens.next();
+        }
+
+        return this._nodeFactory(NodeType.CaseList, children);
+
+    }
+
+    private _caseStatement() {
+
+        let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
+
+        if(t.type !== ';' && t.type !== ':'){
+            //error
+        }
+
+        children.push(t);
+        t = this._tokens.next();
+
+        children.push(this.innerStatementList());
+
+        return this._nodeFactory(NodeType.Case, children);
 
     }
 
