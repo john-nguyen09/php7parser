@@ -152,7 +152,7 @@ export enum NodeType {
     ArrayElementList,
     ClosureUseVariable,
     ClosureUse,
-    List,
+    ListExpression,
     Clone,
     Heredoc,
     DoubleQuotes,
@@ -2770,15 +2770,16 @@ export class Parser<T> {
 
         children.push(t);
         t = this._tokens.next();
-        children.push(this.arrayElementList(this._tokens, ')'));
+        children.push(this._arrayElementList(')'));
+        t = this._tokens.current;
 
-        if (this._tokens.current.type !== ')') {
+        if (t.type !== ')') {
             //error
         }
 
-        children.push(this._tokens.current);
+        children.push(t);
         this._tokens.next();
-        return this._nodeFactory(NodeType.List, children);
+        return this._nodeFactory(NodeType.ListExpression, children);
 
     }
 
