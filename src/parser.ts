@@ -106,7 +106,6 @@ export enum NodeType {
     Closure,
     ParameterList,
     Parameter,
-    ClosureUse,
     IssetList,
     Isset,
     Empty,
@@ -152,7 +151,7 @@ export enum NodeType {
     Variable,
     ArrayElementList,
     ClosureUseVariable,
-    ClosureUseList,
+    ClosureUse,
     List,
     Clone,
     Heredoc,
@@ -614,7 +613,7 @@ export class Parser<T> {
                 return this._variable();
             case TokenType.T_STATIC:
                 if (this._tokens.lookahead().type === TokenType.T_FUNCTION) {
-                    return this.closure(this._tokens);
+                    return this._closure();
                 } else {
                     return this._variable();
                 }
@@ -663,7 +662,7 @@ export class Parser<T> {
             case TokenType.T_YIELD_FROM:
                 return this.yieldFromExpression(this._tokens);
             case TokenType.T_FUNCTION:
-                return this.closure(this._tokens);
+                return this._closure();
             case TokenType.T_INCLUDE:
             case TokenType.T_INCLUDE_ONCE:
             case TokenType.T_REQUIRE:
@@ -2750,100 +2749,93 @@ export class Parser<T> {
 
     }
 
-    private closure(this._tokens: TokenIterator) {
+    private _closure() {
 
         let children: (T | Token)[] = [];
         let doc = this._tokens.lastDocComment;
+        let t = this._tokens.current;
 
-        if (this._tokens.current.type === TokenType.T_STATIC) {
-            children.push(this._tokens.current);
-            this._tokens.next();
+        if (t.type === TokenType.T_STATIC) {
+            children.push(t);
+            t = this._tokens.next();
         }
 
-        children.push(this._tokens.current);
-        this._tokens.next();
+        //should be T_FUNCTION
+        children.push(t);
+        t = this._tokens.next();
 
-        if (this._tokens.current.type === '&') {
-            children.push(this._tokens.current);
-            this._tokens.next();
+        if (t.type === '&') {
+            children.push(t);
+            t = this._tokens.next();
         }
 
-        children.push(this.parameterList(this._tokens));
+        children.push(this._parameterList());
+        t = this._tokens.current;
 
-        if (this._tokens.current.type === TokenType.T_USE) {
-            children.push(this.closureUseList(this._tokens));
+        if (t.type === TokenType.T_USE) {
+            children.push(this._closureUse());
+            t = this._tokens.current;
         }
 
-        if (this._tokens.current.type === ':') {
-            children.push(this.returnType(this._tokens));
+        if (t.type === ':') {
+            children.push(this._returnType());
+            t = this._tokens.current;
         }
 
-        if (this._tokens.current.type !== '{') {
-            //error
-        }
-
-        children.push(this._tokens.current);
-        this._tokens.next();
-        children.push(this.innerStatementList(this._tokens, ['}']));
-
-        if (this._tokens.current.type !== '}') {
-            //error
-        }
-
-        children.push(this._tokens.current);
-        this._tokens.next();
+        children.push(this._curlyInnerStatementList());
         return this._nodeFactory(NodeType.Closure, children);
 
     }
 
-    private closureUseList(this._tokens: TokenIterator) {
+    private _closureUse() {
 
         let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
-        if (this._tokens.next().type !== '(') {
+        if (t.type !== '(') {
             //error
         }
 
-        children.push(this._tokens.current);
-        this._tokens.next();
+        children.push(t);
+        t = this._tokens.next();
 
         while (true) {
 
-            children.push(this.closureUseVariable(this._tokens));
+            children.push(this._closureUseVariable());
+            t = this._tokens.current;
 
-            if (this._tokens.current.type !== ',') {
+            if (t.type === ',') {
+                children.push(t);
+                t = this._tokens.next();    
+            } else if(t.type === ')'){
+                children.push(t);
+                this._tokens.next();
+            } else {
+                //error
                 break;
             }
 
-            children.push(this._tokens.current);
-            this._tokens.next();
-
         }
 
-        if (this._tokens.current.type !== ')') {
-            //error
-        }
-
-        children.push(this._tokens.current);
-        this._tokens.next();
-        return this._nodeFactory(NodeType.ClosureUseList, children);
+        return this._nodeFactory(NodeType.ClosureUse, children);
 
     }
 
-    private closureUseVariable(this._tokens: TokenIterator) {
+    private _closureUseVariable() {
 
         let children: (T | Token)[] = [];
+        let t  =this._tokens.current;
 
-        if (this._tokens.current.type === '&') {
-            children.push(this._tokens.current);
-            this._tokens.next();
+        if (t.type === '&') {
+            children.push(t);
+            t = this._tokens.next();
         }
 
-        if (this._tokens.current.type !== TokenType.T_VARIABLE) {
+        if (t.type !== TokenType.T_VARIABLE) {
             //error
         }
 
-        children.push(this._tokens.current);
+        children.push(t);
         this._tokens.next();
         return this._nodeFactory(NodeType.ClosureUseVariable, children);
 
