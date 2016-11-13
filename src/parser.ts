@@ -600,7 +600,15 @@ export class Parser<T> {
 
     private _atom() {
 
-        switch (this._tokens.current.type) {
+        let t = this._tokens.current;
+
+        switch (t.type) {
+            case TokenType.T_STATIC:
+                if (this._tokens.lookahead().type === TokenType.T_FUNCTION) {
+                    return this._closure();
+                } else {
+                    //fall through
+                }
             case TokenType.T_VARIABLE:
             case '$':
             case TokenType.T_ARRAY:
@@ -610,12 +618,13 @@ export class Parser<T> {
             case TokenType.T_STRING:
             case TokenType.T_NAMESPACE:
             case '(':
-                return this._variable();
-            case TokenType.T_STATIC:
-                if (this._tokens.lookahead().type === TokenType.T_FUNCTION) {
-                    return this._closure();
+                let variable = this._variable();
+                t = this._tokens.current;
+                if (t.type === TokenType.T_INC || t.type === TokenType.T_DEC) {
+                    this._tokens.next();
+                    return this._nodeFactory(NodeType.UnaryExpression, [variable, t]);
                 } else {
-                    return this._variable();
+                    return variable;
                 }
             case TokenType.T_INC:
             case TokenType.T_DEC:
@@ -2806,8 +2815,8 @@ export class Parser<T> {
 
             if (t.type === ',') {
                 children.push(t);
-                t = this._tokens.next();    
-            } else if(t.type === ')'){
+                t = this._tokens.next();
+            } else if (t.type === ')') {
                 children.push(t);
                 this._tokens.next();
             } else {
@@ -2824,7 +2833,7 @@ export class Parser<T> {
     private _closureUseVariable() {
 
         let children: (T | Token)[] = [];
-        let t  =this._tokens.current;
+        let t = this._tokens.current;
 
         if (t.type === '&') {
             children.push(t);
