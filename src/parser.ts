@@ -271,33 +271,11 @@ var opPrecedenceMap: { [op: string]: [number, number, number] } = {
     'or': [29, Associativity.Left, OpType.Binary],
 };
 
-var reservedTokens: (TokenType | string)[] = [
-    TokenType.T_INCLUDE, TokenType.T_INCLUDE_ONCE, TokenType.T_EVAL, TokenType.T_REQUIRE, TokenType.T_REQUIRE_ONCE,
-    TokenType.T_LOGICAL_OR, TokenType.T_LOGICAL_XOR, TokenType.T_LOGICAL_AND,
-    TokenType.T_INSTANCEOF, TokenType.T_NEW, TokenType.T_CLONE, TokenType.T_EXIT, TokenType.T_IF, TokenType.T_ELSEIF,
-    TokenType.T_ELSE, TokenType.T_ENDIF, TokenType.T_ECHO, TokenType.T_DO, TokenType.T_WHILE, TokenType.T_ENDWHILE,
-    TokenType.T_FOR, TokenType.T_ENDFOR, TokenType.T_FOREACH, TokenType.T_ENDFOREACH, TokenType.T_DECLARE,
-    TokenType.T_ENDDECLARE, TokenType.T_AS, TokenType.T_TRY, TokenType.T_CATCH, TokenType.T_FINALLY,
-    TokenType.T_THROW, TokenType.T_USE, TokenType.T_INSTEADOF, TokenType.T_GLOBAL, TokenType.T_VAR, TokenType.T_UNSET,
-    TokenType.T_ISSET, TokenType.T_EMPTY, TokenType.T_CONTINUE, TokenType.T_GOTO,
-    TokenType.T_FUNCTION, TokenType.T_CONST, TokenType.T_RETURN, TokenType.T_PRINT, TokenType.T_YIELD, TokenType.T_LIST,
-    TokenType.T_SWITCH, TokenType.T_ENDSWITCH, TokenType.T_CASE, TokenType.T_DEFAULT, TokenType.T_BREAK,
-    TokenType.T_ARRAY, TokenType.T_CALLABLE, TokenType.T_EXTENDS, TokenType.T_IMPLEMENTS, TokenType.T_NAMESPACE, TokenType.T_TRAIT,
-    TokenType.T_INTERFACE, TokenType.T_CLASS, TokenType.T_CLASS_C, TokenType.T_TRAIT_C, TokenType.T_FUNC_C, TokenType.T_METHOD_C,
-    TokenType.T_LINE, TokenType.T_FILE, TokenType.T_DIR, TokenType.T_NS_C
-];
-
-var semiReservedTokens: (TokenType | string)[] = [
-    TokenType.T_STATIC, TokenType.T_ABSTRACT, TokenType.T_FINAL, TokenType.T_PRIVATE, TokenType.T_PROTECTED, TokenType.T_PUBLIC
-];
-
 export class Parser<T> {
 
     private _nodeFactory: NodeFactory<T>;
     private _errors: ParseError[];
     private _opPrecedenceMap = opPrecedenceMap;
-    private _reserved = reservedTokens;
-    private _semiReserved = semiReservedTokens;
     private _tokens: TokenIterator
 
     constructor(nodeFactory: NodeFactory<T>) {
@@ -335,12 +313,93 @@ export class Parser<T> {
         }
     }
 
-    private isReserved(t: Token) {
-        return this._reserved.indexOf(t.type) !== -1;
+    private _isReservedToken(t: Token) {
+        switch (t.type) {
+            case TokenType.T_INCLUDE:
+            case TokenType.T_INCLUDE_ONCE:
+            case TokenType.T_EVAL:
+            case TokenType.T_REQUIRE:
+            case TokenType.T_REQUIRE_ONCE:
+            case TokenType.T_LOGICAL_OR:
+            case TokenType.T_LOGICAL_XOR:
+            case TokenType.T_LOGICAL_AND:
+            case TokenType.T_INSTANCEOF:
+            case TokenType.T_NEW:
+            case TokenType.T_CLONE:
+            case TokenType.T_EXIT:
+            case TokenType.T_IF:
+            case TokenType.T_ELSEIF:
+            case TokenType.T_ELSE:
+            case TokenType.T_ENDIF:
+            case TokenType.T_ECHO:
+            case TokenType.T_DO:
+            case TokenType.T_WHILE:
+            case TokenType.T_ENDWHILE:
+            case TokenType.T_FOR:
+            case TokenType.T_ENDFOR:
+            case TokenType.T_FOREACH:
+            case TokenType.T_ENDFOREACH:
+            case TokenType.T_DECLARE:
+            case TokenType.T_ENDDECLARE:
+            case TokenType.T_AS:
+            case TokenType.T_TRY:
+            case TokenType.T_CATCH:
+            case TokenType.T_FINALLY:
+            case TokenType.T_THROW:
+            case TokenType.T_USE:
+            case TokenType.T_INSTEADOF:
+            case TokenType.T_GLOBAL:
+            case TokenType.T_VAR:
+            case TokenType.T_UNSET:
+            case TokenType.T_ISSET:
+            case TokenType.T_EMPTY:
+            case TokenType.T_CONTINUE:
+            case TokenType.T_GOTO:
+            case TokenType.T_FUNCTION:
+            case TokenType.T_CONST:
+            case TokenType.T_RETURN:
+            case TokenType.T_PRINT:
+            case TokenType.T_YIELD:
+            case TokenType.T_LIST:
+            case TokenType.T_SWITCH:
+            case TokenType.T_ENDSWITCH:
+            case TokenType.T_CASE:
+            case TokenType.T_DEFAULT:
+            case TokenType.T_BREAK:
+            case TokenType.T_ARRAY:
+            case TokenType.T_CALLABLE:
+            case TokenType.T_EXTENDS:
+            case TokenType.T_IMPLEMENTS:
+            case TokenType.T_NAMESPACE:
+            case TokenType.T_TRAIT:
+            case TokenType.T_INTERFACE:
+            case TokenType.T_CLASS:
+            case TokenType.T_CLASS_C:
+            case TokenType.T_TRAIT_C:
+            case TokenType.T_FUNC_C:
+            case TokenType.T_METHOD_C:
+            case TokenType.T_LINE:
+            case TokenType.T_FILE:
+            case TokenType.T_DIR:
+            case TokenType.T_NS_C:
+                return true;
+            default:
+                return false;
+        }
     }
 
-    private isSemiReserved(t: Token) {
-        return this._semiReserved.indexOf(t.type) !== -1 || this.isReserved(t);
+    private _isSemiReservedToken(t: Token) {
+        switch (t.type) {
+            case TokenType.T_STATIC:
+            case TokenType.T_ABSTRACT:
+            case TokenType.T_FINAL:
+            case TokenType.T_PRIVATE:
+            case TokenType.T_PROTECTED:
+            case TokenType.T_PUBLIC:
+                return true;
+            default:
+                return this._isReservedToken(t);
+        }
     }
 
     private _topStatementList(stopOnTokenTypeArray: (TokenType | string)[]) {
@@ -396,7 +455,7 @@ export class Parser<T> {
     }
 
     private _isStatementStartToken(t: Token) {
-        
+
         switch (t.type) {
             case '{':
             case TokenType.T_IF:
