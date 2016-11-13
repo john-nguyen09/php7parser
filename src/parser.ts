@@ -364,60 +364,65 @@ export class Parser<T> {
 
     private _topStatement() {
 
-        let children: (T | Token)[] = [];
         let t = this._tokens.current;
 
         switch (t.type) {
             case TokenType.T_NAMESPACE:
-                children.push(this._namespaceStatement());
-                break;
+                return this._namespaceStatement();
             case TokenType.T_USE:
-                children.push(this._useStatement());
-                break;
+                return this._useStatement();
             case TokenType.T_HALT_COMPILER:
-                children.push(this._haltCompilerStatement());
-                break;
+                return this._haltCompilerStatement();
             case TokenType.T_CONST:
-                children.push(this._constantDeclarationStatement());
-                break;
+                return this._constantDeclarationStatement();
             case TokenType.T_FUNCTION:
-                children.push(this._functionDeclarationStatement());
-                break;
+                return this._functionDeclarationStatement();
             case TokenType.T_CLASS:
             case TokenType.T_ABSTRACT:
             case TokenType.T_FINAL:
-                children.push(this._classDeclarationStatement());
-                break;
+                return this._classDeclarationStatement();
             case TokenType.T_TRAIT:
-                children.push(this._traitDeclarationStatement());
-                break;
+                return this._traitDeclarationStatement();
             case TokenType.T_INTERFACE:
-                children.push(this._interfaceDeclarationStatement());
-                break;
+                return this._interfaceDeclarationStatement();
             default:
-                if (this.isStatementToken(this._tokens.current)) {
-                    children.push(this.statement(this._tokens));
-                    lookForSemiColon = false;
+                if (this._isStatementStartToken(this._tokens.current)) {
+                    return this.statement(this._tokens);
                 } else {
                     //error
                 }
-                break;
         }
-
-        if (lookForSemiColon) {
-            if (this._tokens.current.type !== ';') {
-                //error
-            }
-            children.push(t);
-            this._tokens.next();
-        }
-
-        return this._nodeFactory(NodeType.TopStatement, children);
 
     }
 
-    private isStatementToken(t: Token) {
-        return true;
+    private _isStatementStartToken(t: Token) {
+        
+        switch (t.type) {
+            case '{':
+            case TokenType.T_IF:
+            case TokenType.T_WHILE:
+            case TokenType.T_DO:
+            case TokenType.T_FOR:
+            case TokenType.T_SWITCH:
+            case TokenType.T_BREAK:
+            case TokenType.T_CONTINUE:
+            case TokenType.T_RETURN:
+            case TokenType.T_GLOBAL:
+            case TokenType.T_STATIC:
+            case TokenType.T_ECHO:
+            case TokenType.T_INLINE_HTML:
+            case TokenType.T_UNSET:
+            case TokenType.T_FOREACH:
+            case TokenType.T_DECLARE:
+            case TokenType.T_TRY:
+            case TokenType.T_THROW:
+            case TokenType.T_GOTO:
+            case TokenType.T_STRING:
+            case ';':
+                return true;
+            default:
+                return this._isExpressionStartToken(t);
+        }
     }
 
     private _constantDeclarationStatement() {
@@ -690,7 +695,64 @@ export class Parser<T> {
         return this._nodeFactory(nodeType, children);
     }
 
-    private isExpressionStartToken(t: Token) {
+    private _isExpressionStartToken(t: Token) {
+
+        switch (t.type) {
+            case TokenType.T_VARIABLE:
+            case '$':
+            case TokenType.T_ARRAY:
+            case '[':
+            case TokenType.T_CONSTANT_ENCAPSED_STRING:
+            case TokenType.T_NS_SEPARATOR:
+            case TokenType.T_STRING:
+            case TokenType.T_NAMESPACE:
+            case '(':
+            case TokenType.T_STATIC:
+            case TokenType.T_INC:
+            case TokenType.T_DEC:
+            case '+':
+            case '-':
+            case '!':
+            case '~':
+            case '@':
+            case TokenType.T_INT_CAST:
+            case TokenType.T_DOUBLE_CAST:
+            case TokenType.T_STRING_CAST:
+            case TokenType.T_ARRAY_CAST:
+            case TokenType.T_OBJECT_CAST:
+            case TokenType.T_BOOL_CAST:
+            case TokenType.T_UNSET_CAST:
+            case TokenType.T_LIST:
+            case TokenType.T_CLONE:
+            case TokenType.T_NEW:
+            case TokenType.T_DNUMBER:
+            case TokenType.T_LNUMBER:
+            case TokenType.T_LINE:
+            case TokenType.T_FILE:
+            case TokenType.T_DIR:
+            case TokenType.T_TRAIT_C:
+            case TokenType.T_METHOD_C:
+            case TokenType.T_FUNC_C:
+            case TokenType.T_NS_C:
+            case TokenType.T_CLASS_C:
+            case TokenType.T_START_HEREDOC:
+            case '"':
+            case '`':
+            case TokenType.T_PRINT:
+            case TokenType.T_YIELD:
+            case TokenType.T_YIELD_FROM:
+            case TokenType.T_FUNCTION:
+            case TokenType.T_INCLUDE:
+            case TokenType.T_INCLUDE_ONCE:
+            case TokenType.T_REQUIRE:
+            case TokenType.T_REQUIRE_ONCE:
+            case TokenType.T_EVAL:
+            case TokenType.T_EMPTY:
+            case TokenType.T_ISSET:
+                return true;
+            default:
+                return false;
+        }
 
     }
 
@@ -1236,13 +1298,17 @@ export class Parser<T> {
     }
 
     private _isInnerStatementStartToken(t: Token) {
-        return t.type === TokenType.T_FUNCTION ||
-            t.type === TokenType.T_ABSTRACT ||
-            t.type === TokenType.T_FINAL ||
-            t.type === TokenType.T_CLASS ||
-            t.type === TokenType.T_TRAIT ||
-            t.type === TokenType.T_INTERFACE ||
-            this.isStatementToken(t);
+        switch (t.type) {
+            case TokenType.T_FUNCTION:
+            case TokenType.T_ABSTRACT:
+            case TokenType.T_FINAL:
+            case TokenType.T_CLASS:
+            case TokenType.T_TRAIT:
+            case TokenType.T_INTERFACE:
+                return true;
+            default:
+                return this._isStatementStartToken(t);
+        }
     }
 
     private _innerStatement() {
@@ -1620,7 +1686,7 @@ export class Parser<T> {
             }
             this._tokens.next();
 
-        } else if (this.isStatementToken(t)) {
+        } else if (this._isStatementStartToken(t)) {
             children.push(this.statement());
         } else {
             //error
@@ -1983,7 +2049,9 @@ export class Parser<T> {
         return this._nodeFactory(nodeType, children);
     }
 
-    private isExpressionStartToken(t: Token) {
+    private _isExpressionStartToken(t: Token) {
+
+
 
     }
 
