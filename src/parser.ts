@@ -561,9 +561,9 @@ export class Parser<T> {
 
     }
 
-    private _expression(minPrecedence = 0) {
+    private _expression(minPrecedence = 0, lookForVariable = false) {
 
-        let lhs = this._atom();
+        let lhs = lookForVariable ? this._variable() : this._atom();
         let precedence: number;
         let associativity: Associativity;
         let op: Token;
@@ -640,7 +640,7 @@ export class Parser<T> {
             case TokenType.T_OBJECT_CAST:
             case TokenType.T_BOOL_CAST:
             case TokenType.T_UNSET_CAST:
-                return this.unaryExpression(this._tokens);
+                return this._unaryExpression();
             case TokenType.T_LIST:
                 return this.listAssignment(this._tokens);
             case TokenType.T_CLONE:
@@ -2748,12 +2748,13 @@ export class Parser<T> {
 
     }
 
-    private unaryExpression(this._tokens: TokenIterator) {
+    private _unaryExpression() {
 
         let t = this._tokens.current;
         let children: (T | Token)[] = [t];
+        let lookForVariable = t.type === TokenType.T_INC || t.type === TokenType.T_DEC;
         this._tokens.next();
-        children.push(this.expression(this._tokens, this._opPrecedenceMap[t.text][0]));
+        children.push(this._expression(this._opPrecedenceMap[t.text][0], lookForVariable));
         return this._nodeFactory(NodeType.UnaryExpression, children);
 
     }
