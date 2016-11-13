@@ -289,7 +289,7 @@ export class Parser<T> {
     parse(tokens: Iterator<Token>) {
 
         this._tokens = new TokenIterator(tokens);
-        return this._topStatementList([]);
+        return this._topStatementList([TokenType.T_EOF]);
 
     }
 
@@ -405,19 +405,42 @@ export class Parser<T> {
     private _topStatementList(stopOnTokenTypeArray: (TokenType | string)[]) {
 
         let children: (T | Token)[] = [];
-        stopOnTokenTypeArray.push(TokenType.T_EOF);
+        let t = this._tokens.current;
 
         while (true) {
 
-            if (stopOnTokenTypeArray.indexOf(this._tokens.current.type) !== -1) {
+            if (stopOnTokenTypeArray.indexOf(t.type) !== -1) {
+                break;
+            } else if(this._isTopStatementStartToken(t)){
+                children.push(this._topStatement());
+            } else {
+                //error
                 break;
             }
-
-            children.push(this._topStatement());
 
         }
 
         return this._nodeFactory(NodeType.TopStatementList, children);
+
+    }
+
+    private _isTopStatementStartToken(t:Token){
+
+        switch (t.type) {
+            case TokenType.T_NAMESPACE:
+            case TokenType.T_USE:
+            case TokenType.T_HALT_COMPILER:
+            case TokenType.T_CONST:
+            case TokenType.T_FUNCTION:
+            case TokenType.T_CLASS:
+            case TokenType.T_ABSTRACT:
+            case TokenType.T_FINAL:
+            case TokenType.T_TRAIT:
+            case TokenType.T_INTERFACE:
+                return true;
+            default:
+                return this._isStatementStartToken(t);
+        }
 
     }
 
