@@ -132,10 +132,10 @@ export enum NodeType {
     ClassConstantDeclarationList,
     ReturnType,
     TypeExpression,
-    ParenthesisedInnerStatementList,
+    CurlyInnerStatementList,
     InnerStatementList,
     ExpressionStatement,
-    FunctionDeclaration,
+    FunctionDeclarationStatement,
     MethodDeclaration,
     UseTrait,
     TraitAdaptationList,
@@ -381,8 +381,7 @@ export class Parser<T> {
                 children.push(this._constantDeclarationStatement());
                 break;
             case TokenType.T_FUNCTION:
-                children.push(this.functionDeclaration(this._tokens));
-                lookForSemiColon = false;
+                children.push(this._functionDeclarationStatement());
                 break;
             case TokenType.T_CLASS:
             case TokenType.T_ABSTRACT:
@@ -424,12 +423,12 @@ export class Parser<T> {
         return true;
     }
 
-    private _constantDeclarationStatement(){
+    private _constantDeclarationStatement() {
 
-        let children:(T|Token)[] = [this._tokens.current];
+        let children: (T | Token)[] = [this._tokens.current];
         this._tokens.next();
         children.push(this._constantDeclarationList());
-        if(this._tokens.current.type !== ';'){
+        if (this._tokens.current.type !== ';') {
             //error
         }
         children.push(this._tokens.current);
@@ -1190,7 +1189,7 @@ export class Parser<T> {
 
     }
 
-    private parenthesisedInnerStatementList(this._tokens: TokenIterator) {
+    private _curlyInnerStatementList() {
 
         let t = this._tokens.current;
         let children: (T | Token)[] = [];
@@ -1200,7 +1199,7 @@ export class Parser<T> {
         }
 
         children.push(t);
-        children.push(this.innerStatementList(this._tokens, [TokenType.T_EOF, '}']));
+        children.push(this._innerStatementList());
         t = this._tokens.current;
 
         if (t.type !== '}') {
@@ -1208,31 +1207,36 @@ export class Parser<T> {
         }
 
         children.push(t);
-        return this._nodeFactory(NodeType.ParenthesisedInnerStatementList, children);
+        this._tokens.next();
+        return this._nodeFactory(NodeType.CurlyInnerStatementList, children);
 
     }
 
-    private innerStatementList(this._tokens: TokenIterator, stopTokenTypeArray: (TokenType | string)[]) {
+    private _innerStatementList() {
 
         let children: (T | Token)[] = [];
 
         while (true) {
-            if (stopTokenTypeArray.indexOf(this._tokens.current.type) !== -1) {
+            if (!this._isInnerStatementStartToken(this._tokens.current)) {
                 break;
             }
-            children.push(this.innerStatement(this._tokens));
+            children.push(this._innerStatement());
         }
 
         return this._nodeFactory(NodeType.InnerStatementList, children);
     }
 
-    private innerStatement(this._tokens: TokenIterator) {
+    private _isInnerStatementStartToken(t:Token){
+
+    }
+
+    private _innerStatement() {
 
         let t = this._tokens.current;
 
         switch (t.type) {
             case TokenType.T_FUNCTION:
-                return this.functionDeclaration(this._tokens);
+                return this._functionDeclarationStatement();
             case TokenType.T_ABSTRACT:
             case TokenType.T_FINAL:
             case TokenType.T_CLASS:
@@ -1295,7 +1299,7 @@ export class Parser<T> {
 
     }
 
-    private functionDeclaration(this._tokens: TokenIterator) {
+    private _functionDeclarationStatement() {
 
         let children: (T | Token)[] = [this._tokens.current];
         let doc = this._tokens.lastDocComment;
@@ -1311,16 +1315,16 @@ export class Parser<T> {
         }
 
         children.push(t);
-        children.push(this.parameterList(this._tokens));
+        children.push(this._parameterList());
         t = this._tokens.current;
 
         if (t.type === ':') {
-            children.push(this.returnType(this._tokens));
+            children.push(this._returnType());
             t = this._tokens.current;
         }
 
-        children.push(this.parenthesisedInnerStatementList(this._tokens));
-        return this._nodeFactory(NodeType.FunctionDeclaration, children);
+        children.push(this._curlyInnerStatementList());
+        return this._nodeFactory(NodeType.FunctionDeclarationStatement, children);
 
     }
 
@@ -1467,7 +1471,7 @@ export class Parser<T> {
             //error
         }
 
-        children.push(this.innerStatementList());
+        children.push(this._innerStatementList());
 
         if (!this._expectCurrent('}', children)) {
             //error
@@ -1509,7 +1513,7 @@ export class Parser<T> {
         }
 
         this._tokens.next();
-        children.push(this.innerStatementList());
+        children.push(this._innerStatementList());
 
         if (!this._expectCurrent('{', children)) {
             //error
@@ -1541,7 +1545,7 @@ export class Parser<T> {
             //error
         }
 
-        children.push(this.innerStatementList());
+        children.push(this._innerStatementList());
 
         if (!this._expectCurrent('}', children)) {
             //error
@@ -1558,7 +1562,7 @@ export class Parser<T> {
 
         while (true) {
 
-            children.push(this.name());
+            children.push(this._name());
             if (this._tokens.current.type !== '|') {
                 break;
             }
@@ -1589,7 +1593,7 @@ export class Parser<T> {
         if (t.type === ':') {
             children.push(t);
             this._tokens.next();
-            children.push(this.innerStatementList());
+            children.push(this._innerStatementList());
             if (!this._expectCurrent(TokenType.T_ENDDECLARE, children)) {
                 //error
             }
@@ -1685,7 +1689,7 @@ export class Parser<T> {
         children.push(t);
         t = this._tokens.next();
 
-        children.push(this.innerStatementList());
+        children.push(this._innerStatementList());
 
         return this._nodeFactory(NodeType.Case, children);
 
@@ -2235,16 +2239,16 @@ export class Parser<T> {
 
     }
 
-    private returnType(this._tokens: TokenIterator) {
+    private _returnType() {
 
         let children: (T | Token)[] = [this._tokens.current];
         this._tokens.next();
-        children.push(this.typeExpression(this._tokens));
+        children.push(this._typeExpression());
         return this._nodeFactory(NodeType.ReturnType, children);
 
     }
 
-    private typeExpression(this._tokens: TokenIterator) {
+    private _typeExpression() {
 
         let t = this._tokens.current;
         let children: (T | Token)[] = [];
@@ -2263,7 +2267,7 @@ export class Parser<T> {
             case TokenType.T_STRING:
             case TokenType.T_NAMESPACE:
             case TokenType.T_NS_SEPARATOR:
-                children.push(this.name(this._tokens));
+                children.push(this._name());
                 break;
             default:
                 //error
@@ -2677,7 +2681,7 @@ export class Parser<T> {
 
     }
 
-    private parameterList(this._tokens: TokenIterator) {
+    private _parameterList() {
 
         let t = this._tokens.current;
         let children: (T | Token)[] = [];
@@ -2688,26 +2692,24 @@ export class Parser<T> {
         children.push(t);
         t = this._tokens.next();
 
-        if (t.type === ')') {
-            children.push(t);
-            this._tokens.next();
-            return this._nodeFactory(NodeType.ParameterList, children);
-        }
-
-        while (true) {
-
-            children.push(this.parameter());
-            t = this._tokens.current;
-
-            if (t.type !== ',') {
-                break;
-            }
-            children.push(t);
-            t = this._tokens.next();
-        }
-
         if (t.type !== ')') {
-            //error
+
+            while (true) {
+
+                children.push(this._parameter());
+                t = this._tokens.current;
+
+                if (t.type !== ',') {
+                    break;
+                }
+                children.push(t);
+                t = this._tokens.next();
+            }
+
+            if (t.type !== ')') {
+                //error
+            }
+
         }
 
         children.push(t);
@@ -2716,47 +2718,41 @@ export class Parser<T> {
 
     }
 
-    private parameter() {
+    private _parameter() {
 
-        let t = this._lexer.current;
+        let t = this._tokens.current;
         let children: (T | Token)[] = [];
 
         if (t.type === TokenType.T_NS_SEPARATOR ||
             t.type === TokenType.T_STRING ||
             t.type === TokenType.T_NAMESPACE) {
-            children.push(this.name());
+            children.push(this._name());
         } else if (t.type === TokenType.T_ARRAY || t.type === TokenType.T_CALLABLE) {
             children.push(t);
-            this._lexer.next();
+            this._tokens.next();
         }
 
-        t = this._lexer.current;
+        t = this._tokens.current;
 
-        if (t.type === '&') {
+        if (t.type === '&' || t.type === TokenType.T_ELLIPSIS) {
             children.push(t);
-            t = this._lexer.next();
-        }
-
-        if (t.type === TokenType.T_ELLIPSIS) {
-            children.push(t);
-            t = this._lexer.next();
+            t = this._tokens.next();
         }
 
         if (t.type !== TokenType.T_VARIABLE) {
-            return this._nodeFactory(NodeType.Parameter, children, this.parseError(t, [TokenType.T_VARIABLE]));
+            //error
         }
 
         children.push(t);
-        t = this._lexer.next();
+        t = this._tokens.next();
 
-        if (t.type !== '=') {
-            return this._nodeFactory(NodeType.Parameter, children);
+        if (t.type === '=') {
+            children.push(t);
+            this._tokens.next();
+            children.push(this.expression());
+
         }
 
-        children.push(t);
-        t = this._lexer.next();
-
-        children.push(this.expression(0));
         return this._nodeFactory(NodeType.Parameter, children);
 
     }
@@ -2967,7 +2963,7 @@ export class Parser<T> {
             case TokenType.T_NS_SEPARATOR:
             case TokenType.T_STRING:
             case TokenType.T_NAMESPACE:
-                subAtom = this.name();
+                subAtom = this._name();
                 break;
             case '(':
                 subAtom = this.parenthesisedExpression();
@@ -2981,7 +2977,7 @@ export class Parser<T> {
 
     }
 
-    private name(this._tokens: TokenIterator) {
+    private _name() {
 
         let t = this._tokens.current;
         let children: (T | Token)[] = [];
@@ -3000,7 +2996,7 @@ export class Parser<T> {
             }
         }
 
-        children.push(this.namespaceName(this._tokens));
+        children.push(this.namespaceName());
 
         return this._nodeFactory(NodeType.Name, children);
 
@@ -3214,7 +3210,7 @@ export class Parser<T> {
         children.push(t);
         t = this._tokens.next();
 
-        if(t.type !== ';'){
+        if (t.type !== ';') {
             //error
         }
 
@@ -3265,7 +3261,7 @@ export class Parser<T> {
         }
 
         t = this._tokens.current;
-        if(t.type !== ';'){
+        if (t.type !== ';') {
             //error
         }
         children.push(t);
