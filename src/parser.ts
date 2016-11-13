@@ -146,7 +146,7 @@ export enum NodeType {
     ClassModifiers,
     ClassDeclaration,
     TraitDeclarationStatement,
-    InterfaceDeclaration,
+    InterfaceDeclarationStatement,
     BinaryExpression,
     EncapsulatedVariable,
     Variable,
@@ -392,8 +392,7 @@ export class Parser<T> {
                 children.push(this._traitDeclarationStatement());
                 break;
             case TokenType.T_INTERFACE:
-                children.push(this.interfaceDeclaration(this._tokens));
-                lookForSemiColon = false;
+                children.push(this._interfaceDeclarationStatement());
                 break;
             default:
                 if (this.isStatementToken(this._tokens.current)) {
@@ -1237,7 +1236,13 @@ export class Parser<T> {
     }
 
     private _isInnerStatementStartToken(t: Token) {
-
+        return t.type === TokenType.T_FUNCTION ||
+            t.type === TokenType.T_ABSTRACT ||
+            t.type === TokenType.T_FINAL ||
+            t.type === TokenType.T_CLASS ||
+            t.type === TokenType.T_TRAIT ||
+            t.type === TokenType.T_INTERFACE ||
+            this.isStatementToken(t);
     }
 
     private _innerStatement() {
@@ -1250,18 +1255,18 @@ export class Parser<T> {
             case TokenType.T_ABSTRACT:
             case TokenType.T_FINAL:
             case TokenType.T_CLASS:
-                return this._classDeclarationStatement(this._tokens);
+                return this._classDeclarationStatement();
             case TokenType.T_TRAIT:
-                return this._traitDeclarationStatement(this._tokens);
+                return this._traitDeclarationStatement();
             case TokenType.T_INTERFACE:
-                return this.interfaceDeclaration(this._tokens);
+                return this._interfaceDeclarationStatement();
             default:
                 return this.statement(this._tokens);
         }
 
     }
 
-    private interfaceDeclaration(this._tokens: TokenIterator) {
+    private _interfaceDeclarationStatement() {
 
         let children: (T | Token)[] = [this._tokens.current];
         let doc = this._tokens.lastDocComment;
@@ -1275,19 +1280,19 @@ export class Parser<T> {
         t = this._tokens.next();
 
         if (t.type === TokenType.T_EXTENDS) {
-            children.push(this.extendsInterface(this._tokens));
+            children.push(this._extendsInterface());
         }
 
-        children.push(this.classStatementList(this._tokens));
-        return this._nodeFactory(NodeType.InterfaceDeclaration, children, doc);
+        children.push(this._classStatementList());
+        return this._nodeFactory(NodeType.InterfaceDeclarationStatement, children, doc);
 
     }
 
-    private extendsInterface(this._tokens: TokenIterator) {
+    private _extendsInterface() {
 
         let children: (T | Token)[] = [this._tokens.current];
         this._tokens.next();
-        children.push(this.nameList(this._tokens));
+        children.push(this._nameList());
         return this._nodeFactory(NodeType.InterfaceExtends, children);
 
     }
@@ -1390,7 +1395,7 @@ export class Parser<T> {
             } else {
                 break;
             }
-            
+
         }
 
         return this._nodeFactory(NodeType.ClassModifiers, children);
