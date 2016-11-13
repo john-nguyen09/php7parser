@@ -88,7 +88,7 @@ export enum NodeType {
     HaltCompilerStatement,
     ConstantDeclarationStatement,
     ConstantDeclarationList,
-    ConstElement,
+    ConstantDeclaration,
     DynamicVariable,
     ArrayDeclaration,
     UnaryOp,
@@ -118,7 +118,7 @@ export enum NodeType {
     BackticksExpression,
     ComplexVariable,
     EncapsulatedVariableList,
-    AnonymousClass,
+    AnonymousClassDeclaration,
     New,
     ClassExtends,
     Implements,
@@ -135,7 +135,7 @@ export enum NodeType {
     CurlyInnerStatementList,
     InnerStatementList,
     ExpressionStatement,
-    FunctionDeclarationStatement,
+    FunctionDeclaration,
     MethodDeclaration,
     UseTrait,
     TraitAdaptationList,
@@ -386,8 +386,7 @@ export class Parser<T> {
             case TokenType.T_CLASS:
             case TokenType.T_ABSTRACT:
             case TokenType.T_FINAL:
-                children.push(this.classDeclaration(this._tokens));
-                lookForSemiColon = false;
+                children.push(this._classDeclarationStatement());
                 break;
             case TokenType.T_TRAIT:
                 children.push(this.traitDeclaration(this._tokens));
@@ -474,7 +473,7 @@ export class Parser<T> {
         this._tokens.next();
         children.push(this.expression());
 
-        return this._nodeFactory(NodeType.ConstElement, children, doc);
+        return this._nodeFactory(NodeType.ConstantDeclaration, children, doc);
 
     }
 
@@ -916,21 +915,21 @@ export class Parser<T> {
         }
 
         if (t.type === TokenType.T_EXTENDS) {
-            children.push(this.extendsClass(this._tokens));
+            children.push(this._extendsClass());
             t = this._tokens.current;
         }
 
         if (t.type === TokenType.T_IMPLEMENTS) {
-            children.push(this.implementsInterfaces(this._tokens));
+            children.push(this._implements());
             t = this._tokens.current;
         }
 
-        children.push(this.classStatementList(this._tokens));
-        return this._nodeFactory(NodeType.AnonymousClass, children);
+        children.push(this._classStatementList());
+        return this._nodeFactory(NodeType.AnonymousClassDeclaration, children);
 
     }
 
-    private classStatementList(this._tokens: TokenIterator) {
+    private _classStatementList() {
 
         let t = this._tokens.current;
         let children: (T | Token)[] = [];
@@ -944,26 +943,38 @@ export class Parser<T> {
 
         while (true) {
 
-            if (t.type === '}' || t.type === TokenType.T_EOF) {
+            if (t.type === '}') {
+                children.push(t);
+                this._tokens.next();
+                break;
+            } else if (this._isClassStatementStartToken(t)) {
+                children.push(this._classStatement());
+                t = this._tokens.current;
+            } else {
+                //error
                 break;
             }
 
-            children.push(this.classStatement(this._tokens));
-            t = this._tokens.current;
         }
-
-        if (t.type !== '}') {
-            //error
-        }
-
-        children.push(t);
-        this._tokens.next();
 
         return this._nodeFactory(NodeType.ClassStatementList, children);
 
     }
 
-    private classStatement(this._tokens: TokenIterator) {
+    private _isClassStatementStartToken(t: Token) {
+        return t.type === TokenType.T_PUBLIC ||
+            t.type === TokenType.T_PROTECTED ||
+            t.type === TokenType.T_PRIVATE ||
+            t.type === TokenType.T_STATIC ||
+            t.type === TokenType.T_ABSTRACT ||
+            t.type === TokenType.T_FINAL ||
+            t.type === TokenType.T_FUNCTION ||
+            t.type === TokenType.T_VAR ||
+            t.type === TokenType.T_CONST ||
+            t.type === TokenType.T_USE;
+    }
+
+    private _classStatement() {
 
         let t = this._tokens.current;
 
@@ -1226,7 +1237,7 @@ export class Parser<T> {
         return this._nodeFactory(NodeType.InnerStatementList, children);
     }
 
-    private _isInnerStatementStartToken(t:Token){
+    private _isInnerStatementStartToken(t: Token) {
 
     }
 
@@ -1240,7 +1251,7 @@ export class Parser<T> {
             case TokenType.T_ABSTRACT:
             case TokenType.T_FINAL:
             case TokenType.T_CLASS:
-                return this.classDeclaration(this._tokens);
+                return this._classDeclarationStatement(this._tokens);
             case TokenType.T_TRAIT:
                 return this.traitDeclaration(this._tokens);
             case TokenType.T_INTERFACE:
@@ -1324,24 +1335,25 @@ export class Parser<T> {
         }
 
         children.push(this._curlyInnerStatementList());
-        return this._nodeFactory(NodeType.FunctionDeclarationStatement, children);
+        return this._nodeFactory(NodeType.FunctionDeclaration, children);
 
     }
 
-    private classDeclaration(this._tokens: TokenIterator) {
+    private _classDeclarationStatement() {
 
         let t = this._tokens.current;
         let children: (T | Token)[] = [];
         let doc = this._tokens.lastDocComment;
 
         if (t.type === TokenType.T_ABSTRACT || t.type === TokenType.T_FINAL) {
-            children.push(this.classModifiers(this._tokens));
+            children.push(this._classModifiers());
         }
 
         t = this._tokens.current;
         if (t.type !== TokenType.T_CLASS) {
             //error
         }
+
         children.push(t);
         t = this._tokens.next();
 
@@ -1353,31 +1365,33 @@ export class Parser<T> {
         t = this._tokens.next();
 
         if (t.type === TokenType.T_EXTENDS) {
-            children.push(this.extendsClass(this._tokens));
+            children.push(this._extendsClass());
             t = this._tokens.current;
         }
 
         if (t.type === TokenType.T_IMPLEMENTS) {
-            children.push(this.implementsInterfaces(this._tokens));
+            children.push(this._implements());
             t = this._tokens.current;
         }
 
-        children.push(this.classStatementList(this._tokens));
+        children.push(this._classStatementList());
         return this._nodeFactory(NodeType.ClassDeclaration, children, doc);
 
     }
 
-    private classModifiers(this._tokens: TokenIterator) {
+    private _classModifiers() {
 
         let children: (T | Token)[] = [this._tokens.current];
         let t = this._tokens.next();
 
         while (true) {
-            if (t.type !== TokenType.T_ABSTRACT && t.type !== TokenType.T_FINAL) {
+            if (t.type === TokenType.T_ABSTRACT || t.type === TokenType.T_FINAL) {
+                children.push(t);
+                t = this._tokens.next();
+            } else {
                 break;
             }
-            children.push(t);
-            t = this._tokens.next();
+            
         }
 
         return this._nodeFactory(NodeType.ClassModifiers, children);
@@ -2409,29 +2423,29 @@ export class Parser<T> {
 
     }
 
-    private extendsClass(this._tokens: TokenIterator) {
+    private _extendsClass() {
 
         let t = this._tokens.current;
         this._tokens.next();
-        return this._nodeFactory(NodeType.ClassExtends, [t, this.name(this._tokens)]);
+        return this._nodeFactory(NodeType.ClassExtends, [t, this._name()]);
 
     }
 
-    private implementsInterfaces(this._tokens: TokenIterator) {
+    private _implements() {
 
         let t = this._tokens.current;
         this._tokens.next();
-        return this._nodeFactory(NodeType.Implements, [t, this.nameList(this._tokens)]);
+        return this._nodeFactory(NodeType.Implements, [t, this._nameList()]);
 
     }
 
-    private nameList(this._tokens: TokenIterator) {
+    private _nameList() {
 
         let children: (T | Token)[] = [];
         let t: Token;
 
         while (true) {
-            children.push(this.name(this._tokens));
+            children.push(this._name());
             t = this._tokens.current;
             if (t.type !== ',') {
                 break;
