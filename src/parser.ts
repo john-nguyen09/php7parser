@@ -562,9 +562,9 @@ export class Parser<T> {
 
     }
 
-    private expression(this._tokens: TokenIterator, minPrecedence = 0) {
+    private expression(minPrecedence = 0) {
 
-        let lhs = this.atom(this._tokens);
+        let lhs = this._atom();
         let precedence: number;
         let associativity: Associativity;
         let op: Token;
@@ -574,7 +574,7 @@ export class Parser<T> {
 
             op = this._tokens.current;
 
-            if (!this.isBinaryOp(op)) {
+            if (!this._isBinaryOpToken(op)) {
                 break;
             }
 
@@ -589,7 +589,7 @@ export class Parser<T> {
             }
 
             this._tokens.next();
-            rhs = this.expression(this._tokens, precedence);
+            rhs = this.expression(precedence);
             lhs = this._nodeFactory(NodeType.BinaryExpression, [lhs, op, rhs]);
 
         }
@@ -599,7 +599,7 @@ export class Parser<T> {
 
     }
 
-    private atom(this._tokens: TokenIterator) {
+    private _atom() {
 
         switch (this._tokens.current.type) {
             case TokenType.T_VARIABLE:
@@ -3355,7 +3355,7 @@ export class Parser<T> {
         return this._nodeFactory(NodeType.ParenthesisedExpression, children);
     }
 
-    private isBinaryOp(t: Token) {
+    private _isBinaryOpToken(t: Token) {
         return this._opPrecedenceMap.hasOwnProperty(t.text) && (this._opPrecedenceMap[t.text][2] & OpType.Binary) === OpType.Binary;
     }
 
