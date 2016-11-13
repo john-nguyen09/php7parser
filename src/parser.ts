@@ -611,12 +611,12 @@ export class Parser<T> {
             case TokenType.T_STRING:
             case TokenType.T_NAMESPACE:
             case '(':
-                return this.variable(this._tokens);
+                return this._variable(this._tokens);
             case TokenType.T_STATIC:
                 if (this._tokens.lookahead().type === TokenType.T_FUNCTION) {
                     return this.closure(this._tokens);
                 } else {
-                    return this.variable(this._tokens);
+                    return this._variable(this._tokens);
                 }
             case TokenType.T_INC:
             case TokenType.T_DEC:
@@ -2925,9 +2925,9 @@ export class Parser<T> {
 
     }
 
-    private variable(this._tokens: TokenIterator) {
+    private _variable() {
 
-        let variableAtom = this.variableAtom(this._tokens);
+        let variableAtom = this._variableAtom();
 
         while (true) {
 
@@ -3120,13 +3120,13 @@ export class Parser<T> {
                 subAtom = t;
                 break;
             case '$':
-                subAtom = this.simpleVariable();
+                subAtom = this._simpleVariable();
                 break;
             case TokenType.T_ARRAY:
-                subAtom = this.longArray(this._tokens);
+                subAtom = this._longArray(this._tokens);
                 break;
             case '[':
-                subAtom = this.shortArray(this._tokens);
+                subAtom = this._shortArray(this._tokens);
                 break;
             case TokenType.T_NS_SEPARATOR:
             case TokenType.T_STRING:
@@ -3134,7 +3134,7 @@ export class Parser<T> {
                 subAtom = this._name();
                 break;
             case '(':
-                subAtom = this.parenthesisedExpression();
+                subAtom = this._parenthesisedExpression();
                 break;
             default:
                 //unexpected tokens should be handled higher up
@@ -3170,66 +3170,75 @@ export class Parser<T> {
 
     }
 
-    private shortArray(this._tokens: TokenIterator) {
+    private _shortArray() {
 
         let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
-        if (this._tokens.next().type === ']') {
-            children.push(this._tokens.current);
-            this._tokens.next();
-            return this._nodeFactory(NodeType.ArrayDeclaration, children);
+        if (this._isArrayElementStartToken(t)) {
+            children.push(this._arrayElementList(']'));
+            t = this._tokens.current;    
         }
 
-        children.push(this.arrayElementList(this._tokens, ']'));
-
-        if (this._tokens.current.type !== ']') {
+        if (t.type !== ']') {
             //error
         }
-        children.push(this._tokens.current);
+
+        children.push(t);
         this._tokens.next();
         return this._nodeFactory(NodeType.ArrayDeclaration, children);
 
     }
 
-    private longArray(this._tokens: TokenIterator) {
+    private _longArray() {
 
         let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
-        if (this._tokens.next().type !== '(') {
+        if (t.type !== '(') {
             //error
         }
 
-        children.push(this._tokens.current);
-        if (this._tokens.next().type === ')') {
-            children.push(this._tokens.current);
-            this._tokens.next();
-            return this._nodeFactory(NodeType.ArrayDeclaration, children);
+        children.push(t);
+        t = this._tokens.next();
+        
+        if (this._isArrayElementStartToken(t)) {
+            children.push(this._arrayElementList(')'));
+            t = this._tokens.current;    
         }
 
-        children.push(this.arrayElementList(this._tokens, ')'));
-
-        if (this._tokens.current.type !== ')') {
+        if (t.type !== ')') {
             //error
         }
-        children.push(this._tokens.current);
+
+        children.push(t);
         this._tokens.next();
         return this._nodeFactory(NodeType.ArrayDeclaration, children);
 
     }
 
-    private arrayElementList(this._tokens: TokenIterator, closeTokenType: string) {
+    private _isArrayElementStartToken(t:Token){
+        return t.type === '&' || this._isExpressionStartToken(t);
+    }
+
+    private _arrayElementList(closeTokenType: string) {
 
         let children: (T | Token)[] = [];
+        let t = this._tokens.current;
 
         while (true) {
 
-            children.push(this.arrayElement(this._tokens));
-            if (this._tokens.current.type !== ',') {
+            children.push(this._arrayElement());
+            if (t.type === ',') {
+                children.push(this._tokens.current);
+                t = this._tokens.next();
+                if (t.type === closeTokenType) {
+                    break;
+                }
+            } else if(t.type === closeTokenType){
                 break;
-            }
-
-            children.push(this._tokens.current);
-            if (this._tokens.next().type === closeTokenType) {
+            } else {
+                //error
                 break;
             }
 
@@ -3239,7 +3248,7 @@ export class Parser<T> {
 
     }
 
-    private arrayElement(this._tokens: TokenIterator) {
+    private _arrayElement() {
 
         let t = this._tokens.current;
 
@@ -3270,19 +3279,19 @@ export class Parser<T> {
     }
 
 
-    private variableAtom(this._tokens: TokenIterator) {
+    private _variableAtom() {
         let t = this._tokens.current;
 
         switch (t.type) {
             case TokenType.T_VARIABLE:
             case '$':
-                return this.simpleVariable(this._tokens);
+                return this._simpleVariable();
             case '(':
-                return this.parenthesisedExpression(this._tokens);
+                return this._parenthesisedExpression();
             case TokenType.T_ARRAY:
-                return this.longArray(this._tokens);
+                return this._longArray(this._tokens);
             case '[':
-                return this.shortArray(this._tokens);
+                return this._shortArray(this._tokens);
             case TokenType.T_CONSTANT_ENCAPSED_STRING:
             case TokenType.T_STATIC:
                 this._tokens.next();
@@ -3298,7 +3307,7 @@ export class Parser<T> {
 
     }
 
-    private simpleVariable(this._tokens: TokenIterator) {
+    private _simpleVariable() {
 
         let children: (T | Token)[] = [];
         let t = this._tokens.current;
@@ -3312,14 +3321,15 @@ export class Parser<T> {
             if (t.type === '{') {
                 children.push(t);
                 this._tokens.next();
-                children.push(this.expression(this._tokens));
-                if (this._tokens.current.type !== '}') {
+                children.push(this.expression());
+                t = this._tokens.current;
+                if (t.type !== '}') {
                     //error
                 }
-                children.push(this._tokens.current);
+                children.push(t);
                 this._tokens.next();
             } else if (t.type === '$' || t.type === TokenType.T_VARIABLE) {
-                children.push(this.simpleVariable(this._tokens));
+                children.push(this._simpleVariable());
             } else {
                 //error
             }
@@ -3331,19 +3341,29 @@ export class Parser<T> {
 
     }
 
-    private parenthesisedExpression(this._tokens: TokenIterator) {
+    private _parenthesisedExpression() {
 
-        let map: { [id: string]: string } = {
-            '(': ')',
-            '{': '}',
-            '[': ']'
-        };
         let t = this._tokens.current;
-        let close = map[t.type];
+        let close:TokenType | string;
+
+        switch(t.type){
+            case '(':
+                close = ')';
+                break;
+            case '{':
+                close = '}';
+                break;
+            case '[':
+                close = ']';
+                break;
+            default:
+                throw new Error(`Unexpected token ${t.type}`);
+        }
+
         let children: (T | Token)[] = [t];
 
         this._tokens.next();
-        children.push(this.expression(this._tokens));
+        children.push(this.expression());
         t = this._tokens.current;
 
         if (t.type !== close) {
