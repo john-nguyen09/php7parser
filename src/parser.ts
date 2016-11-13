@@ -563,11 +563,20 @@ export class Parser<T> {
 
     private _expression(minPrecedence = 0, lookForVariable = false) {
 
-        let lhs = lookForVariable ? this._variable() : this._atom();
+        let restrictOperators:(TokenType|string)[];
+        let lhs:T|Token; 
         let precedence: number;
         let associativity: Associativity;
         let op: Token;
         let rhs: T | Token;
+
+        if(lookForVariable){
+            lhs = this._variable();
+            restrictOperators = this._variableOnlyOperators();
+        } else {
+            restrictOperators = [];
+            lhs = this._atom(restrictOperators);
+        }
 
         while (true) {
 
@@ -575,6 +584,10 @@ export class Parser<T> {
 
             if (!this._isBinaryOpToken(op)) {
                 break;
+            }
+
+            if(restrictOperators.length && restrictOperators.indexOf(op.type) === -1){
+                //error
             }
 
             [precedence, associativity] = this._opPrecedenceMap[op.text];
@@ -598,7 +611,25 @@ export class Parser<T> {
 
     }
 
-    private _atom() {
+    private _variableOnlyOperators():(TokenType|string)[]{
+        return [
+            '=',
+            TokenType.T_PLUS_EQUAL,
+            TokenType.T_MINUS_EQUAL,
+            TokenType.T_MUL_EQUAL,
+            TokenType.T_POW_EQUAL,
+            TokenType.T_DIV_EQUAL,
+            TokenType.T_CONCAT_EQUAL,
+            TokenType.T_MOD_EQUAL,
+            TokenType.T_AND_EQUAL,
+            TokenType.T_OR_EQUAL,
+            TokenType.T_XOR_EQUAL,
+            TokenType.T_SL_EQUAL,
+            TokenType.T_SR_EQUAL
+        ];
+    }
+
+    private _atom(restrictOperators:(TokenType|string)[]) {
 
         let t = this._tokens.current;
 
@@ -624,6 +655,7 @@ export class Parser<T> {
                     this._tokens.next();
                     return this._nodeFactory(NodeType.UnaryExpression, [variable, t]);
                 } else {
+                    restrictOperators.push(...this._variableOnlyOperators());
                     return variable;
                 }
             case TokenType.T_INC:
@@ -642,7 +674,8 @@ export class Parser<T> {
             case TokenType.T_UNSET_CAST:
                 return this._unaryExpression();
             case TokenType.T_LIST:
-                return this.listAssignment(this._tokens);
+                restrictOperators.push('=');
+                return this._listExpression();
             case TokenType.T_CLONE:
                 return this.cloneExpression(this._tokens);
             case TokenType.T_NEW:
@@ -2726,16 +2759,17 @@ export class Parser<T> {
 
     }
 
-    private listAssignment(this._tokens: TokenIterator) {
+    private _listExpression() {
 
         let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
-        if (this._tokens.next().type !== '(') {
+        if (t.type !== '(') {
             //error
         }
 
-        children.push(this._tokens.current);
-        this._tokens.next();
+        children.push(t);
+        t = this._tokens.next();
         children.push(this.arrayElementList(this._tokens, ')'));
 
         if (this._tokens.current.type !== ')') {
@@ -2752,7 +2786,7 @@ export class Parser<T> {
 
         let t = this._tokens.current;
         let children: (T | Token)[] = [t];
-        let lookForVariable = t.type === TokenType.T_INC || t.type === TokenType.T_DEC;
+        let lookForVariable = t.type === TokenType.T_INC || t.type === TokenType.T_DEC || t.type === '&';
         this._tokens.next();
         children.push(this._expression(this._opPrecedenceMap[t.text][0], lookForVariable));
         return this._nodeFactory(NodeType.UnaryExpression, children);
