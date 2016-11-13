@@ -145,7 +145,7 @@ export enum NodeType {
     TraitAlias,
     ClassModifiers,
     ClassDeclaration,
-    TraitDeclaration,
+    TraitDeclarationStatement,
     InterfaceDeclaration,
     BinaryExpression,
     EncapsulatedVariable,
@@ -389,8 +389,7 @@ export class Parser<T> {
                 children.push(this._classDeclarationStatement());
                 break;
             case TokenType.T_TRAIT:
-                children.push(this.traitDeclaration(this._tokens));
-                lookForSemiColon = false;
+                children.push(this._traitDeclarationStatement());
                 break;
             case TokenType.T_INTERFACE:
                 children.push(this.interfaceDeclaration(this._tokens));
@@ -1253,7 +1252,7 @@ export class Parser<T> {
             case TokenType.T_CLASS:
                 return this._classDeclarationStatement(this._tokens);
             case TokenType.T_TRAIT:
-                return this.traitDeclaration(this._tokens);
+                return this._traitDeclarationStatement(this._tokens);
             case TokenType.T_INTERFACE:
                 return this.interfaceDeclaration(this._tokens);
             default:
@@ -1293,7 +1292,7 @@ export class Parser<T> {
 
     }
 
-    private traitDeclaration(this._tokens: TokenIterator) {
+    private _traitDeclarationStatement() {
 
         let children: (T | Token)[] = [this._tokens.current];
         let doc = this._tokens.lastDocComment;
@@ -1305,8 +1304,8 @@ export class Parser<T> {
 
         children.push(t);
         this._tokens.next();
-        children.push(this.classStatementList(this._tokens));
-        return this._nodeFactory(NodeType.TraitDeclaration, children, doc);
+        children.push(this._classStatementList());
+        return this._nodeFactory(NodeType.TraitDeclarationStatement, children, doc);
 
     }
 
