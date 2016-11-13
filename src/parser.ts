@@ -86,7 +86,8 @@ export enum NodeType {
     UseGroupStatement,
     UseList,
     HaltCompilerStatement,
-    ConstDeclarationList,
+    ConstantDeclarationStatement,
+    ConstantDeclarationList,
     ConstElement,
     DynamicVariable,
     ArrayDeclaration,
@@ -377,7 +378,7 @@ export class Parser<T> {
                 children.push(this._haltCompilerStatement());
                 break;
             case TokenType.T_CONST:
-                children.push(this.constDeclarationList(this._tokens));
+                children.push(this._constantDeclarationStatement());
                 break;
             case TokenType.T_FUNCTION:
                 children.push(this.functionDeclaration(this._tokens));
@@ -423,13 +424,27 @@ export class Parser<T> {
         return true;
     }
 
-    private constDeclarationList(this._tokens: TokenIterator) {
+    private _constantDeclarationStatement(){
 
-        let children: (T | Token)[] = [this._tokens.current];
+        let children:(T|Token)[] = [this._tokens.current];
+        this._tokens.next();
+        children.push(this._constantDeclarationList());
+        if(this._tokens.current.type !== ';'){
+            //error
+        }
+        children.push(this._tokens.current);
+        this._tokens.next();
+        return this._nodeFactory(NodeType.ConstantDeclarationStatement, children);
+
+    }
+
+    private _constantDeclarationList() {
+
+        let children: (T | Token)[] = [];
 
         while (true) {
 
-            children.push(this.constElement(this._tokens));
+            children.push(this._constantDeclaration());
             if (this._tokens.current.type !== ',') {
                 break;
             }
@@ -437,16 +452,16 @@ export class Parser<T> {
             this._tokens.next();
         }
 
-        return this._nodeFactory(NodeType.ConstDeclarationList, children);
+        return this._nodeFactory(NodeType.ConstantDeclarationList, children);
 
     }
 
-    private constElement(this._tokens: TokenIterator) {
+    private _constantDeclaration() {
 
         let children: (T | Token)[] = [];
         let doc = this._tokens.lastDocComment;
 
-        if (this._tokens.current.type !== TokenType.T_CONST) {
+        if (this._tokens.current.type !== TokenType.T_STRING) {
             //error
         }
 
@@ -457,14 +472,8 @@ export class Parser<T> {
         }
 
         children.push(this._tokens.current);
-        children.push(this.expression(this._tokens));
-
-        if (this._tokens.current.type !== ';') {
-            //error
-        }
-
-        children.push(this._tokens.current);
         this._tokens.next();
+        children.push(this.expression());
 
         return this._nodeFactory(NodeType.ConstElement, children, doc);
 
@@ -1570,7 +1579,7 @@ export class Parser<T> {
             //error
         }
 
-        children.push(this.constDeclarationList());
+        children.push(this._constantDeclarationList());
 
         if (!this._expectCurrent(')', children)) {
             //error
