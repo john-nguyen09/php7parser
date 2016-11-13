@@ -85,7 +85,7 @@ export enum NodeType {
     UseStatement,
     UseGroupStatement,
     UseList,
-    HaltCompiler,
+    HaltCompilerStatement,
     ConstDeclarationList,
     ConstElement,
     DynamicVariable,
@@ -374,7 +374,7 @@ export class Parser<T> {
                 children.push(this._useStatement());
                 break;
             case TokenType.T_HALT_COMPILER:
-                children.push(this.haltCompiler(this._tokens));
+                children.push(this._haltCompilerStatement());
                 break;
             case TokenType.T_CONST:
                 children.push(this.constDeclarationList(this._tokens));
@@ -3186,23 +3186,32 @@ export class Parser<T> {
         return this._opPrecedenceMap.hasOwnProperty(t.text) && (this._opPrecedenceMap[t.text][2] & OpType.Binary) === OpType.Binary;
     }
 
-    private haltCompiler(this._tokens: TokenIterator) {
+    private _haltCompilerStatement() {
 
         let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
-        if (this._tokens.next().type !== '(') {
+        if (t.type !== '(') {
             //error
         }
 
-        children.push(this._tokens.current);
+        children.push(t);
+        t = this._tokens.next();
 
-        if (this._tokens.next().type !== ')') {
+        if (t.type !== ')') {
             //error
         }
 
-        children.push(this._tokens.current);
+        children.push(t);
+        t = this._tokens.next();
+
+        if(t.type !== ';'){
+            //error
+        }
+
+        children.push(t);
         this._tokens.next();
-        return this._nodeFactory(NodeType.HaltCompiler, children);
+        return this._nodeFactory(NodeType.HaltCompilerStatement, children);
 
     }
 
