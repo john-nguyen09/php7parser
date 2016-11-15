@@ -712,9 +712,9 @@ export class Parser<T> {
             case TokenType.T_FUNC_C:
             case TokenType.T_NS_C:
             case TokenType.T_CLASS_C:
-                return this._tokens.current;
+                return t;
             case TokenType.T_START_HEREDOC:
-                return this.heredoc(this._tokens);
+                return this._heredoc(this._tokens);
             case '"':
                 return this.doubleQuotesExpression(this._tokens);
             case '`':
@@ -957,7 +957,7 @@ export class Parser<T> {
         return this._nodeFactory(NodeType.BackticksExpression, children);
     }
 
-    private encapsulatedVariableList(this._tokens: TokenIterator) {
+    private _encapsulatedVariableList() {
 
         let children: (T | Token)[] = [];
 
@@ -969,20 +969,21 @@ export class Parser<T> {
                     this._tokens.next();
                     continue;
                 case TokenType.T_VARIABLE:
-                    if (this._tokens.lookahead().type === '[') {
-                        children.push(this.encapsulatedDimension(this._tokens));
-                    } else if (this._tokens.lookahead().type === TokenType.T_OBJECT_OPERATOR) {
-                        children.push(this.encapsulatedProperty(this._tokens));
+                    let next = this._tokens.lookahead();
+                    if (next.type === '[') {
+                        children.push(this._encapsulatedDimension());
+                    } else if (next.type === TokenType.T_OBJECT_OPERATOR) {
+                        children.push(this._encapsulatedProperty());
                     } else {
-                        children.push(this._nodeFactory(NodeType.EncapsulatedVariable, [this._nodeFactory(NodeType.Variable, [this._tokens.current])]));
+                        children.push(this._nodeFactory(NodeType.Variable, [this._tokens.current]));
                         this._tokens.next();
                     }
                     continue;
                 case TokenType.T_DOLLAR_OPEN_CURLY_BRACES:
-                    children.push(this.dollarCurlyOpenEncapsulatedVariable(this._tokens));
+                    children.push(this._dollarCurlyOpenEncapsulatedVariable());
                     continue;
                 case TokenType.T_CURLY_OPEN:
-                    children.push(this.curlyOpenEncapsulatedVariable(this._tokens));
+                    children.push(this._curlyOpenEncapsulatedVariable());
                     continue;
                 default:
                     break;
@@ -996,71 +997,79 @@ export class Parser<T> {
 
     }
 
-    private curlyOpenEncapsulatedVariable(this._tokens: TokenIterator) {
+    private _curlyOpenEncapsulatedVariable() {
 
-        let children: (T | Token)[] = [this._tokens.current, this.variable(this._tokens)];
+        let children: (T | Token)[] = [this._tokens.current, this._variable()];
+        let t = this._tokens.current;
 
-        if (this._tokens.current.type !== '}') {
+        if (t.type !== '}') {
             //error
         }
 
-        children.push(this._tokens.current);
+        children.push(t);
         this._tokens.next();
         return this._nodeFactory(NodeType.EncapsulatedVariable, children);
 
     }
 
-    private dollarCurlyOpenEncapsulatedVariable(this._tokens: TokenIterator) {
+    private _dollarCurlyOpenEncapsulatedVariable() {
 
         let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
-        if (this._tokens.next().type === TokenType.T_STRING_VARNAME) {
+        if (t.type === TokenType.T_STRING_VARNAME) {
 
             if (this._tokens.lookahead().type === '[') {
 
-                let dimChildren: (T | Token)[] = [this._nodeFactory(NodeType.Variable, [this._tokens.current]), this._tokens.next(), this.expression(this._tokens)];
-                if (this._tokens.current.type !== ']') {
+                let dimChildren: (T | Token)[] = [this._nodeFactory(NodeType.Variable, [t]), this._tokens.next(), this._expression()];
+                t = this._tokens.current;
+                if (t.type !== ']') {
                     //error
                 }
-                dimChildren.push(this._tokens.current);
+                dimChildren.push(t);
                 children.push(this._nodeFactory(NodeType.Dimension, dimChildren));
             } else {
-                children.push(this._nodeFactory(NodeType.Variable, [this._tokens.current]));
+                children.push(this._nodeFactory(NodeType.Variable, [t]));
             }
 
             this._tokens.next();
 
+        } else if(this._isExpressionStartToken(t)) {
+            children.push(this._expression());
         } else {
-            children.push(this.expression(this._tokens));
-        }
-
-        if (this._tokens.current.type !== '}') {
             //error
         }
-        children.push(this._tokens.current);
+
+        t = this._tokens.current;
+        if (t.type !== '}') {
+            //error
+        }
+        children.push(t);
         this._tokens.next();
         return this._nodeFactory(NodeType.EncapsulatedVariable, children);
 
     }
 
-    private encapsulatedDimension(this._tokens: TokenIterator) {
+    private _encapsulatedDimension() {
 
         let children: (T | Token)[] = [this._nodeFactory(NodeType.Variable, [this._tokens.current]), this._tokens.next()];
+        let t = this._tokens.next();
 
-        switch (this._tokens.next().type) {
+        switch (t.type) {
             case TokenType.T_STRING:
             case TokenType.T_NUM_STRING:
-                children.push(this._tokens.current);
+                children.push(t);
                 break;
             case TokenType.T_VARIABLE:
-                children.push(this._nodeFactory(NodeType.Variable, [this._tokens.current]));
+                children.push(this._nodeFactory(NodeType.Variable, [t]));
                 break;
             case '-':
-                let unaryNodeChildren = [this._tokens.current];
-                if (this._tokens.next().type !== TokenType.T_NUM_STRING) {
+                let unaryNodeChildren = [t];
+                t = this._tokens.next();
+                if (t.type !== TokenType.T_NUM_STRING) {
                     //error
                 }
-                unaryNodeChildren.push(this._tokens.current);
+                unaryNodeChildren.push(t);
                 children.push(this._nodeFactory(NodeType.UnaryExpression, unaryNodeChildren));
                 break;
             default:
@@ -1068,33 +1077,35 @@ export class Parser<T> {
                 break;
         }
 
-        if (this._tokens.next().type !== ']') {
+        t = this._tokens.next();
+        if (t.type !== ']') {
             //error
         }
 
-        children.push(this._tokens.current);
+        children.push(t);
         this._tokens.next();
-        return this._nodeFactory(NodeType.EncapsulatedVariable, [this._nodeFactory(NodeType.Dimension, children)]);
+        return this._nodeFactory(NodeType.Dimension, children);
 
     }
 
-    private encapsulatedProperty(this._tokens: TokenIterator) {
+    private _encapsulatedProperty() {
         let children: (T | Token)[] = [this._nodeFactory(NodeType.Variable, [this._tokens.current]), this._tokens.next()];
+        let t = this._tokens.next();
 
-        if (this._tokens.next().type !== TokenType.T_STRING) {
+        if (t.type !== TokenType.T_STRING) {
             //error
         }
 
-        children.push(this._tokens.current);
+        children.push(t);
         this._tokens.next();
-        return this._nodeFactory(NodeType.EncapsulatedVariable, [this._nodeFactory(NodeType.Property, children)]);
+        return this._nodeFactory(NodeType.Property, children);
     }
 
-    private heredoc(this._tokens: TokenIterator) {
+    private _heredoc() {
 
         let children: (T | Token)[] = [this._tokens.current];
         this._tokens.next();
-        children.push(this.encapsulatedVariableList(this._tokens));
+        children.push(this._encapsulatedVariableList(this._tokens));
         if (this._tokens.current.type !== TokenType.T_END_HEREDOC) {
             //error
         }
