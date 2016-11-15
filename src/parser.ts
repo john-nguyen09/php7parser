@@ -701,7 +701,7 @@ export class Parser<T> {
             case TokenType.T_CLONE:
                 return this._cloneExpression();
             case TokenType.T_NEW:
-                return this.newExpression(this._tokens);
+                return this._newExpression();
             case TokenType.T_DNUMBER:
             case TokenType.T_LNUMBER:
             case TokenType.T_LINE:
@@ -1104,18 +1104,14 @@ export class Parser<T> {
 
     }
 
-    private anonymousClassDeclaration(this._tokens: TokenIterator) {
+    private _anonymousClassDeclaration() {
 
         let children: (T | Token)[] = [this._tokens.current];
         let doc = this._tokens.lastDocComment;
         let t = this._tokens.next();
 
-        if (doc) {
-            children.unshift(doc);
-        }
-
         if (t.type === '(') {
-            children.push(this.argumentList(this._tokens));
+            children.push(this._argumentList());
             t = this._tokens.current;
         }
 
@@ -1130,7 +1126,7 @@ export class Parser<T> {
         }
 
         children.push(this._classStatementList());
-        return this._nodeFactory(NodeType.AnonymousClassDeclaration, children);
+        return this._nodeFactory(NodeType.AnonymousClassDeclaration, children, doc);
 
     }
 
@@ -2675,43 +2671,32 @@ export class Parser<T> {
 
     }
 
-    private newExpression(this._tokens: TokenIterator) {
+    private _newExpression() {
 
         let t = this._tokens.current;
         let children: (T | Token)[] = [t];
         t = this._tokens.next();
 
         if (t.type === TokenType.T_CLASS) {
-            children.push(this.anonymousClassDeclaration(this._tokens));
+            children.push(this._anonymousClassDeclaration());
             return this._nodeFactory(NodeType.New, children);
         }
 
-        let name = this.newVariablePart(this._tokens);
-
+        children.push(this._newVariable());
         t = this._tokens.current;
-        if (t.type === '[' || t.type === '{' || t.type === TokenType.T_OBJECT_OPERATOR || t.type === TokenType.T_PAAMAYIM_NEKUDOTAYIM) {
-            name = this.newVariable(this._tokens, name);
-            t = this._tokens.current;
-        }
-
-        children.push(name);
 
         if (t.type === '(') {
-            children.push(this.argumentList(this._tokens));
+            children.push(this._argumentList());
         }
 
         return this._nodeFactory(NodeType.New, children);
 
     }
 
-    private newVariable(this._tokens: TokenIterator, part: T | Token = null) {
+    private _newVariable() {
 
-        if (!part) {
-            part = this.newVariablePart(this._tokens);
-        }
-
+         let part = this._newVariablePart();
         let t: Token;
-        let next: Token;
         let propName: T | Token;
 
         while (true) {
@@ -2721,15 +2706,15 @@ export class Parser<T> {
             switch (t.type) {
                 case '[':
                 case '{':
-                    part = this.dimension(this._tokens, part);
+                    part = this._dimension(part);
                     continue;
                 case TokenType.T_OBJECT_OPERATOR:
                     this._tokens.next();
-                    part = this._nodeFactory(NodeType.Property, [part, t, this.propertyName(this._tokens)]);
+                    part = this._nodeFactory(NodeType.Property, [part, t, this._propertyName()]);
                     continue;
                 case TokenType.T_PAAMAYIM_NEKUDOTAYIM:
-                    next = this._tokens.next();
-                    part = this._nodeFactory(NodeType.StaticProperty, [part, t, this.simpleVariable(this._tokens)]);
+                    this._tokens.next();
+                    part = this._nodeFactory(NodeType.StaticProperty, [part, t, this._simpleVariable()]);
                     continue;
                 default:
                     break;
@@ -2743,32 +2728,25 @@ export class Parser<T> {
 
     }
 
-    private newVariablePart(this._tokens: TokenIterator) {
+    private _newVariablePart():T|Token {
 
         let t = this._tokens.current;
-        let newVariablePart: T | Token = null;
 
         switch (t.type) {
             case TokenType.T_STATIC:
-                newVariablePart = t;
                 this._tokens.next();
-                break;
+                return t;
             case TokenType.T_VARIABLE:
             case '$':
-                newVariablePart = this.simpleVariable(this._tokens);
-                break;
+                return this._simpleVariable();
             case TokenType.T_STRING:
             case TokenType.T_NAMESPACE:
             case TokenType.T_NS_SEPARATOR:
-                newVariablePart = this.name(this._tokens);
-                break;
+                return this._name();
             default:
                 //error
                 break;
-
         }
-
-        return newVariablePart;
 
     }
 
