@@ -185,7 +185,7 @@ export enum NodeType {
     Catch,
     CatchNameList,
     FinallyStatement,
-
+    TernaryExpression
 }
 
 export interface NodeFactory<T> {
@@ -251,7 +251,8 @@ var opPrecedenceMap: { [op: string]: [number, number, number] } = {
     '&&': [36, Associativity.Left, OpType.Binary],
     '||': [35, Associativity.Left, OpType.Binary],
     '??': [34, Associativity.Right, OpType.Binary],
-    '?:': [33, Associativity.Left, OpType.Binary],
+    '?': [33, Associativity.Left, OpType.Binary], //?: ternary
+    ':': [33, Associativity.Left, OpType.Binary], //?: ternary
     '=': [32, Associativity.Right, OpType.Binary],
     '.=': [32, Associativity.Right, OpType.Binary],
     '+=': [32, Associativity.Right, OpType.Binary],
@@ -601,13 +602,34 @@ export class Parser<T> {
             }
 
             this._tokens.next();
-            rhs = this._expression(precedence);
-            lhs = this._nodeFactory(NodeType.BinaryExpression, [lhs, op, rhs]);
-
+            if(op.type === '?'){
+                lhs = this._ternaryExpression(lhs, op, precedence);
+            } else {
+                rhs = this._expression(precedence);
+                lhs = this._nodeFactory(NodeType.BinaryExpression, [lhs, op, rhs]);
+            }
+            
         }
 
         return lhs;
 
+
+    }
+
+    private _ternaryExpression(lhs:T|Token, op:Token, precedence:number){
+
+        let children:(T|Token)[] = [lhs, op];
+        children.push(this._expression(precedence));
+        op = this._tokens.current;
+
+        if(op.type !== ':'){
+            //error
+        }
+        
+        children.push(op);
+        this._tokens.next();
+        children.push(this._expression(precedence));
+        return this._nodeFactory(NodeType.TernaryExpression, children);
 
     }
 
