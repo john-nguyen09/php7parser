@@ -724,7 +724,7 @@ export class Parser<T> {
             case TokenType.T_YIELD:
                 return this.yieldExpression(this._tokens);
             case TokenType.T_YIELD_FROM:
-                return this.yieldFromExpression(this._tokens);
+                return this._keywordExpression(NodeType.YieldFrom);
             case TokenType.T_FUNCTION:
                 return this._closure();
             case TokenType.T_INCLUDE:
@@ -817,12 +817,6 @@ export class Parser<T> {
         children.push(this._tokens.current);
         this._tokens.next();
         return this._nodeFactory(NodeType.Eval, children);
-
-    }
-
-    private yieldFromExpression(this._tokens: TokenIterator) {
-
-        return this.keywordExpression(NodeType.YieldFrom, this._tokens);
 
     }
 
