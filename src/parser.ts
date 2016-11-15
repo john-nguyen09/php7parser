@@ -114,7 +114,7 @@ export enum NodeType {
     YieldFrom,
     Yield,
     Print,
-    BackticksExpression,
+    Backticks,
     ComplexVariable,
     EncapsulatedVariableList,
     AnonymousClassDeclaration,
@@ -714,11 +714,11 @@ export class Parser<T> {
             case TokenType.T_CLASS_C:
                 return t;
             case TokenType.T_START_HEREDOC:
-                return this._heredoc(this._tokens);
+                return this._heredoc();
             case '"':
-                return this.doubleQuotesExpression(this._tokens);
+                return this._quotedEncapsulatedVariableList(NodeType.DoubleQuotes, '"');
             case '`':
-                return this.backticksExpression(this._tokens);
+                return this._quotedEncapsulatedVariableList(NodeType.Backticks, '`');
             case TokenType.T_PRINT:
                 return this.printExpression(this._tokens);
             case TokenType.T_YIELD:
@@ -928,24 +928,44 @@ export class Parser<T> {
 
     }
 
-    private doubleQuotesExpression(this._tokens: TokenIterator) {
+    private _doubleQuotes() {
 
         let children: (T | Token)[] = [this._tokens.current];
-        this._tokens.next();
-        children.push(this.encapsulatedVariableList(this._tokens));
-        if (this._tokens.current.type !== '"') {
+        let t = this._tokens.next();
+        children.push(this._encapsulatedVariableList());
+        t = this._tokens.current;
+        
+        if (t.type !== '"') {
             //error
         }
-        children.push(this._tokens.current);
+
+        children.push(t);
         this._tokens.next();
         return this._nodeFactory(NodeType.DoubleQuotes, children);
 
     }
 
-    private backticksExpression(this._tokens: TokenIterator) {
+    private _quotedEncapsulatedVariableList(type:NodeType, closeTokenType:Token|string) {
 
         let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
+        children.push(this._encapsulatedVariableList());
+        t = this._tokens.current;
+        
+        if (t.type !== closeTokenType) {
+            //error
+        }
+
+        children.push(t);
         this._tokens.next();
+        return this._nodeFactory(type, children);
+
+    }
+
+    private _backticks() {
+
+        let children: (T | Token)[] = [this._tokens.current];
+        let t this._tokens.next();
         children.push(this.encapsulatedVariableList(this._tokens));
 
         if (this._tokens.current.type !== '`') {
@@ -954,7 +974,7 @@ export class Parser<T> {
 
         children.push(this._tokens.current);
         this._tokens.next();
-        return this._nodeFactory(NodeType.BackticksExpression, children);
+        return this._nodeFactory(NodeType.Backticks, children);
     }
 
     private _encapsulatedVariableList() {
@@ -1104,12 +1124,15 @@ export class Parser<T> {
     private _heredoc() {
 
         let children: (T | Token)[] = [this._tokens.current];
-        this._tokens.next();
-        children.push(this._encapsulatedVariableList(this._tokens));
-        if (this._tokens.current.type !== TokenType.T_END_HEREDOC) {
+        let t = this._tokens.next();
+        children.push(this._encapsulatedVariableList());
+        t = this._tokens.current;
+        
+        if (t.type !== TokenType.T_END_HEREDOC) {
             //error
         }
-        children.push(this._tokens.current);
+
+        children.push(t);
         this._tokens.next();
         return this._nodeFactory(NodeType.Heredoc, children);
 
