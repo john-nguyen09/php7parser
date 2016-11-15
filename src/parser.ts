@@ -731,7 +731,7 @@ export class Parser<T> {
             case TokenType.T_INCLUDE_ONCE:
             case TokenType.T_REQUIRE:
             case TokenType.T_REQUIRE_ONCE:
-                return this.includeExpression(this._tokens);
+                return this._keywordExpression(NodeType.Include);
             case TokenType.T_EVAL:
                 return this.evalExpression(this._tokens);
             case TokenType.T_EMPTY:
@@ -817,12 +817,6 @@ export class Parser<T> {
         children.push(this._tokens.current);
         this._tokens.next();
         return this._nodeFactory(NodeType.Eval, children);
-
-    }
-
-    private includeExpression(this._tokens: TokenIterator) {
-
-        return this.keywordExpression(NodeType.Include, this._tokens);
 
     }
 
