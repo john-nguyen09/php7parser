@@ -928,23 +928,6 @@ export class Parser<T> {
 
     }
 
-    private _doubleQuotes() {
-
-        let children: (T | Token)[] = [this._tokens.current];
-        let t = this._tokens.next();
-        children.push(this._encapsulatedVariableList());
-        t = this._tokens.current;
-        
-        if (t.type !== '"') {
-            //error
-        }
-
-        children.push(t);
-        this._tokens.next();
-        return this._nodeFactory(NodeType.DoubleQuotes, children);
-
-    }
-
     private _quotedEncapsulatedVariableList(type:NodeType, closeTokenType:Token|string) {
 
         let children: (T | Token)[] = [this._tokens.current];
@@ -960,21 +943,6 @@ export class Parser<T> {
         this._tokens.next();
         return this._nodeFactory(type, children);
 
-    }
-
-    private _backticks() {
-
-        let children: (T | Token)[] = [this._tokens.current];
-        let t this._tokens.next();
-        children.push(this.encapsulatedVariableList(this._tokens));
-
-        if (this._tokens.current.type !== '`') {
-            //error
-        }
-
-        children.push(this._tokens.current);
-        this._tokens.next();
-        return this._nodeFactory(NodeType.Backticks, children);
     }
 
     private _encapsulatedVariableList() {
