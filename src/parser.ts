@@ -625,7 +625,7 @@ export class Parser<T> {
         if(op.type !== ':'){
             //error
         }
-        
+
         children.push(op);
         this._tokens.next();
         children.push(this._expression(precedence));
@@ -699,7 +699,7 @@ export class Parser<T> {
                 restrictOperators.push('=');
                 return this._listExpression();
             case TokenType.T_CLONE:
-                return this.cloneExpression(this._tokens);
+                return this._cloneExpression();
             case TokenType.T_NEW:
                 return this.newExpression(this._tokens);
             case TokenType.T_DNUMBER:
@@ -2772,11 +2772,11 @@ export class Parser<T> {
 
     }
 
-    private cloneExpression(this._tokens: TokenIterator) {
+    private _cloneExpression() {
 
         let children: (T | Token)[] = [this._tokens.current];
         this._tokens.next();
-        children.push(this.expression(this._tokens));
+        children.push(this._expression());
         return this._nodeFactory(NodeType.Clone, children);
 
     }
