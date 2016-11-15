@@ -733,9 +733,9 @@ export class Parser<T> {
             case TokenType.T_REQUIRE_ONCE:
                 return this._keywordExpression(NodeType.Include);
             case TokenType.T_EVAL:
-                return this._eval();
+                return this._keywordParenthesisedExpression(NodeType.Eval);
             case TokenType.T_EMPTY:
-                return this.emptyExpression(this._tokens);
+                return this._keywordParenthesisedExpression(NodeType.Empty);
             case TokenType.T_ISSET:
                 return this.issetExpression(this._tokens);
             default:
@@ -776,29 +776,7 @@ export class Parser<T> {
 
     }
 
-    private emptyExpression(this._tokens: TokenIterator) {
-
-        let children: (T | Token)[] = [this._tokens.current];
-
-        if (this._tokens.next().type !== '(') {
-            //error
-        }
-
-        children.push(this._tokens.current);
-        this._tokens.next();
-        children.push(this.expression(this._tokens));
-
-        if (this._tokens.current.type !== ')') {
-            //error
-        }
-
-        children.push(this._tokens.current);
-        this._tokens.next();
-        return this._nodeFactory(NodeType.Empty, children);
-
-    }
-
-    private _eval() {
+    private _keywordParenthesisedExpression(type:NodeType) {
 
         let children: (T | Token)[] = [this._tokens.current];
         let t = this._tokens.next();
@@ -818,7 +796,7 @@ export class Parser<T> {
 
         children.push(t);
         this._tokens.next();
-        return this._nodeFactory(NodeType.Eval, children);
+        return this._nodeFactory(type, children);
 
     }
 
