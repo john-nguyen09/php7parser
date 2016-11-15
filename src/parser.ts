@@ -126,7 +126,7 @@ export enum NodeType {
     ClassStatementList,
     MemberModifierList,
     PropertyDeclaration,
-    PropertyDeclarationList,
+    PropertyDeclarationStatement,
     ClassConstantDeclaration,
     ClassConstantDeclarationList,
     ReturnType,
@@ -564,14 +564,14 @@ export class Parser<T> {
 
     private _expression(minPrecedence = 0, lookForVariable = false) {
 
-        let restrictOperators:(TokenType|string)[];
-        let lhs:T|Token; 
+        let restrictOperators: (TokenType | string)[];
+        let lhs: T | Token;
         let precedence: number;
         let associativity: Associativity;
         let op: Token;
         let rhs: T | Token;
 
-        if(lookForVariable){
+        if (lookForVariable) {
             lhs = this._variable();
             restrictOperators = this._variableOnlyOperators();
         } else {
@@ -587,7 +587,7 @@ export class Parser<T> {
                 break;
             }
 
-            if(restrictOperators.length && restrictOperators.indexOf(op.type) === -1){
+            if (restrictOperators.length && restrictOperators.indexOf(op.type) === -1) {
                 //error
             }
 
@@ -602,13 +602,13 @@ export class Parser<T> {
             }
 
             this._tokens.next();
-            if(op.type === '?'){
+            if (op.type === '?') {
                 lhs = this._ternaryExpression(lhs, op, precedence);
             } else {
                 rhs = this._expression(precedence);
                 lhs = this._nodeFactory(NodeType.BinaryExpression, [lhs, op, rhs]);
             }
-            
+
         }
 
         return lhs;
@@ -616,13 +616,13 @@ export class Parser<T> {
 
     }
 
-    private _ternaryExpression(lhs:T|Token, op:Token, precedence:number){
+    private _ternaryExpression(lhs: T | Token, op: Token, precedence: number) {
 
-        let children:(T|Token)[] = [lhs, op];
+        let children: (T | Token)[] = [lhs, op];
         children.push(this._expression(precedence));
         op = this._tokens.current;
 
-        if(op.type !== ':'){
+        if (op.type !== ':') {
             //error
         }
 
@@ -633,7 +633,7 @@ export class Parser<T> {
 
     }
 
-    private _variableOnlyOperators():(TokenType|string)[]{
+    private _variableOnlyOperators(): (TokenType | string)[] {
         return [
             '=',
             TokenType.T_PLUS_EQUAL,
@@ -651,7 +651,7 @@ export class Parser<T> {
         ];
     }
 
-    private _atom(restrictOperators:(TokenType|string)[]) {
+    private _atom(restrictOperators: (TokenType | string)[]) {
 
         let t = this._tokens.current;
 
@@ -764,8 +764,8 @@ export class Parser<T> {
 
             if (this._tokens.current.type === ',') {
                 children.push(t);
-                this._tokens.next();    
-            } else if(t.type === ')'){
+                this._tokens.next();
+            } else if (t.type === ')') {
                 children.push(t);
                 this._tokens.next();
                 break;
@@ -774,14 +774,14 @@ export class Parser<T> {
                 break;
             }
 
-            
+
         }
 
         return this._nodeFactory(NodeType.Isset, children);
 
     }
 
-    private _keywordParenthesisedExpression(type:NodeType) {
+    private _keywordParenthesisedExpression(type: NodeType) {
 
         let children: (T | Token)[] = [this._tokens.current];
         let t = this._tokens.next();
@@ -897,13 +897,13 @@ export class Parser<T> {
 
     }
 
-    private _quotedEncapsulatedVariableList(type:NodeType, closeTokenType:Token|string) {
+    private _quotedEncapsulatedVariableList(type: NodeType, closeTokenType: Token | string) {
 
         let children: (T | Token)[] = [this._tokens.current];
         let t = this._tokens.next();
         children.push(this._encapsulatedVariableList());
         t = this._tokens.current;
-        
+
         if (t.type !== closeTokenType) {
             //error
         }
@@ -991,7 +991,7 @@ export class Parser<T> {
 
             this._tokens.next();
 
-        } else if(this._isExpressionStartToken(t)) {
+        } else if (this._isExpressionStartToken(t)) {
             children.push(this._expression());
         } else {
             //error
@@ -1064,7 +1064,7 @@ export class Parser<T> {
         let t = this._tokens.next();
         children.push(this._encapsulatedVariableList());
         t = this._tokens.current;
-        
+
         if (t.type !== TokenType.T_END_HEREDOC) {
             //error
         }
@@ -1157,10 +1157,10 @@ export class Parser<T> {
             case TokenType.T_STATIC:
             case TokenType.T_ABSTRACT:
             case TokenType.T_FINAL:
-                let modifierList = this.memberModifierList(this._tokens);
+                let modifierList = this._memberModifierList();
                 t = this._tokens.current;
                 if (t.type === TokenType.T_VARIABLE) {
-                    return this.propertyDeclarationList(this._tokens, modifierList);
+                    return this._propertyDeclarationStatement(modifierList);
                 } else if (t.type === TokenType.T_FUNCTION) {
                     return this.methodDeclaration(this._tokens, modifierList);
                 } else if (t.type === TokenType.T_CONST) {
@@ -1172,7 +1172,7 @@ export class Parser<T> {
                 return this.methodDeclaration(this._tokens);
             case TokenType.T_VAR:
                 this._tokens.next();
-                return this.propertyDeclarationList(this._tokens, t);
+                return this._propertyDeclarationStatement(t);
             case TokenType.T_CONST:
                 return this.classConstantDeclarationList(this._tokens);
             case TokenType.T_USE:
@@ -2527,35 +2527,34 @@ export class Parser<T> {
 
     }
 
-    private propertyDeclarationList(this._tokens: TokenIterator, modifiersOrVar: T | Token) {
+    private _propertyDeclarationStatement(modifiersOrVar: T | Token) {
         let t = this._tokens.current;
         let children: (T | Token)[] = [modifiersOrVar];
 
         while (true) {
 
-            children.push(this.propertyDeclaration(this._tokens));
+            children.push(this._propertyDeclaration());
             t = this._tokens.current;
 
-            if (t.type !== ',') {
-                break;
-            } else {
+            if (t.type === ',') {
                 children.push(t);
                 t = this._tokens.next();
+            } else if (t.type === ';') {
+                children.push(t);
+                this._tokens.next();
+                break;
+            } else {
+                //error
+                break;
             }
 
         }
 
-        if (t.type !== ';') {
-            //error
-        }
-
-        children.push(t);
-        this._tokens.next();
-        return this._nodeFactory(NodeType.PropertyDeclarationList, children);
+        return this._nodeFactory(NodeType.PropertyDeclarationStatement, children);
 
     }
 
-    private propertyDeclaration(this._tokens: TokenIterator) {
+    private _propertyDeclaration() {
         let t = this._tokens.current;
         let children: (T | Token)[] = [];
         let doc = this._tokens.lastDocComment;
@@ -2574,12 +2573,12 @@ export class Parser<T> {
         children.push(t);
         t = this._tokens.next();
 
-        children.push(this.expression(this._tokens));
+        children.push(this._expression());
         return this._nodeFactory(NodeType.PropertyDeclaration, children, doc);
 
     }
 
-    private memberModifierList(this._tokens: TokenIterator) {
+    private _memberModifierList() {
 
         let t = this._tokens.current;
         let children: (T | Token)[] = [t];
@@ -2661,7 +2660,7 @@ export class Parser<T> {
 
     private _newVariable() {
 
-         let part = this._newVariablePart();
+        let part = this._newVariablePart();
         let t: Token;
         let propName: T | Token;
 
@@ -2694,7 +2693,7 @@ export class Parser<T> {
 
     }
 
-    private _newVariablePart():T|Token {
+    private _newVariablePart(): T | Token {
 
         let t = this._tokens.current;
 
