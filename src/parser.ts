@@ -722,7 +722,7 @@ export class Parser<T> {
             case TokenType.T_PRINT:
                 return this._keywordExpression(NodeType.Print);
             case TokenType.T_YIELD:
-                return this.yieldExpression(this._tokens);
+                return this._yield();
             case TokenType.T_YIELD_FROM:
                 return this._keywordExpression(NodeType.YieldFrom);
             case TokenType.T_FUNCTION:
@@ -889,23 +889,25 @@ export class Parser<T> {
 
     }
 
-    private yieldExpression(this._tokens: TokenIterator) {
+    private _yield() {
 
         let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
-        if (!this.isExpressionStartToken(this._tokens.next())) {
+        if (!this._isExpressionStartToken(t)) {
             return this._nodeFactory(NodeType.Yield, children);
         }
 
-        children.push(this.expression(this._tokens));
+        children.push(this._expression());
+        t = this._tokens.current;
 
-        if (this._tokens.current.type !== TokenType.T_DOUBLE_ARROW) {
+        if (t.type !== TokenType.T_DOUBLE_ARROW) {
             return this._nodeFactory(NodeType.Yield, children);
         }
 
-        children.push(this._tokens.current);
+        children.push(t);
         this._tokens.next();
-        children.push(this.expression(this._tokens));
+        children.push(this._expression());
         return this._nodeFactory(NodeType.Yield, children);
 
     }
