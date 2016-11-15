@@ -733,7 +733,7 @@ export class Parser<T> {
             case TokenType.T_REQUIRE_ONCE:
                 return this._keywordExpression(NodeType.Include);
             case TokenType.T_EVAL:
-                return this.evalExpression(this._tokens);
+                return this._eval();
             case TokenType.T_EMPTY:
                 return this.emptyExpression(this._tokens);
             case TokenType.T_ISSET:
@@ -798,23 +798,25 @@ export class Parser<T> {
 
     }
 
-    private evalExpression(this._tokens: TokenIterator) {
+    private _eval() {
 
         let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
-        if (this._tokens.next().type !== '(') {
+        if (t.type !== '(') {
             //error
         }
 
-        children.push(this._tokens.current);
+        children.push(t);
         this._tokens.next();
-        children.push(this.expression(this._tokens));
+        children.push(this._expression());
+        t = this._tokens.current;
 
-        if (this._tokens.current.type !== ')') {
+        if (t.type !== ')') {
             //error
         }
 
-        children.push(this._tokens.current);
+        children.push(t);
         this._tokens.next();
         return this._nodeFactory(NodeType.Eval, children);
 
