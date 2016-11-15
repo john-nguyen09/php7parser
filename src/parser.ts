@@ -720,7 +720,7 @@ export class Parser<T> {
             case '`':
                 return this._quotedEncapsulatedVariableList(NodeType.Backticks, '`');
             case TokenType.T_PRINT:
-                return this.printExpression(this._tokens);
+                return this._keywordExpression(NodeType.Print);
             case TokenType.T_YIELD:
                 return this.yieldExpression(this._tokens);
             case TokenType.T_YIELD_FROM:
@@ -832,11 +832,11 @@ export class Parser<T> {
 
     }
 
-    private keywordExpression(nodeType: NodeType, this._tokens: TokenIterator) {
+    private _keywordExpression(nodeType: NodeType) {
 
         let children: (T | Token)[] = [this._tokens.current];
         this._tokens.next();
-        children.push(this._expression(this._tokens));
+        children.push(this._expression());
         return this._nodeFactory(nodeType, children);
     }
 
@@ -919,12 +919,6 @@ export class Parser<T> {
         this._tokens.next();
         children.push(this.expression(this._tokens));
         return this._nodeFactory(NodeType.Yield, children);
-
-    }
-
-    private printExpression(this._tokens: TokenIterator) {
-
-        return this.keywordExpression(NodeType.Print, this._tokens);
 
     }
 
@@ -2192,11 +2186,6 @@ export class Parser<T> {
         return this._nodeFactory(nodeType, children);
     }
 
-    private _isExpressionStartToken(t: Token) {
-
-
-
-    }
 
     private forStatement(this._tokens: TokenIterator) {
 
