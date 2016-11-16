@@ -128,7 +128,7 @@ export enum NodeType {
     PropertyDeclaration,
     PropertyDeclarationStatement,
     ClassConstantDeclaration,
-    ClassConstantDeclarationList,
+    ClassConstantDeclarationStatement,
     ReturnType,
     TypeExpression,
     CurlyInnerStatementList,
@@ -1164,7 +1164,7 @@ export class Parser<T> {
                 } else if (t.type === TokenType.T_FUNCTION) {
                     return this._methodDeclarationStatement(modifierList);
                 } else if (t.type === TokenType.T_CONST) {
-                    return this.classConstantDeclarationList(this._tokens, modifierList);
+                    return this._classConstantDeclarationStatement(modifierList);
                 } else {
                     //error
                 }
@@ -1174,7 +1174,7 @@ export class Parser<T> {
                 this._tokens.next();
                 return this._propertyDeclarationStatement(t);
             case TokenType.T_CONST:
-                return this.classConstantDeclarationList(this._tokens);
+                return this._classConstantDeclarationStatement(this._tokens);
             case TokenType.T_USE:
                 return this.useTrait(this._tokens);
             default:
@@ -1367,10 +1367,10 @@ export class Parser<T> {
             t = this._tokens.current;
         }
 
-        if(t.type === ';'){
+        if (t.type === ';') {
             children.push(t);
             this._tokens.next();
-        } else if(t.type === '{'){
+        } else if (t.type === '{') {
             children.push(this._curlyInnerStatementList());
         } else {
             //error
@@ -2479,7 +2479,7 @@ export class Parser<T> {
 
     }
 
-    private classConstantDeclarationList(this._tokens: TokenIterator, modifiers: T = null) {
+    private _classConstantDeclarationStatement(modifiers: T = null) {
         let t = this._tokens.current;
         let children: (T | Token)[] = [];
 
@@ -2491,32 +2491,31 @@ export class Parser<T> {
         t = this._tokens.next();
 
         while (true) {
-            children.push(this.classConstantDeclaration(this._tokens));
+            children.push(this._classConstantDeclaration());
             t = this._tokens.current;
 
-            if (t.type !== ',') {
-                break;
-            } else {
+            if (t.type === ',') {
                 children.push(t);
                 t = this._tokens.next();
+            } else if (t.type === ';') {
+                children.push(t);
+                this._tokens.next();
+                break;
+            } else {
+                //error
+                break;
             }
         }
 
-        if (t.type !== ';') {
-            //error
-        }
-
-        children.push(t);
-        this._tokens.next();
-        return this._nodeFactory(NodeType.ClassConstantDeclarationList, children);
+        return this._nodeFactory(NodeType.ClassConstantDeclarationStatement, children);
     }
 
-    private classConstantDeclaration(this._tokens: TokenIterator) {
+    private _classConstantDeclaration() {
         let t = this._tokens.current;
         let children: (T | Token)[] = [];
         let doc = this._tokens.lastDocComment;
 
-        if (t.type !== TokenType.T_STRING && !this.isSemiReserved(t)) {
+        if (t.type !== TokenType.T_STRING && !this._isSemiReservedToken(t)) {
             //error
         }
 
@@ -2530,7 +2529,7 @@ export class Parser<T> {
         children.push(t);
         t = this._tokens.next();
 
-        children.push(this.expression(this._tokens));
+        children.push(this._expression());
         return this._nodeFactory(NodeType.ClassConstantDeclaration, children, doc);
 
     }
