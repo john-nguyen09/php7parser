@@ -136,7 +136,7 @@ export enum NodeType {
     ExpressionStatement,
     FunctionDeclaration,
     MethodDeclaration,
-    UseTrait,
+    UseTraitStatement,
     TraitAdaptationList,
     TraitAdaptation,
     MethodReference,
@@ -1169,14 +1169,14 @@ export class Parser<T> {
                     //error
                 }
             case TokenType.T_FUNCTION:
-                return this._methodDeclarationStatement(this._tokens);
+                return this._methodDeclarationStatement();
             case TokenType.T_VAR:
                 this._tokens.next();
                 return this._propertyDeclarationStatement(t);
             case TokenType.T_CONST:
-                return this._classConstantDeclarationStatement(this._tokens);
+                return this._classConstantDeclarationStatement();
             case TokenType.T_USE:
-                return this.useTrait(this._tokens);
+                return this._useTraitStatement();
             default:
                 //error
                 break;
@@ -1185,52 +1185,57 @@ export class Parser<T> {
 
     }
 
-    private useTrait(this._tokens: TokenIterator) {
+    private _useTraitStatement() {
 
         let children: (T | Token)[] = [this._tokens.current];
         let t = this._tokens.next();
 
-        children.push(this.nameList(this._tokens));
+        children.push(this._nameList());
         t = this._tokens.current;
 
         if (t.type === ';') {
             children.push(t);
             this._tokens.next();
-            return this._nodeFactory(NodeType.UseTrait, children);
+            return this._nodeFactory(NodeType.UseTraitStatement, children);
         }
 
         if (t.type !== '{') {
             //error
         }
 
-        children.push(this.traitAdaptationList(this._tokens));
+        children.push(this._traitAdaptationList());
         return this._nodeFactory(NodeType.TraitAdaptationList, children);
 
     }
 
-    private traitAdaptationList(this._tokens: TokenIterator) {
+    private _traitAdaptationList() {
 
         let children: (T | Token)[] = [this._tokens.current];
         let t = this._tokens.next();
 
         while (true) {
+
             if (t.type === '}' || t.type === TokenType.T_EOF) {
+                children.push(t);
+                this._tokens.next();
+                break;
+            } else if (t.type === TokenType.T_STRING ||
+                t.type === TokenType.T_NAMESPACE ||
+                t.type === TokenType.T_NS_SEPARATOR ||
+                this._isSemiReservedToken(t)) {
+                children.push(this._traitAdaptation());
+                t = this._tokens.current;
+            } else {
+                //error
                 break;
             }
-            children.push(this.traitAdaptation(this._tokens));
-            t = this._tokens.current;
+
         }
 
-        if (t.type !== '}') {
-            //error
-        }
-
-        children.push(t);
-        this._tokens.next();
         return this._nodeFactory(NodeType.TraitAdaptationList, children);
     }
 
-    private traitAdaptation(this._tokens: TokenIterator) {
+    private _traitAdaptation() {
 
         let t = this._tokens.current;
         let methodRefOrIdent: T | Token;
@@ -1241,25 +1246,26 @@ export class Parser<T> {
             (t.type === TokenType.T_STRING &&
                 (t2.type === TokenType.T_PAAMAYIM_NEKUDOTAYIM || t2.type === TokenType.T_NS_SEPARATOR))) {
 
-            methodRefOrIdent = this.methodReference(this._tokens);
+            methodRefOrIdent = this._methodReference();
+            t = this._tokens.current;
 
             if (t.type === TokenType.T_INSTEADOF) {
-                return this.traitPrecedence(this._tokens, methodRefOrIdent);
+                return this._traitPrecedence(methodRefOrIdent);
             }
 
-        } else if (t.type === TokenType.T_STRING || this.isSemiReserved(t)) {
+        } else if (t.type === TokenType.T_STRING || this._isSemiReservedToken(t)) {
             methodRefOrIdent = t;
             this._tokens.next();
         } else {
             //error
         }
 
-        return this.traitAlias(this._tokens, methodRefOrIdent);
+        return this._traitAlias(methodRefOrIdent);
 
 
     }
 
-    private traitAlias(this._tokens: TokenIterator, methodReferenceOrIdentifier: T | Token) {
+    private _traitAlias(methodReferenceOrIdentifier: T | Token) {
         let t = this._tokens.current;
         let children: (T | Token)[] = [methodReferenceOrIdentifier];
 
@@ -1270,13 +1276,13 @@ export class Parser<T> {
         children.push(t);
         t = this._tokens.next();
 
-        if (t.type === TokenType.T_STRING || this.isReserved(t)) {
+        if (t.type === TokenType.T_STRING || this._isReservedToken(t)) {
             children.push(t);
             t = this._tokens.next();
         } else if (t.type === TokenType.T_PUBLIC || t.type === TokenType.T_PROTECTED || t.type === TokenType.T_PRIVATE) {
             children.push(t);
             t = this._tokens.next();
-            if (t.type === TokenType.T_STRING || this.isSemiReserved(t)) {
+            if (t.type === TokenType.T_STRING || this._isSemiReservedToken(t)) {
                 children.push(t);
                 t = this._tokens.next();
             }
@@ -1293,11 +1299,11 @@ export class Parser<T> {
         return this._nodeFactory(NodeType.TraitAlias, children);
     }
 
-    private traitPrecedence(this._tokens: TokenIterator, methodReference: T) {
+    private _traitPrecedence(methodReference: T) {
 
         let children: (T | Token)[] = [methodReference, this._tokens.current];
         this._tokens.next();
-        children.push(this.nameList(this._tokens));
+        children.push(this._nameList());
         let t = this._tokens.current;
 
         if (t.type !== ';') {
@@ -1310,12 +1316,12 @@ export class Parser<T> {
 
     }
 
-    private methodReference(this._tokens: TokenIterator) {
+    private _methodReference() {
 
         let t = this._tokens.current;
         let children: (T | Token)[] = [];
 
-        children.push(this.name(this._tokens));
+        children.push(this._name());
         t = this._tokens.current;
 
         if (t.type !== TokenType.T_PAAMAYIM_NEKUDOTAYIM) {
@@ -1325,7 +1331,7 @@ export class Parser<T> {
         children.push(t);
         t = this._tokens.next();
 
-        if (t.type !== TokenType.T_STRING || !this.isSemiReserved(t)) {
+        if (t.type !== TokenType.T_STRING || !this._isSemiReservedToken(t)) {
             //error
         }
 
