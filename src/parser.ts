@@ -1162,14 +1162,14 @@ export class Parser<T> {
                 if (t.type === TokenType.T_VARIABLE) {
                     return this._propertyDeclarationStatement(modifierList);
                 } else if (t.type === TokenType.T_FUNCTION) {
-                    return this.methodDeclaration(this._tokens, modifierList);
+                    return this._methodDeclarationStatement(modifierList);
                 } else if (t.type === TokenType.T_CONST) {
                     return this.classConstantDeclarationList(this._tokens, modifierList);
                 } else {
                     //error
                 }
             case TokenType.T_FUNCTION:
-                return this.methodDeclaration(this._tokens);
+                return this._methodDeclarationStatement(this._tokens);
             case TokenType.T_VAR:
                 this._tokens.next();
                 return this._propertyDeclarationStatement(t);
@@ -1335,7 +1335,7 @@ export class Parser<T> {
 
     }
 
-    private methodDeclaration(this._tokens: TokenIterator, modifiers: T = null) {
+    private _methodDeclarationStatement(modifiers: T = null) {
 
         let t = this._tokens.current;
         let children: (T | Token)[] = [];
@@ -1353,21 +1353,29 @@ export class Parser<T> {
             t = this._tokens.next();
         }
 
-        if (t.type !== TokenType.T_STRING && !this.isSemiReserved(t)) {
+        if (t.type !== TokenType.T_STRING && !this._isSemiReservedToken(t)) {
             //error
         }
 
         children.push(t);
         t = this._tokens.next();
-        children.push(this.parameterList(this._tokens));
+        children.push(this._parameterList());
         t = this._tokens.current;
 
         if (t.type === ':') {
-            children.push(this.returnType(this._tokens));
+            children.push(this._returnType());
             t = this._tokens.current;
         }
 
-        children.push(this.parenthesisedInnerStatementList(this._tokens));
+        if(t.type === ';'){
+            children.push(t);
+            this._tokens.next();
+        } else if(t.type === '{'){
+            children.push(this._curlyInnerStatementList());
+        } else {
+            //error
+        }
+
         return this._nodeFactory(NodeType.MethodDeclaration, children);
 
     }
