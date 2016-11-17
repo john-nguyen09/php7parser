@@ -1611,7 +1611,7 @@ export class Parser<T> {
             case TokenType.T_WHILE:
                 return this._whileStatement();
             case TokenType.T_DO:
-                return this.doWhileStatement(this._tokens);
+                return this._doWhileStatement();
             case TokenType.T_FOR:
                 return this.forStatement(this._tokens);
             case TokenType.T_SWITCH:
@@ -2252,12 +2252,12 @@ export class Parser<T> {
 
     }
 
-    private doWhileStatement(this._tokens: TokenIterator) {
+    private _doWhileStatement() {
 
         let children: (T | Token)[] = [this._tokens.current];
         let t = this._tokens.next();
 
-        children.push(this.statement(this._tokens));
+        children.push(this._statement());
         t = this._tokens.current;
 
         if (t.type !== TokenType.T_WHILE) {
@@ -2271,7 +2271,7 @@ export class Parser<T> {
         }
         children.push(t);
         t = this._tokens.next();
-        children.push(this.expression(this._tokens));
+        children.push(this._expression());
         t = this._tokens.current;
         if (t.type !== ')') {
             //error
