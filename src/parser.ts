@@ -469,7 +469,7 @@ export class Parser<T> {
                 return this._interfaceDeclarationStatement();
             default:
                 if (this._isStatementStartToken(this._tokens.current)) {
-                    return this.statement(this._tokens);
+                    return this._statement();
                 } else {
                     //error
                 }
@@ -1453,7 +1453,12 @@ export class Parser<T> {
             case TokenType.T_INTERFACE:
                 return this._interfaceDeclarationStatement();
             default:
-                return this.statement(this._tokens);
+                if (this._isStatementStartToken(t)) {
+                    return this._statement();
+                } else {
+                    //error
+                }
+
         }
 
     }
@@ -1594,26 +1599,15 @@ export class Parser<T> {
 
     }
 
-    private statement(this._tokens: TokenIterator) {
+    private _statement() {
 
         let t = this._tokens.current;
 
         switch (t.type) {
             case '{':
-                let children: (T | Token)[] = [t];
-                this._tokens.next();
-                children.push(this.innerStatementList(this._tokens, [TokenType.T_EOF, '}']));
-                t = this._tokens.current;
-
-                if (t.type !== '}') {
-                    //error
-                }
-
-                children.push(t);
-                this._tokens.next();
-                return this._nodeFactory(NodeType.Statement, children);
+                return this._curlyInnerStatementList();
             case TokenType.T_IF:
-                return this.ifStatementList(this._tokens);
+                return this._ifStatementList();
             case TokenType.T_WHILE:
                 return this.whileStatement(this._tokens);
             case TokenType.T_DO:
@@ -1654,8 +1648,8 @@ export class Parser<T> {
                 this._tokens.next();
                 return this._nodeFactory(NodeType.Statement, [t]);
             default:
-                if (this.isExpressionStartToken(t)) {
-                    let children: (T | Token)[] = [this.expression(this._tokens)];
+                if (this._isExpressionStartToken(t)) {
+                    let children: (T | Token)[] = [this._expression()];
                     let t = this._tokens.current;
 
                     if (t.type !== ';') {
@@ -1813,7 +1807,7 @@ export class Parser<T> {
             this._tokens.next();
 
         } else if (this._isStatementStartToken(t)) {
-            children.push(this.statement());
+            children.push(this._statement());
         } else {
             //error
         }
@@ -2337,28 +2331,28 @@ export class Parser<T> {
 
     }
 
-    private ifStatementList(this._tokens: TokenIterator) {
+    private _ifStatementList() {
 
         let children: (T | Token)[] = [];
         let t = this._tokens.current;
         let discoverAlt = { isAlt: false };
 
-        children.push(this.ifStatement(this._tokens, false, discoverAlt));
+        children.push(this._ifStatement(false, discoverAlt));
         t = this._tokens.current;
 
         while (true) {
 
-            if (t.type !== TokenType.T_ELSEIF) {
+            if (t.type === TokenType.T_ELSEIF) {
+                children.push(this._ifStatement(discoverAlt.isAlt));
+                t = this._tokens.current;
+            } else {
                 break;
             }
-
-            children.push(this.ifStatement(this._tokens, discoverAlt.isAlt));
-            t = this._tokens.current;
 
         }
 
         if (t.type === TokenType.T_ELSE) {
-            children.push(this.ifStatement(this._tokens, discoverAlt.isAlt));
+            children.push(this._ifStatement(discoverAlt.isAlt));
             t = this._tokens.current;
         }
 
@@ -2382,7 +2376,7 @@ export class Parser<T> {
 
     }
 
-    private ifStatement(this._tokens: TokenIterator, isAlt: boolean, discoverAlt: { isAlt: boolean } = null) {
+    private _ifStatement(isAlt: boolean, discoverAlt: { isAlt: boolean } = null) {
 
         let t = this._tokens.current;
         let children: (T | Token)[] = [t];
@@ -2397,7 +2391,7 @@ export class Parser<T> {
 
             children.push(t);
             this._tokens.next();
-            children.push(this.expression(this._tokens));
+            children.push(this._expression());
             t = this._tokens.current;
 
             if (t.type !== ')') {
@@ -2419,9 +2413,9 @@ export class Parser<T> {
 
             children.push(t);
             t = this._tokens.next();
-            children.push(this.innerStatementList(this._tokens, [TokenType.T_ELSEIF, TokenType.T_ELSE, TokenType.T_ENDIF]));
-        } else if (this.isStatementToken(t)) {
-            children.push(this.statement(this._tokens));
+            children.push(this._innerStatementList());
+        } else if (this._isStatementStartToken(t)) {
+            children.push(this._statement());
         } else {
             //error
 
