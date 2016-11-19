@@ -169,7 +169,7 @@ export enum NodeType {
     ReturnStatement,
     GlobalVariableDeclarationStatement,
     StaticVariableListStatement,
-    StaticVariable,
+    StaticVariableDeclaration,
     EchoStatement,
     UnsetStatement,
     ThrowStatement,
@@ -1625,7 +1625,7 @@ export class Parser<T> {
             case TokenType.T_GLOBAL:
                 return this._globalVariableDeclarationStatement();
             case TokenType.T_STATIC:
-                return this.staticVarList(this._tokens);
+                return this._staticVariableDeclarationStatement();
             case TokenType.T_ECHO:
                 return this.echoExpressionList(this._tokens);
             case TokenType.T_INLINE_HTML:
@@ -2097,27 +2097,28 @@ export class Parser<T> {
 
     }
 
-    private staticVarList(this._tokens: TokenIterator) {
+    private _staticVariableDeclarationStatement() {
 
         let children: (T | Token)[] = [this._tokens.current];
         let t = this._tokens.next();
 
         while (true) {
 
-            children.push(this.staticVariable(this._tokens));
-            if (this._tokens.current.type !== ',') {
+            children.push(this._staticVariableDeclaration());
+            if (t.type === ',') {
+                children.push(this._tokens.current);
+                t = this._tokens.next();
+            } else if(t.type === ';'){
+                children.push(t);
+                this._tokens.next();
+                break;
+            } else {
+                //error
                 break;
             }
-            children.push(this._tokens.current);
-            this._tokens.next();
+            
 
         }
-
-        if (this._tokens.current.type !== ';') {
-            //error
-        }
-        children.push(this._tokens.current);
-        this._tokens.next();
 
         return this._nodeFactory(NodeType.StaticVariableListStatement, children);
 
@@ -2151,18 +2152,19 @@ export class Parser<T> {
 
     }
 
-    private staticVariable(this._tokens: TokenIterator) {
+    private _staticVariableDeclaration() {
 
         let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
-        if (this._tokens.next().type !== '=') {
-            return this._nodeFactory(NodeType.StaticVariable, children);
+        if (t.type !== '=') {
+            return this._nodeFactory(NodeType.StaticVariableDeclaration, children);
         }
 
-        children.push(this._tokens.current);
-        this._tokens.next();
-        children.push(this.expression(this._tokens));
-        return this._nodeFactory(NodeType.StaticVariable, children);
+        children.push(t);
+        t = this._tokens.next();
+        children.push(this._expression());
+        return this._nodeFactory(NodeType.StaticVariableDeclaration, children);
 
     }
 
