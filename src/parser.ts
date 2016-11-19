@@ -167,7 +167,7 @@ export enum NodeType {
     BreakStatement,
     ContinueStatement,
     ReturnStatement,
-    GlobalVariableListStatement,
+    GlobalVariableDeclarationStatement,
     StaticVariableListStatement,
     StaticVariable,
     EchoStatement,
@@ -1623,7 +1623,7 @@ export class Parser<T> {
             case TokenType.T_RETURN:
                 return this._keywordOptionalExpressionStatement(NodeType.ReturnStatement);
             case TokenType.T_GLOBAL:
-                return this.globalVarList(this._tokens);
+                return this._globalVariableDeclarationStatement();
             case TokenType.T_STATIC:
                 return this.staticVarList(this._tokens);
             case TokenType.T_ECHO:
@@ -2125,29 +2125,29 @@ export class Parser<T> {
 
 
 
-    private globalVarList(this._tokens: TokenIterator) {
+    private _globalVariableDeclarationStatement() {
 
         let children: (T | Token)[] = [this._tokens.current];
         let t = this._tokens.next();
 
         while (true) {
 
-            children.push(this.simpleVariable(this._tokens));
-            if (this._tokens.current.type !== ',') {
+            children.push(this._simpleVariable());
+            if (t.type === ',') {
+                children.push(this._tokens.current);
+                t = this._tokens.next();
+            } else if(t.type === ';'){
+                children.push(this._tokens.current);
+                this._tokens.next();
                 break;
-            }
-            children.push(this._tokens.current);
-            this._tokens.next();
+            } else {
+                //error
+                break;
+            }            
 
         }
 
-        if (this._tokens.current.type !== ';') {
-            //error
-        }
-        children.push(this._tokens.current);
-        this._tokens.next();
-
-        return this._nodeFactory(NodeType.GlobalVariableListStatement, children);
+        return this._nodeFactory(NodeType.GlobalVariableDeclarationStatement, children);
 
     }
 
