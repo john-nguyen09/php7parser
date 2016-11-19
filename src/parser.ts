@@ -1631,7 +1631,7 @@ export class Parser<T> {
             case TokenType.T_INLINE_HTML:
                 return t;
             case TokenType.T_UNSET:
-                return this.unsetVarList(this._tokens);
+                return this._unsetStatement();
             case TokenType.T_FOREACH:
                 return this.foreachStatement(this._tokens);
             case TokenType.T_DECLARE:
@@ -2040,33 +2040,42 @@ export class Parser<T> {
 
     }
 
-    private unsetVarList(this._tokens: TokenIterator) {
+    private _unsetStatement() {
 
         let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
-        if (!this._tokens.expectNext('(', <Token[]>children)) {
+        if(t.type === '('){
+            children.push(t);
+            t = this._tokens.next();
+        } else {
             //error
         }
 
         while (true) {
 
-            children.push(this.variable(this._tokens));
-            if (this._tokens.current.type !== ',') {
+            children.push(this._variable());
+            t = this._tokens.current;
+            if (t.type === ',') {
+                children.push(t);
+                t = this._tokens.next();
+            } else if(t.type === ')'){
+                children.push(t);
+                t = this._tokens.next();
                 break;
+            } else {
+                //error
             }
-            children.push(this._tokens.current);
-            this._tokens.next();
 
         }
 
-        if (!this._tokens.expectCurrent(')', children)) {
-            //error
-        }
-
-        if (!this._tokens.expectNext(';', children)) {
-            //error
-        }
-
+       if(t.type === ';'){
+           children.push(t);
+           this._tokens.next();
+       } else {
+           //error
+       }
+       
         return this._nodeFactory(NodeType.UnsetStatement, children);
 
     }
