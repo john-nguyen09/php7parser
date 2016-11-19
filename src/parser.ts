@@ -1627,7 +1627,7 @@ export class Parser<T> {
             case TokenType.T_STATIC:
                 return this._staticVariableDeclarationStatement();
             case TokenType.T_ECHO:
-                return this.echoExpressionList(this._tokens);
+                return this._echoStatement();
             case TokenType.T_INLINE_HTML:
                 return t;
             case TokenType.T_UNSET:
@@ -2071,27 +2071,27 @@ export class Parser<T> {
 
     }
 
-    private echoExpressionList(this._tokens: TokenIterator) {
+    private _echoStatement() {
 
         let children: (T | Token)[] = [this._tokens.current];
         let t = this._tokens.next();
 
         while (true) {
 
-            children.push(this.expression(this._tokens));
-            if (this._tokens.current.type !== ',') {
+            children.push(this._expression());
+            t = this._tokens.current;
+            if (t.type === ',') {
+                children.push(t);
+                t = this._tokens.next();
+            } else if(t.type === ';'){
+                children.push(t);
+                t = this._tokens.next();
                 break;
-            }
-            children.push(this._tokens.current);
-            this._tokens.next();
+            } else {
+                //error
+            }           
 
         }
-
-        if (this._tokens.current.type !== ';') {
-            //error
-        }
-        children.push(this._tokens.current);
-        this._tokens.next();
 
         return this._nodeFactory(NodeType.EchoStatement, children);
 
@@ -2105,6 +2105,7 @@ export class Parser<T> {
         while (true) {
 
             children.push(this._staticVariableDeclaration());
+            t = this._tokens.current;
             if (t.type === ',') {
                 children.push(this._tokens.current);
                 t = this._tokens.next();
@@ -2134,6 +2135,7 @@ export class Parser<T> {
         while (true) {
 
             children.push(this._simpleVariable());
+            t = this._tokens.current;
             if (t.type === ',') {
                 children.push(this._tokens.current);
                 t = this._tokens.next();
