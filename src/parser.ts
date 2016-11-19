@@ -1633,7 +1633,7 @@ export class Parser<T> {
             case TokenType.T_UNSET:
                 return this._unsetStatement();
             case TokenType.T_FOREACH:
-                return this.foreachStatement(this._tokens);
+                return this._foreachStatement();
             case TokenType.T_DECLARE:
                 return this.declareStatement();
             case TokenType.T_TRY:
@@ -1960,74 +1960,92 @@ export class Parser<T> {
         return this._nodeFactory(NodeType.ThrowStatement, children);
     }
 
-    private foreachStatement(this._tokens: TokenIterator) {
+    private _foreachStatement() {
 
         let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
-        if (!this._tokens.expectNext('(', children)) {
-            //error
-        }
-        this._tokens.next();
-        children.push(this.expression(this._tokens));
-        if (!this._tokens.expectCurrent(TokenType.T_AS, children)) {
-            //error
-        }
-        this._tokens.next();
-        children.push(this.foreachVariable(this._tokens));
-
-        if (this._tokens.current.type === TokenType.T_DOUBLE_ARROW) {
-            children.push(this._tokens.current);
-            this._tokens.next();
-            children.push(this.foreachVariable(this._tokens));
-        }
-
-        if (!this._tokens.expectCurrent(')', children)) {
+        if (t.type = '(') {
+            children.push(t);
+            t = this._tokens.next();    
+        } else {
             //error
         }
 
+        children.push(this._expression());
+        t = this._tokens.current;
 
-        if (this._tokens.next().type === ':') {
+        if (t.type === TokenType.T_AS) {
+            children.push(t);
+            t = this._tokens.next();
+        } else {
+            //error
+        }
 
-            children.push(this._tokens.current);
-            this._tokens.next();
-            children.push(this.innerStatementList(this._tokens, [TokenType.T_ENDFOREACH]));
+        children.push(this._foreachVariable());
+        t = this._tokens.current;
 
-            if (!this._tokens.expectCurrent(TokenType.T_ENDFOREACH, children)) {
+        if (t.type === TokenType.T_DOUBLE_ARROW) {
+            children.push(t);
+            t = this._tokens.next();
+            children.push(this._foreachVariable());
+            t = this._tokens.current;
+        }
+
+        if (t.type === ')') {
+            children.push(t);
+            t = this._tokens.next();
+        } else {
+            //error
+        }
+
+
+        if (t.type === ':') {
+
+            children.push(t);
+            t = this._tokens.next();
+            children.push(this._innerStatementList());
+            t = this._tokens.current;
+
+            if (t.type === TokenType.T_ENDFOREACH) {
+                children.push(t);
+                t = this._tokens.next();
+            } else {
                 //error
             }
 
-            if (!this._tokens.expectNext(';', children)) {
+            if (t.type === ';') {
+                children.push(t);
+                t = this._tokens.next();
+            } else {
                 //error
             }
 
-            this._tokens.next();
-
-        } else if (this.isStatementToken(this._tokens.current)) {
-            children.push(this.statement(this._tokens));
+        } else if (this._isStatementStartToken(t)) {
+            children.push(this._statement());
         } else {
             //error
         }
 
         return this._nodeFactory(NodeType.ForeachStatement, children);
 
-
     }
 
-    private foreachVariable(this._tokens: TokenIterator) {
+    private _foreachVariable() {
 
         let t = this._tokens.current;
         switch (t.type) {
 
             case '&':
                 this._tokens.next();
-                return this._nodeFactory(NodeType.UnaryExpression, [t, this.variable(this._tokens)]);
+                return this._nodeFactory(NodeType.UnaryExpression, [t, this._variable()]);
             case TokenType.T_LIST:
-                return this.listAssignment(this._tokens);
+                return this._listExpression();
             case '[':
-                return this.shortArray(this._tokens);
+                return this._shortArray();
             default:
-                if (this.isVariableStartToken(t)) {
-                    return this.variable(this._tokens);
+                if (this._isVariableStartToken(t)) {
+                    return this._variable();
                 } else {
                     //error
                 }
@@ -2036,7 +2054,23 @@ export class Parser<T> {
 
     }
 
-    private isVariableStartToken(t: Token) {
+    private _isVariableStartToken(t: Token) {
+        
+        switch (t.type) {
+            case TokenType.T_VARIABLE:
+            case '$':
+            case '(':
+            case TokenType.T_ARRAY:
+            case '[':
+            case TokenType.T_CONSTANT_ENCAPSED_STRING:
+            case TokenType.T_STATIC:
+            case TokenType.T_STRING:
+            case TokenType.T_NAMESPACE:
+            case TokenType.T_NS_SEPARATOR:
+                return true;
+            default:
+                return false;
+        }
 
     }
 
