@@ -176,9 +176,9 @@ export enum NodeType {
     GotoStatement,
     LabelStatement,
     ForeachStatement,
-    CaseList,
-    Switch,
-    Case,
+    CaseStatementList,
+    SwitchStatement,
+    CaseStatement,
     DeclareStatement,
     TryStatement,
     TryCatchFinallyStatement,
@@ -1615,13 +1615,13 @@ export class Parser<T> {
             case TokenType.T_FOR:
                 return this._forStatement();
             case TokenType.T_SWITCH:
-                return this.switchStatement(this._tokens);
+                return this._switchStatement();
             case TokenType.T_BREAK:
-                return this.keywordOptionalExpressionStatement(this._tokens, NodeType.BreakStatement);
+                return this._keywordOptionalExpressionStatement(NodeType.BreakStatement);
             case TokenType.T_CONTINUE:
-                return this.keywordOptionalExpressionStatement(this._tokens, NodeType.ContinueStatement);
+                return this._keywordOptionalExpressionStatement(NodeType.ContinueStatement);
             case TokenType.T_RETURN:
-                return this.keywordOptionalExpressionStatement(this._tokens, NodeType.ReturnStatement);
+                return this._keywordOptionalExpressionStatement(NodeType.ReturnStatement);
             case TokenType.T_GLOBAL:
                 return this.globalVarList(this._tokens);
             case TokenType.T_STATIC:
@@ -1816,68 +1816,88 @@ export class Parser<T> {
 
     }
 
-    private switchStatement() {
+    private _switchStatement() {
 
         let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
-        if (!this._expectNext('(', children)) {
+
+        if (t.type === '(') {
+            children.push(t);
+            this._tokens.next();
+        } else {
             //error
         }
 
         children.push(this._expression());
+        t = this._tokens.current;
 
-        if (!this._expectCurrent(')', children)) {
+        if (t.type === ')') {
+            children.push(t);
+            t = this._tokens.next();    
+        } else {
             //error
         }
 
-        children.push(this._caseList());
+        let close: TokenType | string = t.type === ':' ? TokenType.T_ENDSWITCH : '}';
 
-        return this._nodeFactory(NodeType.Switch, children);
-
-    }
-
-    private _caseList() {
-
-        let children: (T | Token)[] = [];
-        let t = this._tokens.current;
-        let close: TokenType | string = '}';
-
-        if (t.type === ':') {
-            close = TokenType.T_ENDSWITCH;
-        } else if (t.type !== '{') {
+        if (t.type === '{' || t.type === ':') {
+            children.push(t);
+            t = this._tokens.next();
+        } else {
             //error
         }
-
-        children.push(t);
-        t = this._tokens.next();
+        
         if (t.type === ';') {
             children.push(t);
             t = this._tokens.next();
         }
 
-        while (true) {
+        if (t.type === TokenType.T_CASE || t.type === TokenType.T_DEFAULT) {
+            children.push(this._caseStatementList());
+            t = this._tokens.current;
+        }
 
-            if (t.type === TokenType.T_CASE || t.type === TokenType.T_DEFAULT) {
-                children.push(this._caseStatement());
-            } else if (this._tokens.current.type === close) {
-                children.push(this._tokens.current);
-                this._tokens.next();
-                break;
-            } else {
-                //error
-            }
-
+        if(t.type === close){
+            children.push(t);
+            t = this._tokens.next();
+        } else {
+            //error
         }
 
         if (close === TokenType.T_ENDSWITCH) {
 
-            if (!this._expectCurrent(';', children)) {
+            if (t.type === ';') {
+                children.push(t);
+                this._tokens.next();
+            } else {
                 //error
             }
-            this._tokens.next();
+            
         }
 
-        return this._nodeFactory(NodeType.CaseList, children);
+        return this._nodeFactory(NodeType.SwitchStatement, children);
+
+    }
+
+    private _caseStatementList() {
+
+        let children: (T | Token)[] = [];
+        let t = this._tokens.current;
+        
+
+        while (true) {
+
+            if (t.type === TokenType.T_CASE || t.type === TokenType.T_DEFAULT) {
+                children.push(this._caseStatement());
+                t = this._tokens.current;
+            }  else {
+                break;
+            }
+
+        }
+
+        return this._nodeFactory(NodeType.CaseStatementList, children);
 
     }
 
@@ -1886,16 +1906,15 @@ export class Parser<T> {
         let children: (T | Token)[] = [this._tokens.current];
         let t = this._tokens.next();
 
-        if (t.type !== ';' && t.type !== ':') {
+        if (t.type === ';' || t.type === ':') {
+            children.push(t);
+            t = this._tokens.next();
+        } else {
             //error
         }
 
-        children.push(t);
-        t = this._tokens.next();
-
         children.push(this._innerStatementList());
-
-        return this._nodeFactory(NodeType.Case, children);
+        return this._nodeFactory(NodeType.CaseStatement, children);
 
     }
 
@@ -2147,25 +2166,22 @@ export class Parser<T> {
 
     }
 
-    private keywordOptionalExpressionStatement(this._tokens: TokenIterator, nodeType: NodeType) {
+    private _keywordOptionalExpressionStatement(nodeType: NodeType) {
         let children: (T | Token)[] = [this._tokens.current];
         let t = this._tokens.current;
 
-        if (t.type !== ';' && this.isExpressionStartToken(t)) {
-            if (this.isExpressionStartToken(t)) {
-                children.push(this.expression(this._tokens));
-                t = this._tokens.current;
-            } else {
-                //error
-            }
+        if(this._isExpressionStartToken(t)){
+            children.push(this._expression());
+            t = this._tokens.current;
         }
 
-        if (t.type !== ';') {
+        if (t.type === ';') {
+            children.push(t);
+            this._tokens.next();
+        } else {
             //error
         }
 
-        children.push(t);
-        this._tokens.next();
         return this._nodeFactory(nodeType, children);
     }
 
