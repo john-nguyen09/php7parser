@@ -3139,43 +3139,6 @@ export class Parser<T> {
 
     }
 
-    private subAtom() {
-
-        let t = this._lexer.current;
-        let subAtom: T | Token;
-
-        switch (t.type) {
-            case TokenType.T_VARIABLE:
-            case TokenType.T_CONSTANT_ENCAPSED_STRING:
-            case TokenType.T_STATIC:
-                subAtom = t;
-                break;
-            case '$':
-                subAtom = this._simpleVariable();
-                break;
-            case TokenType.T_ARRAY:
-                subAtom = this._longArray(this._tokens);
-                break;
-            case '[':
-                subAtom = this._shortArray(this._tokens);
-                break;
-            case TokenType.T_NS_SEPARATOR:
-            case TokenType.T_STRING:
-            case TokenType.T_NAMESPACE:
-                subAtom = this._name();
-                break;
-            case '(':
-                subAtom = this._parenthesisedExpression();
-                break;
-            default:
-                //unexpected tokens should be handled higher up
-                throw new Error(`Unexpected token: ${t.type}`);
-        }
-
-        return subAtom;
-
-    }
-
     private _name() {
 
         let t = this._tokens.current;
