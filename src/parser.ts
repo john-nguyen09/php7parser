@@ -5,6 +5,7 @@
 'use strict';
 
 import { Token, Lexer, TokenType, Iterator } from './lexer';
+import {ParseError} from './parseError';
 
 class TokenIterator implements Iterator<Token> {
 
@@ -192,12 +193,6 @@ export interface NodeFactory<T> {
     (type: NodeType, children: (T | Token)[], doc?: Token, error?: ParseError): T;
 }
 
-export interface ParseError {
-    unexpected: Token,
-    expected: (TokenType | string)[],
-    nodeTypes?: NodeType[]
-}
-
 enum Associativity {
     None,
     Left,
@@ -277,9 +272,11 @@ export class Parser<T> {
     private _errors: ParseError[];
     private _opPrecedenceMap = opPrecedenceMap;
     private _tokens: TokenIterator
+    private _followOnStack:(TokenType|string)[][];
 
     constructor(nodeFactory: NodeFactory<T>) {
         this._nodeFactory = nodeFactory;
+        this._reset();
     }
 
     get errors() {
@@ -288,9 +285,15 @@ export class Parser<T> {
 
     parse(tokens: Iterator<Token>) {
 
+        this._reset();
         this._tokens = new TokenIterator(tokens);
         return this._topStatementList([TokenType.T_EOF]);
 
+    }
+
+    private _reset(){
+        this._errors = [];
+        this._followOnStack = [];
     }
 
     private _expectNext(tokenType: TokenType | string, pushToArray: (T | Token)[]) {
@@ -1635,13 +1638,13 @@ export class Parser<T> {
             case TokenType.T_FOREACH:
                 return this._foreachStatement();
             case TokenType.T_DECLARE:
-                return this.declareStatement();
+                return this._declareStatement();
             case TokenType.T_TRY:
                 return this._tryCatchFinallyStatement();
             case TokenType.T_THROW:
                 return this.throwStatement(this._tokens);
             case TokenType.T_GOTO:
-                return this.gotoStatement(this._tokens);
+                return this._gotoStatement(this._tokens);
             case TokenType.T_STRING:
                 return this.labelStatement(this._tokens);
             case ';':
@@ -1779,11 +1782,15 @@ export class Parser<T> {
 
     }
 
-    private declareStatement() {
+    private _declareStatement() {
 
         let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
 
-        if (!this._expectNext('(', children)) {
+        if(t.type === '('){
+            children.push(t);
+            t = this._tokens.next();
+        } else {
             //error
         }
 
@@ -1929,9 +1936,14 @@ export class Parser<T> {
 
     }
 
-    private gotoStatement(this._tokens: TokenIterator) {
+    private _gotoStatement() {
 
         let children: (T | Token)[] = [this._tokens.current];
+        let t = this._tokens.next();
+
+        if(t.type === TokenType.T_STRING){
+            children.push(t)
+        }
 
         if (!this._tokens.expectNext(TokenType.T_STRING, children)) {
             //error
@@ -3681,13 +3693,42 @@ export class Parser<T> {
 
     }
 
-    private parseError(unexpected: Token, expected: (TokenType | string)[], nodeTypes?: NodeType[]): ParseError {
-        let error: ParseError = {
-            unexpected: unexpected,
-            expected: expected
+    private _defaultErrorRecovery(){
+
+
+
+
+    }
+
+    private _skip(n:number){
+
+    }
+
+    private _testSkip(){
+        let nSkip = 1;
+        let followOnSet = this._followOnTop();
+        let lookahead:Token;
+        while(true){
+            lookahead = this._tokens.lookahead(nSkip);
+            if(lookahead.type === TokenType.T_EOF || followOnSet.indexOf(lookahead.type) !== -1){
+                break;
+            } else {
+                ++nSkip;
+            }
         }
-        this._errors.push(error);
-        return error;
+        return nSkip;
+    }
+
+    private _testSubstitute() {
+        return this._followOnTop().indexOf(this._tokens.lookahead(1).type) !== -1;
+    }
+
+    private _testInsert(){
+        return this._followOnTop().indexOf(this._tokens.lookahead().type) !== -1;
+    }
+
+    private _followOnTop(){
+        return this._followOnStack.length ? this._followOnStack[this._followOnStack.length - 1] : [];
     }
 
 }
