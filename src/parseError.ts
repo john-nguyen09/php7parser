@@ -4,23 +4,14 @@
 
 'use strict';
 
-import { TokenType } from './lexer';
+import { TokenType, Token } from './lexer';
 
 export class ParseError {
 
-    constructor(public unexpected: TokenType | string,
+    constructor(public unexpected: Token,
         public expected: (TokenType | string)[],
-        public skipped: (TokenType | string)[] = null,
-        public substituted: Substitute = null,
-        public inserted: TokenType | string) {
+        public skipped: Token[] = null) {
 
     }
 
-
-
-}
-
-export interface Substitute {
-    actual: TokenType | string;
-    substitute: TokenType | string;
 }
