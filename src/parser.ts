@@ -470,7 +470,7 @@ export class Parser<T> {
 
     private _topStatement() {
 
-        let t = this._tokens.current;
+        let t = this._tokens.lookahead();
 
         switch (t.type) {
             case TokenType.T_NAMESPACE:
@@ -492,10 +492,12 @@ export class Parser<T> {
             case TokenType.T_INTERFACE:
                 return this._interfaceDeclarationStatement();
             default:
-                if (this._isStatementStartToken(this._tokens.current)) {
+                if (isStatementStartToken(this._tokens.current)) {
                     return this._statement();
                 } else {
                     //error
+                    //shouldn't reach here
+                    throw new Error(`Unexpected token ${t.type}`);
                 }
         }
 
@@ -3531,17 +3533,24 @@ export class Parser<T> {
 
     private _namespaceStatement() {
 
-        let children: (T | Token)[] = [this._tokens.current];
-        let t = this._tokens.next();
+        let children: (T | Token)[] = [this._tokens.next()];
+        let t = this._tokens.lookahead();
         this._tokens.lastDocComment;
 
         if (t.type == TokenType.T_STRING) {
+            this._followOnStack.push((x) => { return x.type === ';' || x.type === '{'; });
             children.push(this.namespaceName());
-            t = this._tokens.current;
+            this._followOnStack.pop();
+            t = this._tokens.lookahead();
             if (t.type === ';') {
-                children.push(t);
-                this._tokens.next();
+                children.push(this._tokens.next());
                 return this._nodeFactory(NodeType.NamespaceStatement, children);
+            } else if(t.type === '{'){
+                children.push(this._tokens.next());
+
+            } else {
+                //error
+                
             }
 
         }
@@ -3590,17 +3599,6 @@ export class Parser<T> {
 
     }
 
-    private _testSubstitute() {
-        return this._followOnTop().indexOf(this._tokens.lookahead(1).type) !== -1;
-    }
-
-    private _testInsert(followOnSet: (TokenType | string)[]) {
-        return followOnSet.indexOf(this._tokens.lookahead().type) !== -1;
-    }
-
-    private _followOnTop() {
-        return this._followOnStack[this._followOnStack.length - 1];
-    }
 
 }
 
