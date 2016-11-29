@@ -413,7 +413,6 @@ export class Parser<T> {
     private _nodeFactory: NodeFactory<T>;
     private _opPrecedenceMap = opPrecedenceMap;
     private _tokens: TokenIterator
-    private _errorRecovery: ErrorRecovery;
 
     constructor(nodeFactory: NodeFactory<T>) {
         this._nodeFactory = nodeFactory;
@@ -422,9 +421,7 @@ export class Parser<T> {
     parse(tokens:Token[]) {
 
         this._tokens = new TokenIterator(tokens);
-        this._errorRecovery = new ErrorRecovery(this._tokens);
-        let n = this._topStatementList();
-        return n;
+        return this._topStatementList();
 
     }
 
@@ -441,53 +438,50 @@ export class Parser<T> {
         return this._nodeFactory(tempNode.type, tempNode.children, tempNode.doc, tempNode.errors);
     }
 
-    private _topStatementList(breakTokens: (TokenType | string)[] = [TokenType.T_EOF]) {
+    private _topStatementStartTokenTypes():(TokenType|string)[]{
 
-        let children: (T | Token)[] = [];
+    }
+
+    private _topStatementList(breakOn: (TokenType | string)[] = [TokenType.T_EOF]) {
+
+        let n = this._tempNode(NodeType.TopStatementList);
         let t = this._tokens.peek();
-        let err: ParseError[] = [];
-        let expect: (t: Token) => boolean = (t) => {
-            return isTopStatementStartToken(t) || breakTokens.indexOf(t.type) !== -1;
+        let followOn:TokenPredicate = (x) => {
+            return isTopStatementStartToken(x) || breakOn.indexOf(x.type) !== -1;
         };
 
         while (true) {
 
             if (isTopStatementStartToken(t)) {
-                this._errorRecovery.pushFollowOn(expect);
-                children.push(this._topStatement());
-                this._errorRecovery.popFollowOn();
+                n.children.push(this._topStatement(followOn));
                 t = this._tokens.peek();
-                if (this._errorRecovery.isRecovering) {
-                    break;
-                }
-            } else if (breakTokens.indexOf(t.type) !== -1) {
+            } else if (breakOn.indexOf(t.type) !== -1) {
                 break;
             } else {
                 //error
-                err.push(new ParseError(t));
-                this._tokens.skip(expect);
-                if (this._tokens.peek().type === TokenType.T_EOF) {
+                n.errors.push(new ParseError(t, this._topStatementStartTokenTypes().concat(breakOn)));
+                if (this._tokens.skip(followOn).type === TokenType.T_EOF) {
                     break;
                 }
             }
 
         }
 
-        return this._nodeFactory(NodeType.TopStatementList, children, null, err);
+        return this._createNode(n);
 
     }
 
-    private _topStatement() {
+    private _topStatement(followOn:TokenPredicate) {
 
         let t = this._tokens.peek();
 
         switch (t.type) {
             case TokenType.T_NAMESPACE:
-                return this._namespaceStatement();
+                return this._namespaceStatement(followOn);
             case TokenType.T_USE:
                 return this._useStatement();
             case TokenType.T_HALT_COMPILER:
-                return this._haltCompilerStatement();
+                return this._haltCompilerStatement(followOn);
             case TokenType.T_CONST:
                 return this._constantDeclarationStatement();
             case TokenType.T_FUNCTION:
@@ -501,7 +495,7 @@ export class Parser<T> {
             case TokenType.T_INTERFACE:
                 return this._interfaceDeclarationStatement();
             default:
-                if (isStatementStartToken(this._tokens.current)) {
+                if (isStatementStartToken(t)) {
                     return this._statement();
                 } else {
                     //error
@@ -3387,32 +3381,24 @@ export class Parser<T> {
         return this._opPrecedenceMap.hasOwnProperty(t.text) && (this._opPrecedenceMap[t.text][2] & OpType.Binary) === OpType.Binary;
     }
 
-    private _haltCompilerStatement() {
+    private _haltCompilerStatement(followOn:TokenPredicate) {
 
-        let children: (T | Token)[] = [this._tokens.current];
-        let t = this._tokens.next();
+        let n = this._tempNode(NodeType.HaltCompilerStatement, [this._tokens.next()]);
+        let expected:(TokenType|string)[] = ['(', ')', ';'];
+        let t:Token;
 
-        if (t.type !== '(') {
-            //error
+        for(let k = 0; k < expected.length; ++k){
+            t = this._tokens.expect(expected[k]);
+            if(!t){
+                n.errors.push(new ParseError(this._tokens.peek(), [expected[k]]));
+                this._tokens.skip(followOn);
+                break;
+            } else {
+                n.children.push(t);
+            }
         }
 
-        children.push(t);
-        t = this._tokens.next();
-
-        if (t.type !== ')') {
-            //error
-        }
-
-        children.push(t);
-        t = this._tokens.next();
-
-        if (t.type !== ';') {
-            //error
-        }
-
-        children.push(t);
-        this._tokens.next();
-        return this._nodeFactory(NodeType.HaltCompilerStatement, children);
+        return this._createNode(n);
 
     }
 
