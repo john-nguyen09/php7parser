@@ -6,36 +6,60 @@
 
 import { TokenType, Token } from './lexer';
 import { TokenIterator } from './tokenIterator';
+import { NodeType } from './parser';
 
 export class ParseError {
 
-    constructor(public unexpected: Token,
-        public expected: (TokenType | string)[],
-        public skipped: Token[] = null) {
+    private _unexpected: Token;
+    private _expected: (TokenType | string)[];
+    private _nodeTypes: NodeType[];
 
+    constructor(unexpected: Token, expected: (TokenType | string)[] = [], nodeTypes: NodeType[] = []) {
+        this._unexpected = unexpected;
+        this._expected = expected;
+        this._nodeTypes = nodeTypes;
+    }
+
+    get unexpected(){
+        return this._unexpected;
+    }
+
+    get expected(){
+        return this._expected;
+    }
+
+    get nodeTypes(){
+        return this._nodeTypes;
     }
 
 }
 
 export interface SyncOption {
-    expected: TokenType;
-    followOnSet: (TokenType | string)[];
+    expected: TokenType|string;
+    followOn?: (t: Token) => boolean;
 }
 
 export class ErrorRecovery {
 
     private _syncDepth: number;
-    private _followOnStack: (TokenType | string)[][];
+    private _followOnStack: ((t: Token) => boolean)[];
     private _tokens: TokenIterator;
+
+    constructor(tokens: TokenIterator) {
+        this._tokens = tokens;
+        this._followOnStack = [];
+        this._syncDepth = 0;
+    }
 
     get isRecovering(): boolean {
         return this._syncDepth > 0;
     }
 
     /**
-     * @return boolean true if calling production can continue
+     * If calling production can continue then the successful syncOption is returned, else null
+     * The sync token will be the current token
      */
-    recover(syncOptions: SyncOption[]) {
+    recover(syncOptions: SyncOption[]):SyncOption {
 
         this._syncDepth = 0;
         let syncOption: SyncOption;
@@ -44,19 +68,19 @@ export class ErrorRecovery {
 
             syncOption = syncOptions[n];
             if (this._testInsert(syncOption)) {
-                return true;
+                return syncOption;
             } else if (this._testSubstitute(syncOption)) {
                 this._tokens.next();
-                return true;
+                return syncOption;
             } else if (this._testSkip(syncOption)) {
                 this._tokens.next();
                 this._tokens.next();
-                return true;
+                return syncOption;
             }
 
         }
 
-        let t = this._tokens.lookahead();
+        let t = this._tokens.peek();
         while (true) {
 
             if (t.type === TokenType.T_EOF) {
@@ -65,24 +89,24 @@ export class ErrorRecovery {
             }
 
             for (let n = this._followOnStack.length - 1; n >= 0; --n) {
-                if (this._followOnStack[n].indexOf(t.type)) {
+                if (this._followOnStack[n](t)) {
                     this._syncDepth = this._followOnStack.length - n;
                     break;
                 }
             }
 
             this._tokens.next();
-            t = this._tokens.lookahead();
+            t = this._tokens.peek();
 
         }
 
-        return false;
+        return null;
 
     }
 
-    pushFollowOn(set: (TokenType | string)[]) {
+    pushFollowOn(predicate: (t: Token) => boolean) {
 
-        this._followOnStack.push(set);
+        this._followOnStack.push(predicate);
 
     }
 
@@ -95,16 +119,21 @@ export class ErrorRecovery {
 
     }
 
+    private _followOnTop(){
+        return this._followOnStack.length ? this._followOnStack[this._followOnStack.length - 1] : null;
+    }
+
     private _testSubstitute(syncOption: SyncOption) {
-        return syncOption.followOnSet.indexOf(this._tokens.lookahead(1).type) !== -1;
+        let followOn = syncOption.followOn ? syncOption.followOn : this._followOnTop();
+        return followOn ? followOn(this._tokens.peek(1)) : false;
     }
 
     private _testInsert(syncOption: SyncOption) {
-        return syncOption.followOnSet.indexOf(this._tokens.lookahead().type) !== -1;
+        return syncOption.followOn ? syncOption.followOn(this._tokens.peek()) : false;
     }
 
     private _testSkip(syncOption: SyncOption) {
-        return this._tokens.lookahead(1).type === syncOption.expected;
+        return syncOption.expected === this._tokens.peek(1).type;
     }
 
 

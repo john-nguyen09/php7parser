@@ -4,13 +4,13 @@
 
 'use strict';
 
-import { Token, Iterator, TokenType } from './lexer';
+import { Token, TokenType } from './lexer';
 
-export class TokenIterator implements Iterator<Token> {
+export class TokenIterator {
 
-    private _iteratable: Iterator<Token>;
+    private _tokens: Token[];
+    private _pos: number;
     private _current: Token;
-    private _buffer: Token[];
     private _endToken: Token = {
         type: TokenType.T_EOF,
         text: null,
@@ -19,13 +19,13 @@ export class TokenIterator implements Iterator<Token> {
     };
     private _lastDocComment: Token;
 
-    constructor(iteratable: Iterator<Token>) {
-        this._iteratable = iteratable;
-        this._buffer = [];
+    constructor(tokens: Token[]) {
+        this._tokens = tokens;
+        this._pos = -1;
     }
 
     get current() {
-        return this._current;
+        return this._pos >= 0 ? this._tokens[this._pos] : null;
     }
 
     get lastDocComment() {
@@ -35,66 +35,55 @@ export class TokenIterator implements Iterator<Token> {
     }
 
     expect(tokenType: TokenType | string) {
-
-        return this.lookahead().type === tokenType ? this.next() : null;
-
+        return this.peek().type === tokenType ? this.next() : null;
     }
 
     next(): Token {
-        let t = this._buffer.length ? this._buffer.shift() : this._iteratable.next();
 
-        if (!t) {
-            t = this._endToken;
-        } else if (t.type === '}') {
-            this._lastDocComment = null;
-        } else if (this._isSkip(t)) {
-            return this.next();
+        if (this._pos === this._tokens.length - 1) {
+            return this._endToken;
         }
 
-        return this._current = t;
+        ++this._pos;
+
+        switch (this._tokens[this._pos].type) {
+            case TokenType.T_DOC_COMMENT:
+                this._lastDocComment = this._tokens[this._pos];
+                return this.next();
+            case '}':
+                this._lastDocComment = null;
+                break;
+            case TokenType.T_WHITESPACE:
+            case TokenType.T_COMMENT:
+            case TokenType.T_OPEN_TAG:
+            case TokenType.T_OPEN_TAG_WITH_ECHO:
+            case TokenType.T_CLOSE_TAG:
+                return this.next();
+            default:
+                break;
+        }
+
+        return this._tokens[this._pos];
 
     }
 
-    lookahead(n = 0) {
-
-        let t: Token;
-
-        for (let k = n - this._buffer.length; k >= 0; --k) {
-
-            t = this._iteratable.next();
-            if (!t) {
-                return this._endToken;
-            }
-            this._buffer.push(t);
-        }
-
-        return this._buffer[n];
+    peek(n = 0) {
+        let pos = this._pos + n + 1;
+        return pos < this._tokens.length ? this._tokens[pos] : this._endToken;
     }
 
-    skip(predicate:(t:Token)=>boolean) {
+    skip(until: (t:Token)=>boolean) {
 
-        let skipped: Token[] = [];
         let t: Token;
 
         while (true) {
-            t = this.lookahead();
-            if (predicate(t) || t.type === TokenType.T_EOF) {
+            t = this.peek();
+            if (until(t) || t.type === TokenType.T_EOF) {
                 break;
-            } else {
-                skipped.push(this.next());
             }
         }
 
-        return skipped;
-    }
-
-    private _isSkip(t: Token) {
-        return t.type === TokenType.T_WHITESPACE ||
-            t.type === TokenType.T_COMMENT ||
-            t.type === TokenType.T_DOC_COMMENT ||
-            t.type === TokenType.T_OPEN_TAG ||
-            t.type === TokenType.T_OPEN_TAG_WITH_ECHO ||
-            t.type === TokenType.T_CLOSE_TAG;
+        return t;
     }
 
 }
