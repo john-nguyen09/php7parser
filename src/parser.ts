@@ -508,17 +508,31 @@ export class Parser<T> {
 
 
 
-    private _constantDeclarationStatement() {
+    private _constantDeclarationStatement(followOn:TokenPredicate) {
 
-        let children: (T | Token)[] = [this._tokens.current];
-        this._tokens.next();
-        children.push(this._constantDeclarationList());
-        if (this._tokens.current.type !== ';') {
-            //error
+        let n = this._tempNode(NodeType.ConstantDeclarationStatement, [this._tokens.next()]);
+        let childFollowOn:TokenPredicate = (x)=>{
+            return x.type === ',' || x.type === ';' || followOn(x);
         }
-        children.push(this._tokens.current);
-        this._tokens.next();
-        return this._nodeFactory(NodeType.ConstantDeclarationStatement, children);
+        let t:Token;
+        
+        while (true) {
+
+            n.children.push(this._constantDeclaration(childFollowOn));
+            t = this._tokens.peek();
+            if (t.type === ',') {
+                n.children.push(this._tokens.next());
+            } else if(t.type === ';'){
+                n.children.push(this._tokens.next());
+                break;
+            } else {
+                n.errors.push(new ParseError(t, [',',';']));
+                this._tokens.skip(followOn);
+                break;
+            }
+        }
+        
+        return this._createNode(n);
 
     }
 
@@ -540,30 +554,32 @@ export class Parser<T> {
 
     }
 
-    private _constantDeclaration() {
+    private _constantDeclaration(followOn:TokenPredicate) {
 
-        let children: (T | Token)[] = [];
-        let doc = this._tokens.lastDocComment;
+        let n = this._tempNode(NodeType.ConstantDeclaration);
+        let expected:(TokenType|string)[] = [TokenType.T_STRING, '='];
+        let t:Token;
 
-        if (this._tokens.current.type !== TokenType.T_STRING) {
-            //error
+        for(let k = 0; k < expected.length; ++k){
+            t = this._tokens.expect(expected[k]);
+            if (t) {
+                n.children.push(t);
+            } else {
+                //error
+                n.errors.push(new ParseError(t, [expected[k]]));
+                n.doc = this._tokens.lastDocComment;
+                this._tokens.skip(followOn);
+                return this._createNode(n);
+            }
         }
 
-        children.push(this._tokens.current);
-
-        if (this._tokens.next().type !== '=') {
-            //error
-        }
-
-        children.push(this._tokens.current);
-        this._tokens.next();
-        children.push(this._expression());
-
-        return this._nodeFactory(NodeType.ConstantDeclaration, children, doc);
+        n.doc = this._tokens.lastDocComment;
+        n.children.push(this._expression(followOn));
+        return this._createNode(n);
 
     }
 
-    private _expression(minPrecedence = 0, lookForVariable = false) {
+    private _expression(followOn:TokenPredicate, minPrecedence = 0, lookForVariable = false) {
 
         let restrictOperators: (TokenType | string)[];
         let lhs: T | Token;
