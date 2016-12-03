@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Token, Lexer, TokenType, Iterator, Position } from './lexer';
+import { Token, Lexer, TokenType, Iterator, Position, Range } from './lexer';
 import { ParseError, ErrorRecovery } from './parseError';
 import { TokenIterator } from './tokenIterator';
 
@@ -120,8 +120,15 @@ export enum NodeType {
     TernaryExpression
 }
 
+export enum Flag {
+    None = 0,
+    UseClass,
+    UseFunction,
+    UseConstant
+}
+
 export interface NodeFactory<T> {
-    (type: NodeType, children: (T | Token)[], doc: Token, errors: ParseError[]): T;
+    (value: Element | string, children?: T[]): T;
 }
 
 interface TokenPredicate {
@@ -402,9 +409,20 @@ function isExpressionStartToken(t: Token) {
 }
 
 interface TempNode<T> {
+    value: Element;
+    children: T[];
+}
+
+export interface DocComment {
+    text: string;
+    range: Range;
+}
+
+export interface Element {
     type: NodeType;
-    children: (T | Token)[];
-    doc: Token;
+    flag: Flag;
+    doc: DocComment;
+    range: Range;
     errors: ParseError[];
 }
 
@@ -421,33 +439,55 @@ export class Parser<T> {
     parse(tokens: Token[]) {
 
         this._tokens = new TokenIterator(tokens);
-        return this._topStatementList();
+        return this._topStatementList(false);
 
     }
 
-    private _tempNode(nodeType: NodeType, children: (T | Token)[] = [], doc: Token = null, errors: ParseError[] = []): TempNode<T> {
+    private _start(type: NodeType): TempNode<T> {
+        let t = this._tokens.peek();
+
+        if (t.type === TokenType.T_EOF) {
+            t = this._tokens.current;
+        }
+
         return {
-            type: nodeType,
-            children: children,
-            doc: doc,
-            errors: errors
+            value: {
+                type: type,
+                flag: 0,
+                doc: null,
+                range: {
+                    start: t.range.start,
+                    end: null
+                },
+                errors: []
+            },
+            children: []
         };
     }
 
-    private _createNode(tempNode: TempNode<T>) {
-        return this._nodeFactory(tempNode.type, tempNode.children, tempNode.doc, tempNode.errors);
+
+    private _end(tempNode: TempNode<T>) {
+
+        let t = this._tokens.current;
+        tempNode.value.range.end = t.range.end;
+        return this._nodeFactory(tempNode.value, tempNode.children);
+
     }
 
     private _topStatementStartTokenTypes(): (TokenType | string)[] {
 
     }
 
-    private _topStatementList(breakOn: (TokenType | string)[] = [TokenType.T_EOF]) {
+    private _topStatementList(isCurly: boolean) {
 
-        let n = this._tempNode(NodeType.TopStatementList);
+        let n = this._start(NodeType.TopStatementList);
         let t = this._tokens.peek();
+        let breakOn = isCurly ? '}' : TokenType.T_EOF;
+
         let followOn: TokenPredicate = (x) => {
-            return isTopStatementStartToken(x) || breakOn.indexOf(x.type) !== -1;
+            //; is valid (empty) statement but don't include in error recovery to avoid stopping at end of 
+            //a child statement with error
+            return (x.type !== ';' && isTopStatementStartToken(x)) || x.type === breakOn;
         };
 
         while (true) {
@@ -455,11 +495,13 @@ export class Parser<T> {
             if (isTopStatementStartToken(t)) {
                 n.children.push(this._topStatement(followOn));
                 t = this._tokens.peek();
-            } else if (breakOn.indexOf(t.type) !== -1) {
+            } else if (t.type === breakOn) {
                 break;
             } else {
                 //error
-                n.errors.push(new ParseError(t, this._topStatementStartTokenTypes().concat(breakOn)));
+                let expected = this._topStatementStartTokenTypes();
+                expected.push(breakOn);
+                n.value.errors.push(new ParseError(t, expected));
                 if (this._tokens.skip(followOn).type === TokenType.T_EOF) {
                     break;
                 }
@@ -467,7 +509,7 @@ export class Parser<T> {
 
         }
 
-        return this._createNode(n);
+        return this._end(n);
 
     }
 
@@ -479,7 +521,7 @@ export class Parser<T> {
             case TokenType.T_NAMESPACE:
                 return this._namespaceStatement(followOn);
             case TokenType.T_USE:
-                return this._useStatement();
+                return this._useStatement(followOn);
             case TokenType.T_HALT_COMPILER:
                 return this._haltCompilerStatement(followOn);
             case TokenType.T_CONST:
@@ -1469,18 +1511,15 @@ export class Parser<T> {
 
     }
 
-    private _functionDeclarationStatement() {
+    private _functionDeclarationStatement(followOn: TokenPredicate) {
 
-        let children: (T | Token)[] = [this._tokens.current];
-        let doc = this._tokens.lastDocComment;
-        let t = this._tokens.next();
+        let n = this._tempNode(NodeType.FunctionDeclaration, [this._tokens.next(), this._tokens.lastDocComment]);
 
-        if (t.type === '&') {
-            children.push(t);
-            t = this._tokens.next();
+        if (this._tokens.peek().type === '&') {
+            n.children.push(this._tokens.next());
         }
 
-        if (t.type !== TokenType.T_STRING) {
+        if (this._tokens.expect(TokenType.T_STRING)) {
             //error
         }
 
@@ -3399,238 +3438,215 @@ export class Parser<T> {
 
     private _haltCompilerStatement(followOn: TokenPredicate) {
 
-        let n = this._tempNode(NodeType.HaltCompilerStatement, [this._tokens.next()]);
+        let n = this._start(NodeType.HaltCompilerStatement);
+        this._tokens.next();
         let expected: (TokenType | string)[] = ['(', ')', ';'];
         let t: Token;
 
         for (let k = 0; k < expected.length; ++k) {
-            t = this._tokens.expect(expected[k]);
-            if (!t) {
-                n.errors.push(new ParseError(this._tokens.peek(), [expected[k]]));
+            if (!this._tokens.expect(expected[k])) {
+                n.value.errors.push(new ParseError(this._tokens.peek(), [expected[k]]));
                 this._tokens.skip(followOn);
                 break;
-            } else {
-                n.children.push(t);
             }
         }
 
-        return this._createNode(n);
+        return this._end(n);
 
     }
 
     private _useStatement(followOn: TokenPredicate) {
 
-        let children: (Token | T)[] = [this._tokens.next()];
-        let isMixed = true;
+        let n = this._start(NodeType.UseStatement);
+        this._tokens.next();
         let t = this._tokens.peek();
 
-        if (t.type === TokenType.T_FUNCTION || t.type === TokenType.T_CONST) {
-            children.push(this._tokens.next());
-            isMixed = false;
+        if (this._tokens.expect(TokenType.T_FUNCTION)) {
+            n.value.flag = Flag.UseFunction;
+        } else if (this._tokens.expect(TokenType.T_CONST)) {
+            n.value.flag = Flag.UseConstant;
         }
 
-        let useElementParts: (T | Token)[] = [];
+        let useElementList = this._start(NodeType.UseList);
+        let useElement = this._start(NodeType.UseElement);
+        this._tokens.expect(TokenType.T_NS_SEPARATOR);
 
-        if (this._tokens.peek().type === TokenType.T_NS_SEPARATOR) {
-            useElementParts.push(this._tokens.next());
-        }
-
-        useElementParts.push(this._namespaceName((x) => {
+        let namespaceName = this._namespaceName((x) => {
             return x.type === TokenType.T_NS_SEPARATOR || x.type === ',' || x.type === ';' || followOn(x);
-        }));
+        });
 
-        if (this._tokens.peek().type === TokenType.T_NS_SEPARATOR) {
-            children.push(...useElementParts);
-            return this._useGroup(children, isMixed, followOn);
+        if (this._tokens.expect(TokenType.T_NS_SEPARATOR)) {
+            n.value.type = NodeType.UseGroupStatement;
+            n.children.push(namespaceName);
+            return this._useGroup(n, followOn);
         }
 
-        let n = this._tempNode(NodeType.UseStatement, children);
-        let useListChildren: (T | Token)[] = [];
+        useElement.children.push(namespaceName);
+        useElementList.children.push(this._useElement(useElement, false, true, (x) => { return x.type === ',' || x.type === ';' || followOn(x) }));
 
-        useListChildren.push(this._useElement(useElementParts, false, true, (x) => { return x.type === ',' || x.type === ';' || followOn(x) }));
-
-        if (this._tokens.peek().type === ',') {
-            useListChildren.push(this._tokens.next());
-            children.push(this._useList(useListChildren, false, true, (x) => { return x.type === ';' || followOn(x) }, ';'));
+        if (this._tokens.expect(',')) {
+            n.children.push(this._useList(useElementList, false, true, (x) => { return x.type === ';' || followOn(x) }, ';'));
         } else {
-            children.push(this._createNode(this._tempNode(NodeType.UseList, useListChildren)));
+            n.children.push(this._end(useElementList));
         }
 
-        t = this._tokens.expect(';');
-        if (t) {
-            children.push(t);
-        } else {
-            n.errors.push(new ParseError(this._tokens.peek(), [';']));
+        if (!this._tokens.expect(';')) {
+            n.value.errors.push(new ParseError(this._tokens.peek(), [';']));
             this._tokens.skip(followOn);
         }
 
-        return this._createNode(n);
-
+        return this._end(n);
     }
 
-    private _useGroup(children: (T | Token)[], isMixed: boolean, followOn: TokenPredicate) {
+    private _useGroup(tempNode: TempNode<T>, followOn: TokenPredicate) {
 
-        let n = this._tempNode(NodeType.UseGroupStatement, children);
-        n.children.push(this._tokens.next());
-        let t = this._tokens.expect('{');
+        let n = tempNode;
 
-        if (t) {
-            n.children.push(t);
-        } else {
+        if (!this._tokens.expect('{')) {
             //error
-            n.errors.push(new ParseError(this._tokens.peek(), ['{']));
+            n.value.errors.push(new ParseError(this._tokens.peek(), ['{']));
             this._tokens.skip(followOn);
-            return this._createNode(n);
+            return this._end(n);
         }
 
-        n.children.push(this._useList([], isMixed, false, (x) => { return x.type === '}' || followOn(x) }, '}'));
-        t = this._tokens.expect('}');
+        n.children.push(this._useList(this._start(NodeType.UseList), !n.value.flag, false, (x) => { return x.type === '}' || followOn(x) }, '}'));
 
-        if (t) {
-            n.children.push(t);
-        } else {
-            n.errors.push(new ParseError(this._tokens.peek(), ['}']));
+        if (!this._tokens.expect('}')) {
+            n.value.errors.push(new ParseError(this._tokens.peek(), ['}']));
             this._tokens.skip(followOn);
         }
 
-        return this._createNode(n);
+        return this._end(n);
     }
 
-    private _useList(children: (T | Token)[], isMixed: boolean, lookForPrefix: boolean, followOn: TokenPredicate, breakOn: TokenType | string) {
+    private _useList(tempNode: TempNode<T>, isMixed: boolean, lookForPrefix: boolean, followOn: TokenPredicate, breakOn: TokenType | string) {
 
         let t: Token;
-        let n = this._tempNode(NodeType.UseList, children);
+        let n = tempNode;
         let childFollowOn: TokenPredicate = (x) => {
             return x.type === ',' || followOn(x); //followOn should contain break token
         };
 
-        let useElementStartPredicate: TokenPredicate = (x) => {
-            return x.type === TokenType.T_STRING ||
-                (isMixed && (t.type === TokenType.T_FUNCTION || t.type === TokenType.T_CONST)) ||
-                (lookForPrefix && t.type === TokenType.T_NS_SEPARATOR);
-        };
-
-        let skipPredicate: TokenPredicate = (x) => {
-            return useElementStartPredicate(x) || followOn(x);
-        };
-
         while (true) {
 
-            n.children.push(this._useElement([], isMixed, lookForPrefix, childFollowOn));
+            n.children.push(this._useElement(this._start(NodeType.UseElement), isMixed, lookForPrefix, childFollowOn));
             t = this._tokens.peek();
             if (t.type === ',') {
-                n.children.push(this._tokens.next());
+                this._tokens.next();
             } else if (t.type === breakOn) {
                 break;
             } else {
                 //error
-                n.errors.push(new ParseError(t, [',', breakOn]));
-                if (!useElementStartPredicate(this._tokens.skip(skipPredicate))) {
-                    break;
-                }
+                n.value.errors.push(new ParseError(t, [',', breakOn]));
+                this._tokens.skip(followOn);
+                break;
             }
 
         }
 
-        return this._createNode(n);
+        return this._end(n);
 
     }
 
-    private _useElement(children: (T | Token)[], isMixed: boolean, lookForPrefix: boolean, followOn: TokenPredicate) {
+    private _useElement(tempNode: TempNode<T>, isMixed: boolean, lookForPrefix: boolean, followOn: TokenPredicate) {
 
-        let n = this._tempNode(NodeType.UseElement, children);
+        let n = tempNode;
         //if children not empty then it contains tokens to left of T_AS
-        let t = this._tokens.peek();
+        if (!n.children.length) {
 
-        if (!children.length) {
-
-            if ((isMixed && (t.type === TokenType.T_FUNCTION || t.type === TokenType.T_CONST)) ||
-                (lookForPrefix && t.type === TokenType.T_NS_SEPARATOR)) {
-                n.children.push(this._tokens.next());
+            if (isMixed) {
+                if (this._tokens.expect(TokenType.T_FUNCTION)) {
+                    n.value.flag = Flag.UseFunction;
+                } else if (this._tokens.expect(TokenType.T_CONST)) {
+                    n.value.flag = Flag.UseConstant;
+                } else {
+                    n.value.flag = Flag.UseClass;
+                }
+            } else if (lookForPrefix) {
+                this._tokens.expect(TokenType.T_NS_SEPARATOR);
             }
 
-            children.push(this._namespaceName((x) => { return x.type === TokenType.T_AS || followOn(x) }));
+            n.children.push(this._namespaceName((x) => { return x.type === TokenType.T_AS || followOn(x) }));
         }
 
-        if (this._tokens.peek().type !== TokenType.T_AS) {
-            return this._createNode(n);
+        if (!this._tokens.expect(TokenType.T_AS)) {
+            return this._end(n);
         }
 
-        n.children.push(this._tokens.next());
-        t = this._tokens.expect(TokenType.T_STRING);
-        if (t) {
-            n.children.push(t);
+        if (this._tokens.expect(TokenType.T_STRING)) {
+            n.children.push(this._nodeFactory(this._tokens.current.text));
         } else {
             //error
-            n.errors.push(new ParseError(this._tokens.peek(), [TokenType.T_STRING]));
+            n.value.errors.push(new ParseError(this._tokens.peek(), [TokenType.T_STRING]));
             this._tokens.skip(followOn);
         }
 
-        return this._createNode(n);
+        return this._end(n);
     }
 
     private _namespaceStatement(followOn: TokenPredicate) {
 
-        let n = this._tempNode(NodeType.NamespaceStatement, [this._tokens.next()], this._tokens.lastDocComment);
+        let n = this._start(NodeType.NamespaceStatement);
+        this._tokens.next();
+        this._tokens.lastDocComment;
 
-        if (this._tokens.peek().type == TokenType.T_STRING) {
+        if (this._tokens.expect(TokenType.T_STRING)) {
 
             n.children.push(this._namespaceName((x) => { return x.type === ';' || x.type === '{' || followOn(x) }));
 
-            if (this._tokens.peek().type === ';') {
-                n.children.push(this._tokens.next());
-                return this._createNode(n);
-            }
+            if (this._tokens.expect(';')) {
+                this._tokens.next();
+                return this._end(n);
+            } 
 
-        }
-
-        if (this._tokens.peek().type === '{') {
-            n.children.push(this._tokens.next());
-        } else {
+        } 
+        
+        if (!this._tokens.expect('{')) {
             //error
-            n.errors.push(new ParseError(this._tokens.peek(), ['{']));
+            n.value.errors.push(new ParseError(this._tokens.peek(), ['{']));
             this._tokens.skip(followOn);
-            return this._createNode(n);
+            return this._end(n);
         }
 
-        n.children.push(this._topStatementList(['}']));
+        n.children.push(this._topStatementList(true));
 
-        if (this._tokens.peek().type === '}') {
-            n.children.push(this._tokens.next());
-        } else {
-            //error
-            n.errors.push(new ParseError(this._tokens.peek(), ['}']));
+        if(!this._tokens.expect('}')){
+            n.value.errors.push(new ParseError(this._tokens.peek(), ['}']));
+            this._tokens.skip(followOn);
         }
 
-        return this._createNode(n);
+        return this._end(n);
 
     }
 
     private _namespaceName(followOn: TokenPredicate) {
 
-        let n = this._tempNode(NodeType.NamespaceName);
+        let n = this._start(NodeType.NamespaceName);
+        let text: string;
 
         if (this._tokens.peek().type === TokenType.T_STRING) {
-            n.children.push(this._tokens.next());
+            text = this._tokens.next().text;
         } else {
             //error
-            n.errors.push(new ParseError(this._tokens.peek(), [TokenType.T_STRING]));
+            n.value.errors.push(new ParseError(this._tokens.peek(), [TokenType.T_STRING]));
             this._tokens.skip(followOn);
-            return this._createNode(n);
+            return this._end(n);
         }
 
         while (true) {
 
             if (this._tokens.peek().type === TokenType.T_NS_SEPARATOR &&
                 this._tokens.peek(1).type === TokenType.T_STRING) {
-                n.children.push(this._tokens.next(), this._tokens.next());
+                text += this._tokens.next().text
+                text += this._tokens.next().text;
             } else {
                 break;
             }
 
         }
 
-        return this._createNode(n);
+        n.children.push(this._nodeFactory(text));
+        return this._end(n);
 
     }
 
