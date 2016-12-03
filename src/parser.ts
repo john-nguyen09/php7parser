@@ -548,11 +548,10 @@ export class Parser<T> {
 
     }
 
-
-
     private _constantDeclarationStatement(followOn: TokenPredicate) {
 
-        let n = this._tempNode(NodeType.ConstantDeclarationStatement, [this._tokens.next()]);
+        let n = this._start(NodeType.ConstantDeclarationStatement);
+        this._tokens.next();
         let childFollowOn: TokenPredicate = (x) => {
             return x.type === ',' || x.type === ';' || followOn(x);
         }
@@ -563,18 +562,18 @@ export class Parser<T> {
             n.children.push(this._constantDeclaration(childFollowOn));
             t = this._tokens.peek();
             if (t.type === ',') {
-                n.children.push(this._tokens.next());
+                this._tokens.next();
             } else if (t.type === ';') {
-                n.children.push(this._tokens.next());
+                this._tokens.next();
                 break;
             } else {
-                n.errors.push(new ParseError(t, [',', ';']));
+                n.value.errors.push(new ParseError(t, [',', ';']));
                 this._tokens.skip(followOn);
                 break;
             }
         }
 
-        return this._createNode(n);
+        return this._end(n);
 
     }
 
