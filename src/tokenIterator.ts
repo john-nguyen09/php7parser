@@ -72,13 +72,13 @@ export class TokenIterator {
         return pos < this._tokens.length ? this._tokens[pos] : this._endToken;
     }
 
-    skip(until: (t:Token)=>boolean) {
+    skip(until: (TokenType | string)[]) {
 
         let t: Token;
 
         while (true) {
             t = this.peek();
-            if (until(t) || t.type === TokenType.T_EOF) {
+            if (until.indexOf(t.type) !== -1 || t.type === TokenType.T_EOF) {
                 break;
             }
         }
