@@ -34,7 +34,7 @@ export class TokenIterator {
         return t;
     }
 
-    expect(tokenType: TokenType | string) {
+    consume(tokenType: TokenType | string) {
         return this.peek().type === tokenType ? this.next() : null;
     }
 
