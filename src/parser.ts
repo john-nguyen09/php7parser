@@ -22,7 +22,7 @@ export enum NodeType {
     TraitAdaptation, MethodReference, TraitPrecendence, TraitAlias, ClassModifiers, ClassDeclaration, TraitDeclarationStatement,
     InterfaceDeclarationStatement, BinaryExpression, EncapsulatedVariable, Variable, ArrayPairList, ClosureUseVariable,
     ClosureUse, ListExpression, Clone, Heredoc, DoubleQuotes, TopStatement,
-    Statement, IfStatementList, IfStatement, WhileStatement, DoWhileStatement, ForExpressionList, ForStatement,
+    EmptyStatement, IfStatementList, IfStatement, WhileStatement, DoWhileStatement, ForExpressionList, ForStatement,
     BreakStatement, ContinueStatement, ReturnStatement, GlobalVariableDeclarationStatement, StaticVariableDeclarationStatement, StaticVariableDeclaration,
     EchoStatement, UnsetStatement, ThrowStatement, GotoStatement, LabelStatement, ForeachStatement,
     CaseStatementList, SwitchStatement, CaseStatement, DeclareStatement, TryStatement, TryCatchFinallyStatement,
@@ -33,7 +33,7 @@ export enum NodeType {
     BinaryIsNotIdentical, BinaryIsEqual, BinaryIsNotEqual, BinaryIsSmaller, BinaryIsSmallerOrEqual, BinaryIsGreater,
     BinaryIsGreaterOrEqual, BinarySpaceship, BinaryCoalesce, BinaryAssign, BinaryConcatAssign, BinaryAddAssign, BinarySubtractAssign, BinaryMultiplyAssign,
     BinaryDivideAssign, BinaryModulusAssign, BinaryPowerAssign, BinaryShiftLeftAssign, BinaryShiftRightAssign, BinaryBitwiseOrAssign, BinaryBitwiseAndAssign,
-    BinaryBitwiseXorAssign, BinaryInstanceOf
+    BinaryBitwiseXorAssign, BinaryInstanceOf, MagicConstant
 }
 
 export enum Flag {
@@ -48,7 +48,8 @@ export enum Flag {
     PassByRef = 1 << 7,
     Variadic = 1 << 8,
 
-    Nullable, NameFq, NameNotFq, NameRelative,
+    Nullable, NameFq, NameNotFq, NameRelative,MagicLine, MagicFile, MagicDir, MagicNamespace, MagicFunction,
+    MagicMethod, MagicClass, MagicTrait,
     UseClass,
     UseFunction,
     UseConstant
@@ -753,6 +754,7 @@ export class Parser<T> {
                 return this._newExpression();
             case TokenType.T_DNUMBER:
             case TokenType.T_LNUMBER:
+                return this._nodeFactory(this._tokens.next());
             case TokenType.T_LINE:
             case TokenType.T_FILE:
             case TokenType.T_DIR:
@@ -761,7 +763,9 @@ export class Parser<T> {
             case TokenType.T_FUNC_C:
             case TokenType.T_NS_C:
             case TokenType.T_CLASS_C:
-                return t;
+                let magic = this._tempNode(NodeType.MagicConstant, this._startPos());
+                magic.value.flag = this._magicConstantTokenToFlag(this._tokens.next());
+                return this._concreteNode(magic, this._endPos());
             case TokenType.T_START_HEREDOC:
                 return this._heredoc();
             case '"':
@@ -792,6 +796,29 @@ export class Parser<T> {
                 break;
         }
 
+    }
+
+    private _magicConstantTokenToFlag(t:Token){
+        switch(t.type){
+            case TokenType.T_LINE:
+                return Flag.MagicLine;
+            case TokenType.T_FILE:
+                return Flag.MagicFile;
+            case TokenType.T_DIR:
+                return Flag.MagicDir;
+            case TokenType.T_TRAIT_C:
+                return Flag.MagicTrait;
+            case TokenType.T_METHOD_C:
+                return Flag.MagicMethod;
+            case TokenType.T_FUNC_C:
+                return Flag.MagicFunction;
+            case TokenType.T_NS_C:
+                return Flag.MagicNamespace;
+            case TokenType.T_CLASS_C:
+                return Flag.MagicClass;
+            default:
+                return 0;
+        }
     }
 
     private _isset() {
@@ -1132,17 +1159,17 @@ export class Parser<T> {
             n.children.push(this._nodeFactory(null));
         }
 
-        if (this._tokens.peek().type === TokenType.T_EXTENDS) {
+        if (this._tokens.consume(TokenType.T_EXTENDS)) {
             this._followOnStack.push([TokenType.T_IMPLEMENTS, '{']);
-            n.children.push(this._extendsClass());
+            n.children.push(this._name());
             this._followOnStack.pop();
         } else {
             n.children.push(this._nodeFactory(null));
         }
 
-        if (this._tokens.peek().type === TokenType.T_IMPLEMENTS) {
+        if (this._tokens.consume(TokenType.T_IMPLEMENTS)) {
             this._followOnStack.push(['{']);
-            n.children.push(this._implements());
+            n.children.push(this._nameList());
             this._followOnStack.pop();
         } else {
             n.children.push(this._nodeFactory(null));
@@ -1301,7 +1328,7 @@ export class Parser<T> {
                 n.children.push(this._traitAdaptation());
             } else {
                 //error
-                if(followOn.indexOf(this._error(n, followOn).type) == -1){
+                if (followOn.indexOf(this._error(n, followOn).type) == -1) {
                     break;
                 }
             }
@@ -1333,7 +1360,7 @@ export class Parser<T> {
             }
 
         } else if (t.type === TokenType.T_STRING || this._isSemiReservedToken(t)) {
-            
+
             let methodRef = this._tempNode(NodeType.MethodReference, n.value.range.start);
             methodRef.children.push(this._nodeFactory(null), this._nodeFactory(this._tokens.next()));
             n.children.push(this._concreteNode(methodRef, this._endPos()));
@@ -1348,8 +1375,8 @@ export class Parser<T> {
 
     }
 
-    private _traitAlias(n:TempNode<T>) {
-        
+    private _traitAlias(n: TempNode<T>) {
+
 
         if (this._tokens.consume(TokenType.T_AS)) {
             this._error(n, [TokenType.T_AS]);
@@ -1383,7 +1410,7 @@ export class Parser<T> {
 
     }
 
-    private _traitPrecedence(n:TempNode<T>) {
+    private _traitPrecedence(n: TempNode<T>) {
 
         n.value.type = NodeType.TraitPrecendence;
         this._followOnStack.push([';']);
@@ -1438,7 +1465,8 @@ export class Parser<T> {
         let t = this._tokens.peek();
         if (t.type !== TokenType.T_STRING && !this._isSemiReservedToken(t)) {
             //error
-            n.value.errors.push(this._error(t, [TokenType.T_STRING], [';', ':', '{']));
+            this._error(n, [TokenType.T_STRING], [';', ':', '{']);
+            n.children.push(this._nodeFactory(null));
         }
 
         n.children.push(this._nodeFactory(this._tokens.next()));
@@ -1448,16 +1476,20 @@ export class Parser<T> {
 
         if (this._tokens.peek().type === ':') {
             n.children.push(this._returnType());
+        } else {
+            n.children.push(this._nodeFactory(null));
         }
 
         t = this._tokens.peek();
         if (t.type === ';' && (n.value.flag & Flag.ModifierAbstract)) {
             this._tokens.next();
+            n.children.push(this._nodeFactory(null));
         } else if (t.type === '{') {
             n.children.push(this._curlyInnerStatementList());
         } else {
             //error
-            n.value.errors.push(this._error(t, [';', '{']));
+            n.children.push(this._nodeFactory(null));
+            this._error(n, [';', '{']);
         }
 
         return this._concreteNode(n, this._endPos());
@@ -1466,33 +1498,32 @@ export class Parser<T> {
 
     private _curlyInnerStatementList() {
 
-        let n = this._tempNode(NodeType.Error, this._startPos());
+        let n = this._tempNode(NodeType.InnerStatementList, this._startPos());
 
         if (!this._tokens.consume('{')) {
-            n.value.errors.push(this._error(this._tokens.peek(), ['{']));
+            this._error(n, ['{']);
             return this._concreteNode(n, this._endPos());
         }
 
         if (this._tokens.consume('}')) {
-            return null;
-        }
-
-        this._followOnStack.push(['}']);
-        n.children.push(this._innerStatementList('}'));
-        this._followOnStack.pop();
-
-        if (!this._tokens.consume('}')) {
-            n.value.errors.push(this._error(this._tokens.peek(), ['}']));
             return this._concreteNode(n, this._endPos());
         }
 
-        return n.children.pop();
+        this._followOnStack.push(['}']);
+        this._innerStatementList(['}'], n);
+        this._followOnStack.pop();
+
+        if (!this._tokens.consume('}')) {
+            this._error(n, ['}']);
+        }
+
+        return this._concreteNode(n, this._endPos());
 
     }
 
-    private _innerStatementList(breakOn: (TokenType | string)[]) {
+    private _innerStatementList(breakOn: (TokenType | string)[], tempNode: TempNode<T> = null) {
 
-        let n = this._tempNode(NodeType.InnerStatementList, this._startPos());
+        let n = tempNode ? tempNode : this._tempNode(NodeType.InnerStatementList, this._startPos());
         let t: Token;
         let followOn = innerStatementStartTokenTypes.slice(0);
         Array.prototype.push.apply(followOn, breakOn);
@@ -1509,22 +1540,21 @@ export class Parser<T> {
                 break;
             } else {
                 //error
-                n.value.errors.push(this._error(this._tokens.peek(), followOn, followOn));
-                t = this._tokens.peek();
-                if (!this._isInnerStatementStartToken(t)) {
+                if (!this._isInnerStatementStartToken(this._error(n, followOn, followOn))) {
                     break;
                 }
             }
         }
 
-        return this._concreteNode(n, this._endPos());
+        if (!tempNode) {
+            return this._concreteNode(n, this._endPos());
+        }
+
     }
-
-
 
     private _innerStatement() {
 
-        let t = this._tokens.current;
+        let t = this._tokens.peek();
 
         switch (t.type) {
             case TokenType.T_FUNCTION:
@@ -1542,6 +1572,7 @@ export class Parser<T> {
                     return this._statement();
                 } else {
                     //error
+                    throw new Error(`Unexpected token ${t.type}`);
                 }
 
         }
@@ -1550,140 +1581,145 @@ export class Parser<T> {
 
     private _interfaceDeclarationStatement() {
 
-        let children: (T | Token)[] = [this._tokens.current];
-        let doc = this._tokens.lastDocComment;
+        let n = this._tempNode(NodeType.InterfaceDeclarationStatement, this._startPos());
         let t = this._tokens.next();
+        n.value.doc = this._tokens.lastDocComment;
 
-        if (t.type !== TokenType.T_STRING) {
-            //error
+        if (this._tokens.consume(TokenType.T_STRING)) {
+            n.children.push(this._nodeFactory(this._tokens.current));
+        } else {
+            n.children.push(this._nodeFactory(null));
         }
 
-        children.push(t);
-        t = this._tokens.next();
-
-        if (t.type === TokenType.T_EXTENDS) {
-            children.push(this._extendsInterface());
+        if (this._tokens.consume(TokenType.T_EXTENDS)) {
+            this._followOnStack.push(['{']);
+            n.children.push(this._nameList());
+            this._followOnStack.pop();
+        } else {
+            n.children.push(this._nodeFactory(null));
         }
 
-        children.push(this._classStatementList());
-        return this._nodeFactory(NodeType.InterfaceDeclarationStatement, children, doc);
-
-    }
-
-    private _extendsInterface() {
-
-        let children: (T | Token)[] = [this._tokens.current];
-        this._tokens.next();
-        children.push(this._nameList());
-        return this._nodeFactory(NodeType.InterfaceExtends, children);
+        n.children.push(this._classStatementList());
+        return this._concreteNode(n, this._endPos());
 
     }
 
     private _traitDeclarationStatement() {
 
-        let children: (T | Token)[] = [this._tokens.current];
-        let doc = this._tokens.lastDocComment;
+        let n = this._tempNode(NodeType.TraitDeclarationStatement, this._startPos());
         let t = this._tokens.next();
+        n.value.doc = this._tokens.lastDocComment;
 
-        if (t.type !== TokenType.T_STRING) {
-            //error
+        if (this._tokens.consume(TokenType.T_STRING)) {
+            n.children.push(this._nodeFactory(this._tokens.current));
+        } else {
+            n.children.push(this._nodeFactory(null));
+            this._error(n, [TokenType.T_STRING], ['{']);
         }
 
-        children.push(t);
-        this._tokens.next();
-        children.push(this._classStatementList());
-        return this._nodeFactory(NodeType.TraitDeclarationStatement, children, doc);
-
+        n.children.push(this._classStatementList());
+        return this._concreteNode(n, this._endPos());
     }
 
-    private _functionDeclarationStatement(followOn: Predicate) {
+    private _functionDeclarationStatement() {
 
-        let n = this._tempNode(NodeType.FunctionDeclaration, [this._tokens.next(), this._tokens.lastDocComment]);
+        let n = this._tempNode(NodeType.FunctionDeclaration, this._startPos());
 
-        if (this._tokens.peek().type === '&') {
-            n.children.push(this._tokens.next());
+        this._tokens.next(); //T_FUNCTION
+
+        if (this._tokens.consume('&')) {
+            n.value.flag = Flag.ReturnsRef;
         }
 
         if (this._tokens.consume(TokenType.T_STRING)) {
-            //error
+            n.children.push(this._nodeFactory(this._tokens.current));
+        } else {
+            n.children.push(this._nodeFactory(null));
+            this._error(n, ['(', ':', '{']);
         }
 
-        children.push(t);
-        children.push(this._parameterList());
-        t = this._tokens.current;
+        n.children.push(this._parameterList());
 
-        if (t.type === ':') {
-            children.push(this._returnType());
-            t = this._tokens.current;
+        if (this._tokens.consume(':')) {
+            this._followOnStack.push(['{']);
+            n.children.push(this._returnType());
+            this._followOnStack.pop();
+        } else {
+            n.children.push(this._nodeFactory(null));
         }
 
-        children.push(this._curlyInnerStatementList());
-        return this._nodeFactory(NodeType.FunctionDeclaration, children);
+        n.children.push(this._curlyInnerStatementList());
+        return this._concreteNode(n, this._endPos());
 
     }
 
     private _classDeclarationStatement() {
 
-        let t = this._tokens.current;
-        let children: (T | Token)[] = [];
-        let doc = this._tokens.lastDocComment;
+        let n = this._tempNode(NodeType.ClassDeclaration, this._endPos());
+        let t = this._tokens.peek();
 
         if (t.type === TokenType.T_ABSTRACT || t.type === TokenType.T_FINAL) {
-            children.push(this._classModifiers());
+            n.value.flag = this._classModifiers();
         }
 
-        t = this._tokens.current;
-        if (t.type !== TokenType.T_CLASS) {
+        if (!this._tokens.consume(TokenType.T_CLASS)) {
             //error
+            this._error(n, [TokenType.T_CLASS], [TokenType.T_STRING]);
         }
 
-        children.push(t);
-        t = this._tokens.next();
+        n.value.doc = this._tokens.lastDocComment;
 
-        if (t.type !== TokenType.T_STRING) {
+        if (this._tokens.consume(TokenType.T_STRING)) {
+            n.children.push(this._nodeFactory(this._tokens.current));
+        } else {
             //error
+            this._error(n, [TokenType.T_STRING], [TokenType.T_EXTENDS, TokenType.T_IMPLEMENTS, '{']);
+            n.children.push(this._nodeFactory(null));
         }
 
-        children.push(t);
-        t = this._tokens.next();
-
-        if (t.type === TokenType.T_EXTENDS) {
-            children.push(this._extendsClass());
-            t = this._tokens.current;
+        if (this._tokens.consume(TokenType.T_EXTENDS)) {
+            this._followOnStack.push([TokenType.T_IMPLEMENTS, '{']);
+            n.children.push(this._nameList());
+            this._followOnStack.pop();
+        } else {
+            n.children.push(this._nodeFactory(null));
         }
 
-        if (t.type === TokenType.T_IMPLEMENTS) {
-            children.push(this._implements());
-            t = this._tokens.current;
+        if (this._tokens.consume(TokenType.T_IMPLEMENTS)) {
+            this._followOnStack.push(['{']);
+            n.children.push(this._nameList());
+            this._followOnStack.pop();
+        } else {
+            n.children.push(this._nodeFactory(null));
         }
 
-        children.push(this._classStatementList());
-        return this._nodeFactory(NodeType.ClassDeclaration, children, doc);
+        n.children.push(this._classStatementList());
+        return this._concreteNode(n, this._endPos());
 
     }
 
     private _classModifiers() {
 
-        let children: (T | Token)[] = [this._tokens.current];
-        let t = this._tokens.next();
+        let flag = 0;
+        let t: Token;
 
         while (true) {
+            t = this._tokens.peek();
             if (t.type === TokenType.T_ABSTRACT || t.type === TokenType.T_FINAL) {
-                children.push(t);
-                t = this._tokens.next();
+                flag |= this._memberModifierToFlag(this._tokens.next());
             } else {
                 break;
             }
 
         }
 
-        return this._nodeFactory(NodeType.ClassModifiers, children);
+        return flag;
 
     }
 
     private _statement() {
 
-        let t = this._tokens.current;
+        let t = this._tokens.peek();
 
         switch (t.type) {
             case '{':
@@ -1711,7 +1747,9 @@ export class Parser<T> {
             case TokenType.T_ECHO:
                 return this._echoStatement();
             case TokenType.T_INLINE_HTML:
-                return t;
+                let echo = this._tempNode(NodeType.EchoStatement, this._startPos());
+                echo.children.push(this._nodeFactory(this._tokens.next()));
+                return this._concreteNode(echo, this._endPos());
             case TokenType.T_UNSET:
                 return this._unsetStatement();
             case TokenType.T_FOREACH:
@@ -1721,28 +1759,35 @@ export class Parser<T> {
             case TokenType.T_TRY:
                 return this._tryCatchFinallyStatement();
             case TokenType.T_THROW:
-                return this.throwStatement(this._tokens);
+                return this.throwStatement();
             case TokenType.T_GOTO:
-                return this._gotoStatement(this._tokens);
+                return this._gotoStatement();
             case TokenType.T_STRING:
-                return this.labelStatement(this._tokens);
+                return this.labelStatement();
             case ';':
+                let empty = this._tempNode(NodeType.EmptyStatement, this._startPos());
                 this._tokens.next();
-                return this._nodeFactory(NodeType.Statement, [t]);
+                return this._concreteNode(empty, this._endPos());
             default:
                 if (this._isExpressionStartToken(t)) {
-                    let children: (T | Token)[] = [this._expression()];
-                    let t = this._tokens.current;
+                    let expr = this._tempNode(NodeType.Error, this._startPos());
+                    this._followOnStack.push([';']);
+                    expr.children.push(this._expression());
+                    this._followOnStack.pop();
 
-                    if (t.type !== ';') {
+                    if (!this._tokens.consume(';')) {
                         //error
+                        if (this._error(expr, [';'], [';']).type === ';') {
+                            this._tokens.next();
+                        }
+                        return this._concreteNode(expr, this._endPos());
                     }
+                    return expr.children.pop();
 
-                    children.push(t);
-                    this._tokens.next();
-                    return this._nodeFactory(NodeType.Statement, children);
                 } else {
                     //error
+                    //shouldnt get here
+                    throw new Error(`Unexpected token ${t.type}`);
                 }
 
         }
@@ -1769,6 +1814,13 @@ export class Parser<T> {
     }
 
     private _tryCatchFinallyStatement() {
+
+        let n = this._tempNode(NodeType.TryCatchFinallyStatement, this._startPos());
+        this._tokens.next(); //try
+
+        if(!this._tokens.consume('{')){
+            this._error(n, ['{'], [TokenType.T_CATCH, TokenType.T_FINALLY]);
+        }
 
         let children: (T | Token)[] = [];
 
@@ -2898,23 +2950,6 @@ export class Parser<T> {
         }
     }
 
-    private _extendsClass() {
-
-        let n = this._tempNode(NodeType.ClassExtends, this._startPos());
-        this._tokens.next();
-        n.children.push(this._name());
-        return this._concreteNode(n, this._endPos());
-
-    }
-
-    private _implements() {
-
-        let n = this._tempNode(NodeType.Implements, this._startPos());
-        this._tokens.next();
-        n.children.push(this._nameList());
-        return this._concreteNode(n, this._endPos());
-
-    }
 
     private _nameList() {
 
