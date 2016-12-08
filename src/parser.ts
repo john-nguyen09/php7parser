@@ -33,7 +33,7 @@ export enum NodeType {
     BinaryIsNotIdentical, BinaryIsEqual, BinaryIsNotEqual, BinaryIsSmaller, BinaryIsSmallerOrEqual, BinaryIsGreater,
     BinaryIsGreaterOrEqual, BinarySpaceship, BinaryCoalesce, BinaryAssign, BinaryConcatAssign, BinaryAddAssign, BinarySubtractAssign, BinaryMultiplyAssign,
     BinaryDivideAssign, BinaryModulusAssign, BinaryPowerAssign, BinaryShiftLeftAssign, BinaryShiftRightAssign, BinaryBitwiseOrAssign, BinaryBitwiseAndAssign,
-    BinaryBitwiseXorAssign, BinaryInstanceOf, MagicConstant
+    BinaryBitwiseXorAssign, BinaryInstanceOf, MagicConstant,CatchList
 }
 
 export enum Flag {
@@ -48,7 +48,7 @@ export enum Flag {
     PassByRef = 1 << 7,
     Variadic = 1 << 8,
 
-    Nullable, NameFq, NameNotFq, NameRelative,MagicLine, MagicFile, MagicDir, MagicNamespace, MagicFunction,
+    Nullable, NameFq, NameNotFq, NameRelative, MagicLine, MagicFile, MagicDir, MagicNamespace, MagicFunction,
     MagicMethod, MagicClass, MagicTrait,
     UseClass,
     UseFunction,
@@ -324,6 +324,11 @@ export class Parser<T> {
     }
 
     private _tempNode(type: NodeType = 0, startPos: Position = null): TempNode<T> {
+        
+        if(!startPos){
+            startPos = this._startPos();
+        }
+
         return {
             value: {
                 type: type,
@@ -337,8 +342,11 @@ export class Parser<T> {
     }
 
 
-    private _concreteNode(tempNode: TempNode<T>, endPos: Position) {
+    private _concreteNode(tempNode: TempNode<T>, endPos: Position = null) {
 
+        if(!endPos){
+            endPos = this._endPos();
+        }
         tempNode.value.range.end = endPos;
         return this._nodeFactory(tempNode.value, tempNode.children);
 
@@ -445,13 +453,8 @@ export class Parser<T> {
                 this._tokens.next();
                 break;
             } else {
-                t = this._error(n, [',', ';'], [TokenType.T_STRING, ';']);
-                if (t.type === ';') {
-                    this._tokens.next();
-                    break;
-                } else if (t.type !== TokenType.T_STRING) {
-                    break;
-                }
+                this._error(n, [',', ';']);
+                break;
             }
         }
 
@@ -665,13 +668,14 @@ export class Parser<T> {
             this._followOnStack.push([':']);
             n.children.push(this._expression(precedence));
             this._followOnStack.pop();
-        }
 
-        if (!this._tokens.consume(':')) {
-            //error
-            if (!this._isExpressionStartToken(this._error(n, [':'], expressionStartTokenTypes))) {
-                return this._concreteNode(n, this._endPos());
+            if (!this._tokens.consume(':')) {
+                //error
+                if (!this._isExpressionStartToken(this._error(n, [':'], expressionStartTokenTypes))) {
+                    return this._concreteNode(n, this._endPos());
+                }
             }
+
         }
 
         n.children.push(this._expression(precedence));
@@ -798,8 +802,8 @@ export class Parser<T> {
 
     }
 
-    private _magicConstantTokenToFlag(t:Token){
-        switch(t.type){
+    private _magicConstantTokenToFlag(t: Token) {
+        switch (t.type) {
             case TokenType.T_LINE:
                 return Flag.MagicLine;
             case TokenType.T_FILE:
@@ -1757,7 +1761,7 @@ export class Parser<T> {
             case TokenType.T_DECLARE:
                 return this._declareStatement();
             case TokenType.T_TRY:
-                return this._tryCatchFinallyStatement();
+                return this._try();
             case TokenType.T_THROW:
                 return this.throwStatement();
             case TokenType.T_GOTO:
@@ -1765,12 +1769,12 @@ export class Parser<T> {
             case TokenType.T_STRING:
                 return this.labelStatement();
             case ';':
-                let empty = this._tempNode(NodeType.EmptyStatement, this._startPos());
+                let empty = this._tempNode(NodeType.EmptyStatement);
                 this._tokens.next();
-                return this._concreteNode(empty, this._endPos());
+                return this._concreteNode(empty);
             default:
                 if (this._isExpressionStartToken(t)) {
-                    let expr = this._tempNode(NodeType.Error, this._startPos());
+                    let expr = this._tempNode(NodeType.Error);
                     this._followOnStack.push([';']);
                     expr.children.push(this._expression());
                     this._followOnStack.pop();
@@ -1794,76 +1798,94 @@ export class Parser<T> {
 
     }
 
-    private _tryStatement() {
+    private _try() {
 
-        let children: (T | Token)[] = [this._tokens.current];
+        let n = this._tempNode(NodeType.TryCatchFinallyStatement, this._startPos());
+        let t = this._tokens.next(); //try
 
-        if (!this._expectNext('{', children)) {
-            //error
+        if (!this._tokens.consume('{')) {
+            let recover = innerStatementStartTokenTypes.slice(0);
+            recover.push('}', TokenType.T_CATCH, TokenType.T_FINALLY);
+            this._error(n, ['{'], recover);
         }
 
-        children.push(this._innerStatementList());
+        t = this._tokens.next();
 
-        if (!this._expectCurrent('}', children)) {
-            //error
+        if(t.type === '}' || this._isInnerStatementStartToken(t)){
+            this._followOnStack.push(['}', TokenType.T_CATCH, TokenType.T_FINALLY]);
+            n.children.push(this._innerStatementList(['}']));
+            this._followOnStack.pop();
+        } else {
+            n.children.push(this._nodeFactory(null));
         }
 
-        this._tokens.next();
-        return this._nodeFactory(NodeType.TryStatement, children);
+        this._followOnStack.push([TokenType.T_FINALLY]);
+        n.children.push(this._catchList());
+        this._followOnStack.pop();
+
+        if(this._tokens.peek().type === TokenType.T_FINALLY){
+            n.children.push(this._finallyStatement());
+        } else {
+            n.children.push(this._nodeFactory(null));
+        }
+
+        return this._concreteNode(n, this._endPos());
 
     }
 
-    private _tryCatchFinallyStatement() {
+    private _catchList(){
 
-        let n = this._tempNode(NodeType.TryCatchFinallyStatement, this._startPos());
-        this._tokens.next(); //try
+        let n = this._tempNode(NodeType.CatchList, this._startPos());
+        this._followOnStack.push([TokenType.T_CATCH]);
 
-        if(!this._tokens.consume('{')){
-            this._error(n, ['{'], [TokenType.T_CATCH, TokenType.T_FINALLY]);
-        }
+        while(true){
 
-        let children: (T | Token)[] = [];
-
-        children.push(this._tryStatement());
-
-        while (true) {
-
-            if (this._tokens.current.type !== TokenType.T_CATCH) {
+            if(this._tokens.peek().type === TokenType.T_CATCH){
+                n.children.push(this._catchStatement());
+            } else {
                 break;
             }
 
-            children.push(this._catchStatement());
-
         }
 
-
-
-        return this._nodeFactory(NodeType.CatchList, children);
+        this._followOnStack.pop();
+        return this._concreteNode(n, this._endPos());
 
     }
 
     private _finallyStatement() {
 
-        let children: (T | Token)[] = [this._tokens.current];
+        let n = this._tempNode(NodeType.Error);
+        let t = this._tokens.next(); //T_FINALLY
 
-        if (!this._expectNext('{', children)) {
+        if (!this._tokens.consume('{')) {
             //error
+            let recover = innerStatementStartTokenTypes.slice(0);
+            recover.push('}');
+            this._error(n, ['{'], recover);
         }
 
-        this._tokens.next();
-        children.push(this._innerStatementList());
-
-        if (!this._expectCurrent('{', children)) {
-            //error
+        if(t.type === '}' || this._isInnerStatementStartToken(t)){
+            this._followOnStack.push(['}']);
+            n.children.push(this._innerStatementList(['}']));
+            this._followOnStack.pop();
+        } else {
+            n.children.push(this._nodeFactory(null));
         }
-        this._tokens.next();
-        return this._nodeFactory(NodeType.FinallyStatement, children);
+
+        if (!this._tokens.consume('}')) {
+            //error
+            this._error(n, ['}']);
+        }
+
+        return n.value.errors.length ? this._concreteNode(n) : n.children.pop();
 
     }
 
     private _catchStatement() {
 
-        let children: (T | Token)[] = [this._tokens.current];
+        let n = this._tempNode(NodeType.Catch);
+        this._tokens.next();
 
         if (!this._expectNext('(', children)) {
             //error
