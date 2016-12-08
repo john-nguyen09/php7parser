@@ -856,7 +856,7 @@ export class Parser<T> {
 
         if (!this._tokens.consume(')')) {
             //error
-            if(this._error(n, [')'], [')']).type === ')'){
+            if (this._error(n, [')'], [')']).type === ')') {
                 this._tokens.next();
             }
         }
@@ -1111,7 +1111,7 @@ export class Parser<T> {
         if (!this._tokens.consume(TokenType.T_END_HEREDOC)) {
             //error
             this._error(n, [TokenType.T_END_HEREDOC]);
-            
+
         }
 
         return this._concreteNode(n, this._endPos());
@@ -1250,7 +1250,7 @@ export class Parser<T> {
             default:
                 //error
                 //should never get here
-                throw new Error(`Unexpected token ${t.type}`);                
+                throw new Error(`Unexpected token ${t.type}`);
 
         }
 
@@ -1260,152 +1260,168 @@ export class Parser<T> {
 
         let n = this._tempNode(NodeType.UseTraitStatement, this._startPos());
         let t = this._tokens.next();
-
+        this._followOnStack.push([';', '{']);
         n.children.push(this._nameList());
-
-        if (this._tokens.consume(';')) {
-            return this._concreteNode(n, this._endPos());
-        }
-
-        if (t.type !== '{') {
-            //error
-        }
-
-        children.push(this._traitAdaptationList());
-        return this._nodeFactory(NodeType.TraitAdaptationList, children);
+        this._followOnStack.pop();
+        n.children.push(this._traitAdaptationList());
+        return this._concreteNode(n, this._endPos());
 
     }
 
     private _traitAdaptationList() {
 
-        let children: (T | Token)[] = [this._tokens.current];
-        let t = this._tokens.next();
+        let n = this._tempNode(NodeType.TraitAdaptationList, this._startPos());
+        let t: Token;
+
+        if (this._tokens.consume(';')) {
+            return this._concreteNode(n, this._endPos());
+        }
+
+        if (!this._tokens.consume('{')) {
+            this._error(n, ['{']);
+            return this._concreteNode(n, this._endPos());
+        }
+
+        let followOn: (TokenType | string)[] = [
+            '}', TokenType.T_STRING, TokenType.T_NAMESPACE, TokenType.T_NS_SEPARATOR
+        ];
+        this._followOnStack.push(['}']);
 
         while (true) {
 
-            if (t.type === '}' || t.type === TokenType.T_EOF) {
-                children.push(t);
+            t = this._tokens.peek();
+
+            if (t.type === '}') {
                 this._tokens.next();
                 break;
             } else if (t.type === TokenType.T_STRING ||
                 t.type === TokenType.T_NAMESPACE ||
                 t.type === TokenType.T_NS_SEPARATOR ||
                 this._isSemiReservedToken(t)) {
-                children.push(this._traitAdaptation());
-                t = this._tokens.current;
+                n.children.push(this._traitAdaptation());
             } else {
                 //error
-                break;
+                if(followOn.indexOf(this._error(n, followOn).type) == -1){
+                    break;
+                }
             }
 
         }
 
-        return this._nodeFactory(NodeType.TraitAdaptationList, children);
+        this._followOnStack.pop();
+        return this._concreteNode(n, this._endPos());
+
     }
 
     private _traitAdaptation() {
 
-        let t = this._tokens.current;
-        let methodRefOrIdent: T | Token;
-        let t2 = this._tokens.peek();
+        let n = this._tempNode(NodeType.Error, this._startPos());
+        let t = this._tokens.peek();
+        let t2 = this._tokens.peek(1);
 
         if (t.type === TokenType.T_NAMESPACE ||
             t.type === TokenType.T_NS_SEPARATOR ||
             (t.type === TokenType.T_STRING &&
                 (t2.type === TokenType.T_PAAMAYIM_NEKUDOTAYIM || t2.type === TokenType.T_NS_SEPARATOR))) {
 
-            methodRefOrIdent = this._methodReference();
-            t = this._tokens.current;
+            this._followOnStack.push([TokenType.T_INSTEADOF, TokenType.T_AS]);
+            n.children.push(this._methodReference());
+            this._followOnStack.pop();
 
-            if (t.type === TokenType.T_INSTEADOF) {
-                return this._traitPrecedence(methodRefOrIdent);
+            if (this._tokens.consume(TokenType.T_INSTEADOF)) {
+                return this._traitPrecedence(n);
             }
 
         } else if (t.type === TokenType.T_STRING || this._isSemiReservedToken(t)) {
-            methodRefOrIdent = t;
-            this._tokens.next();
+            
+            let methodRef = this._tempNode(NodeType.MethodReference, n.value.range.start);
+            methodRef.children.push(this._nodeFactory(null), this._nodeFactory(this._tokens.next()));
+            n.children.push(this._concreteNode(methodRef, this._endPos()));
         } else {
             //error
+            this._error(n, [TokenType.T_NAMESPACE, TokenType.T_NS_SEPARATOR, TokenType.T_STRING]);
+            return this._concreteNode(n, this._endPos());
         }
 
-        return this._traitAlias(methodRefOrIdent);
+        return this._traitAlias(n);
 
 
     }
 
-    private _traitAlias(methodReferenceOrIdentifier: T | Token) {
-        let t = this._tokens.current;
-        let children: (T | Token)[] = [methodReferenceOrIdentifier];
+    private _traitAlias(n:TempNode<T>) {
+        
 
-        if (t.type !== TokenType.T_AS) {
-            //error
+        if (this._tokens.consume(TokenType.T_AS)) {
+            this._error(n, [TokenType.T_AS]);
+            n.children.push(this._nodeFactory(null));
+            return this._concreteNode(n, this._endPos());
         }
 
-        children.push(t);
-        t = this._tokens.next();
+        let t = this._tokens.peek();
 
         if (t.type === TokenType.T_STRING || this._isReservedToken(t)) {
-            children.push(t);
-            t = this._tokens.next();
+            n.children.push(this._nodeFactory(this._tokens.next()));
         } else if (t.type === TokenType.T_PUBLIC || t.type === TokenType.T_PROTECTED || t.type === TokenType.T_PRIVATE) {
-            children.push(t);
-            t = this._tokens.next();
+            n.value.flag = this._memberModifierToFlag(this._tokens.next());
+            t = this._tokens.peek();
             if (t.type === TokenType.T_STRING || this._isSemiReservedToken(t)) {
-                children.push(t);
-                t = this._tokens.next();
+                n.children.push(this._nodeFactory(this._tokens.next()));
             }
         } else {
             //error
+            this._error(n, [TokenType.T_STRING, TokenType.T_PUBLIC, TokenType.T_PROTECTED, TokenType.T_PRIVATE]);
+            n.children.push(this._nodeFactory(null));
+            return this._concreteNode(n, this._endPos());
         }
 
-        if (t.type !== ';') {
+        if (this._tokens.consume(';')) {
             //error
+            this._error(n, [';']);
         }
 
-        children.push(t);
-        this._tokens.next();
-        return this._nodeFactory(NodeType.TraitAlias, children);
+        return this._concreteNode(n, this._endPos());
+
     }
 
-    private _traitPrecedence(methodReference: T) {
+    private _traitPrecedence(n:TempNode<T>) {
 
-        let children: (T | Token)[] = [methodReference, this._tokens.current];
-        this._tokens.next();
-        children.push(this._nameList());
-        let t = this._tokens.current;
+        n.value.type = NodeType.TraitPrecendence;
+        this._followOnStack.push([';']);
+        n.children.push(this._nameList());
+        this._followOnStack.pop();
 
-        if (t.type !== ';') {
+        if (!this._tokens.consume(';')) {
             //error
+            this._error(n, [';']);
         }
 
-        children.push(t);
-        this._tokens.next();
-        return this._nodeFactory(NodeType.TraitPrecendence, children);
+        return this._concreteNode(n, this._endPos());
 
     }
 
     private _methodReference() {
 
-        let t = this._tokens.current;
-        let children: (T | Token)[] = [];
+        let n = this._tempNode(NodeType.MethodReference, this._startPos());
 
-        children.push(this._name());
-        t = this._tokens.current;
+        this._followOnStack.push([TokenType.T_PAAMAYIM_NEKUDOTAYIM]);
+        n.children.push(this._name());
+        this._followOnStack.pop();
 
-        if (t.type !== TokenType.T_PAAMAYIM_NEKUDOTAYIM) {
+        if (this._tokens.consume(TokenType.T_PAAMAYIM_NEKUDOTAYIM)) {
             //error
+            this._error(n, [TokenType.T_PAAMAYIM_NEKUDOTAYIM], [TokenType.T_STRING]);
         }
 
-        children.push(t);
-        t = this._tokens.next();
+        let t = this._tokens.peek();
 
-        if (t.type !== TokenType.T_STRING || !this._isSemiReservedToken(t)) {
-            //error
+        if (t.type === TokenType.T_STRING || this._isSemiReservedToken(t)) {
+            n.children.push(this._nodeFactory(this._tokens.next()));
+        } else {
+            n.children.push(this._nodeFactory(null));
+            this._error(n, [TokenType.T_STRING]);
         }
 
-        children.push(t);
-        this._tokens.next();
-        return this._nodeFactory(NodeType.MethodReference, children);
+        return this._concreteNode(n, this._endPos());
 
     }
 
