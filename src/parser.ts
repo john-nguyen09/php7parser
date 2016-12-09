@@ -2433,9 +2433,8 @@ export class Parser<T> {
 
     private _globalVariableDeclarationStatement() {
 
-        let n = this._tempNode(NodeType.GlobalVariableDeclarationStatement, this._startPos());
-        let t: Token;
-        this._tokens.next();
+        let n = this._tempNode(NodeType.GlobalVariableDeclarationStatement);
+        let t = this._tokens.next();
         let followOn: (TokenType | string)[] = [',', ';'];
 
         while (true) {
@@ -2452,20 +2451,15 @@ export class Parser<T> {
                 break;
             } else {
                 //error
-                n.value.errors.push(this._error(t, followOn, ['$', TokenType.T_VARIABLE, ';']));
-                t = this._tokens.peek();
-                if (t.type === ';') {
+                if(this._error(n, followOn, [';']).type === ';'){
                     this._tokens.next();
-                    break;
                 }
-                if (t.type !== '$' && t.type !== TokenType.T_VARIABLE) {
-                    break;
-                }
+                break;
             }
 
         }
 
-        return this._node(n, this._endPos());
+        return this._node(n);
 
     }
 
