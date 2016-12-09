@@ -2398,7 +2398,7 @@ export class Parser<T> {
 
     private _staticVariableDeclarationStatement() {
 
-        let n = this._tempNode(NodeType.StaticVariableDeclarationStatement, this._startPos());
+        let n = this._tempNode(NodeType.StaticVariableDeclarationStatement);
         let t: Token;
         this._tokens.next();
         let followOn: (TokenType | string)[] = [',', ';'];
@@ -2417,19 +2417,15 @@ export class Parser<T> {
                 break;
             } else {
                 //error
-                n.value.errors.push(this._error(t, followOn, [TokenType.T_VARIABLE, ';']));
-                if (this._tokens.peek().type === ';') {
+                if(this._error(n, followOn, [';']).type === ';'){
                     this._tokens.next();
-                    break;
                 }
-                if (this._tokens.peek().type !== TokenType.T_VARIABLE) {
-                    break;
-                }
+                break;
             }
 
         }
 
-        return this._node(n, this._endPos());
+        return this._node(n);
 
     }
 
@@ -2475,16 +2471,16 @@ export class Parser<T> {
 
     private _staticVariableDeclaration() {
 
-        let n = this._tempNode(NodeType.StaticVariableDeclaration, this._startPos());
+        let n = this._tempNode(NodeType.StaticVariableDeclaration);
         n.children.push(this._nodeFactory(this._tokens.next()));
 
         if (!this._tokens.consume('=')) {
             n.children.push(this._nodeFactory(null));
-            return this._node(n, this._endPos());
+            return this._node(n);
         }
 
         n.children.push(this._expression());
-        return this._node(n, this._endPos());
+        return this._node(n);
 
     }
 
