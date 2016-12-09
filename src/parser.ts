@@ -2605,43 +2605,45 @@ export class Parser<T> {
 
     private _doWhileStatement() {
 
-        let n = this._tempNode(NodeType.DoWhileStatement, this._startPos());
+        let n = this._tempNode(NodeType.DoWhileStatement);
         this._tokens.next();
 
-        this._followOnStack.push([TokenType.T_WHILE]);
+        this._followOnStack.push([TokenType.T_WHILE,';']);
         n.children.push(this._statement());
         this._followOnStack.pop();
 
         if (!this._tokens.consume(TokenType.T_WHILE)) {
             //error
             n.children.push(this._nodeFactory(null));
-            n.value.errors.push(this._error(this._tokens.peek(), [TokenType.T_WHILE]));
-            return this._node(n, this._endPos());
+            if(this._error(n, [TokenType.T_WHILE], [';']).type === ';'){
+                this._tokens.next();
+            }
+            return this._node(n);
         }
 
         if (!this._tokens.consume('(')) {
             //error
             n.children.push(this._nodeFactory(null));
-            n.value.errors.push(this._error(this._tokens.peek(), ['(']));
+            if(this._error(n, ['('], [';']).type === ';'){
+                this._tokens.next();
+            }
             return this._node(n, this._endPos());
         }
 
-        this._followOnStack.push([')']);
+        this._followOnStack.push([')', ';']);
         n.children.push(this._expression());
         this._followOnStack.pop();
 
         if (!this._tokens.consume(')')) {
             //error
-            n.value.errors.push(this._error(this._tokens.peek(), [')']));
-            return this._node(n, this._endPos());
+            this._error(n, [')'], [';']);
         }
 
-        if (!this._tokens.consume(';')) {
-            //error
-            n.value.errors.push(this._error(this._tokens.peek(), [';']));
+        if (!this._tokens.consume(';') && this._error(n, [';'], [';']).type === ';') {
+            this._tokens.next();
         }
 
-        return this._node(n, this._endPos());
+        return this._node(n);
 
     }
 
