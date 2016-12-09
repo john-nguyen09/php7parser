@@ -33,7 +33,7 @@ export enum NodeType {
     BinaryIsNotIdentical, BinaryIsEqual, BinaryIsNotEqual, BinaryIsSmaller, BinaryIsSmallerOrEqual, BinaryIsGreater,
     BinaryIsGreaterOrEqual, BinarySpaceship, BinaryCoalesce, BinaryAssign, BinaryConcatAssign, BinaryAddAssign, BinarySubtractAssign, BinaryMultiplyAssign,
     BinaryDivideAssign, BinaryModulusAssign, BinaryPowerAssign, BinaryShiftLeftAssign, BinaryShiftRightAssign, BinaryBitwiseOrAssign, BinaryBitwiseAndAssign,
-    BinaryBitwiseXorAssign, BinaryInstanceOf, MagicConstant, CatchList
+    BinaryBitwiseXorAssign, BinaryInstanceOf, MagicConstant, CatchList, Unset
 }
 
 export enum Flag {
@@ -2277,7 +2277,7 @@ export class Parser<T> {
         switch (this._tokens.peek().type) {
 
             case '&':
-            let unary = this._tempNode(NodeType.UnaryReference);
+                let unary = this._tempNode(NodeType.UnaryReference);
                 this._tokens.next();
                 unary.children.push(this._variable());
                 return this._node(unary);
@@ -2321,45 +2321,52 @@ export class Parser<T> {
 
     private _unsetStatement() {
 
-        let n = this._tempNode(NodeType.UnsetStatement, this._startPos());
+        let n = this._tempNode(NodeType.UnsetStatement);
         let t = this._tokens.next();
-        let followOn = 
 
         if (!this._tokens.consume('(')) {
             //error
-            n.value.errors.push(this._error(this._tokens.peek(), ['('], [';']));
-            if (this._tokens.peek().type === ';') {
+            if (this._error(n, ['('], [';']).type === ';') {
                 this._tokens.next();
             }
-            return this._node(n, this._endPos());
+            return this._node(n);
         }
+
+        let followOn = [';', ')'];
 
         while (true) {
 
-            children.push(this._variable());
-            t = this._tokens.current;
+            this._followOnStack.push(followOn);
+            n.children.push(this._unset());
+            this._followOnStack.pop();
+
+            t = this._tokens.peek();
             if (t.type === ',') {
-                children.push(t);
-                t = this._tokens.next();
+                this._tokens.next();
             } else if (t.type === ')') {
-                children.push(t);
-                t = this._tokens.next();
+                this._tokens.next();
                 break;
             } else {
                 //error
+                this._error(n, [',', ')'], [';']);
+                break;
             }
 
         }
 
-        if (t.type === ';') {
-            children.push(t);
+        if (!this._tokens.consume(';') &&
+            this._error(n, [';'], [';']).type === ';') {
             this._tokens.next();
-        } else {
-            //error
         }
 
-        return this._nodeFactory(NodeType.UnsetStatement, children);
+        return this._node(n);
 
+    }
+
+    private _unset() {
+        let n = this._tempNode(NodeType.Unset);
+        n.children.push(this._variable());
+        return this._node(n);
     }
 
     private _echoStatement() {
