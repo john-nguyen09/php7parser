@@ -2654,9 +2654,9 @@ export class Parser<T> {
 
         if (!this._tokens.consume('(')) {
             //error
-            n.value.errors.push(this._error(this._tokens.peek(), ['(']));
+            this._error(n, ['(']);
             n.children.push(this._nodeFactory(null), this._nodeFactory(null));
-            return this._node(n, this._endPos());
+            return this._node(n);
         }
 
         this._followOnStack.push([')']);
@@ -2667,29 +2667,31 @@ export class Parser<T> {
             //error
             let recover = statementStartTokenTypes.slice(0);
             recover.push(':');
-            n.value.errors.push(this._error(this._tokens.peek(), [')'], recover));
+            this._error(n, [')'], recover);
         }
 
         if (this._tokens.consume(':')) {
-            this._followOnStack.push([TokenType.T_ENDWHILE]);
+            this._followOnStack.push([TokenType.T_ENDWHILE, ';']);
             n.children.push(this._innerStatementList([TokenType.T_ENDWHILE]));
             this._followOnStack.pop();
 
             if (!this._tokens.consume(TokenType.T_ENDWHILE)) {
                 //error
-                n.value.errors.push(this._error(this._tokens.peek(), [TokenType.T_ENDWHILE]));
-                return this._node(n, this._endPos());
+                this._error(n, [TokenType.T_ENDWHILE], [';']);
             }
 
-            if (this._tokens.consume(';')) {
+            if (!this._tokens.consume(';') && this._error(n, [';'], [';']).type === ';') {
                 //error
-                n.value.errors.push(this._error(this._tokens.peek(), [';']));
+                this._tokens.next();
             }
-        } else {
+        } else if(this._isStatementStartToken(this._tokens.peek())){
             n.children.push(this._statement());
+        } else {
+            //error
+            this._error(n, []);
         }
 
-        return this._node(n, this._endPos());
+        return this._node(n);
 
     }
 
