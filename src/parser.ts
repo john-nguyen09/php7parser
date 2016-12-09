@@ -2489,7 +2489,9 @@ export class Parser<T> {
         }
 
         if (!this._tokens.consume(';')) {
-            n.value.errors.push(this._error(this._tokens.peek(), [';']));
+           if(this._error(n, [';'], [';']).type === ';'){
+               this._tokens.next();
+           }
         }
 
         return this._node(n, this._endPos());
