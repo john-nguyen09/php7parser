@@ -33,7 +33,7 @@ export enum NodeType {
     BinaryIsNotIdentical, BinaryIsEqual, BinaryIsNotEqual, BinaryIsSmaller, BinaryIsSmallerOrEqual, BinaryIsGreater,
     BinaryIsGreaterOrEqual, BinarySpaceship, BinaryCoalesce, BinaryAssign, BinaryConcatAssign, BinaryAddAssign, BinarySubtractAssign, BinaryMultiplyAssign,
     BinaryDivideAssign, BinaryModulusAssign, BinaryPowerAssign, BinaryShiftLeftAssign, BinaryShiftRightAssign, BinaryBitwiseOrAssign, BinaryBitwiseAndAssign,
-    BinaryBitwiseXorAssign, BinaryInstanceOf, MagicConstant, CatchList, Unset
+    BinaryBitwiseXorAssign, BinaryInstanceOf, MagicConstant, CatchList
 }
 
 export enum Flag {
@@ -2337,7 +2337,7 @@ export class Parser<T> {
         while (true) {
 
             this._followOnStack.push(followOn);
-            n.children.push(this._unset());
+            n.children.push(this._variable());
             this._followOnStack.pop();
 
             t = this._tokens.peek();
@@ -2363,15 +2363,9 @@ export class Parser<T> {
 
     }
 
-    private _unset() {
-        let n = this._tempNode(NodeType.Unset);
-        n.children.push(this._variable());
-        return this._node(n);
-    }
-
     private _echoStatement() {
 
-        let n = this._tempNode(NodeType.EchoStatement, this._startPos());
+        let n = this._tempNode(NodeType.EchoStatement);
         let t: Token;
         this._tokens.next();
         let followOn: (TokenType | string)[] = [',', ';'];
@@ -2390,21 +2384,15 @@ export class Parser<T> {
                 break;
             } else {
                 //error
-                let recover = expressionStartTokenTypes.slice(0);
-                recover.push(';');
-                n.value.errors.push(this._error(t, followOn, recover));
-                t = this._tokens.peek();
-                if (t.type === ';') {
+                if(this._error(n, followOn, [';']).type === ';'){
                     this._tokens.next();
-                    break;
-                } else if (!this._isExpressionStartToken(t)) {
-                    break;
                 }
+                break;
             }
 
         }
 
-        return this._node(n, this._endPos());
+        return this._node(n);
 
     }
 
