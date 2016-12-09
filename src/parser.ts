@@ -2384,7 +2384,7 @@ export class Parser<T> {
                 break;
             } else {
                 //error
-                if(this._error(n, followOn, [';']).type === ';'){
+                if (this._error(n, followOn, [';']).type === ';') {
                     this._tokens.next();
                 }
                 break;
@@ -2417,7 +2417,7 @@ export class Parser<T> {
                 break;
             } else {
                 //error
-                if(this._error(n, followOn, [';']).type === ';'){
+                if (this._error(n, followOn, [';']).type === ';') {
                     this._tokens.next();
                 }
                 break;
@@ -2451,7 +2451,7 @@ export class Parser<T> {
                 break;
             } else {
                 //error
-                if(this._error(n, followOn, [';']).type === ';'){
+                if (this._error(n, followOn, [';']).type === ';') {
                     this._tokens.next();
                 }
                 break;
@@ -2489,32 +2489,32 @@ export class Parser<T> {
         }
 
         if (!this._tokens.consume(';')) {
-           if(this._error(n, [';'], [';']).type === ';'){
-               this._tokens.next();
-           }
+            if (this._error(n, [';'], [';']).type === ';') {
+                this._tokens.next();
+            }
         }
 
-        return this._node(n, this._endPos());
+        return this._node(n);
     }
 
 
     private _forStatement() {
 
-        let n = this._tempNode(NodeType.ForStatement, this._startPos());
+        let n = this._tempNode(NodeType.ForStatement);
         this._tokens.next(); //for
 
         if (!this._tokens.consume('(')) {
             //error
             n.children.push(this._nodeFactory(null), this._nodeFactory(null),
                 this._nodeFactory(null), this._nodeFactory(null));
-            n.value.errors.push(this._error(this._tokens.peek(), ['(']));
-            return this._node(n, this._endPos());
+            this._error(n, ['(']);
+            return this._node(n);
         }
 
         for (let k = 0; k < 2; ++k) {
 
             if (this._isExpressionStartToken(this._tokens.peek())) {
-                this._followOnStack.push([';']);
+                this._followOnStack.push([';', ')']);
                 n.children.push(this._forExpressionList(';'));
                 this._followOnStack.pop();
             } else {
@@ -2523,7 +2523,8 @@ export class Parser<T> {
 
             if (!this._tokens.consume(';')) {
                 //error
-                n.value.errors.push(this._error(this._tokens.peek(), [';'], [')']));
+                this._error(n, [';'], [')']);
+                break;
             }
 
         }
@@ -2532,46 +2533,49 @@ export class Parser<T> {
             this._followOnStack.push([')']);
             n.children.push(this._expression());
             this._followOnStack.pop();
+        } else {
+            n.children.push(this._nodeFactory(null));
         }
 
         if (!this._tokens.consume(')')) {
             //error
             let recover = statementStartTokenTypes.slice(0);
             recover.push(':');
-            n.value.errors.push(this._error(this._tokens.peek(), [')'], recover));
+            this._error(n, [')'], recover);
         }
 
         if (this._tokens.consume(':')) {
 
-            this._followOnStack.push([TokenType.T_ENDFOR]);
+            this._followOnStack.push([TokenType.T_ENDFOR, ';']);
             n.children.push(this._innerStatementList([TokenType.T_ENDFOR]));
             this._followOnStack.pop();
 
             if (!this._tokens.consume(TokenType.T_ENDFOR)) {
                 //error
-                n.value.errors.push(this._error(this._tokens.peek(), [TokenType.T_ENDFOR]));
-                return this._node(n, this._endPos());
+                this._error(n, [TokenType.T_ENDFOR], [';']);
             }
 
             if (!this._tokens.consume(';')) {
                 //error
-                n.value.errors.push(this._error(this._tokens.peek(), [';']));
+                if (this._error(n, [';'], [';']).type === ';') {
+                    this._tokens.next();
+                }
             }
         } else if (this._isStatementStartToken(this._tokens.peek())) {
             n.children.push(this._statement());
         } else {
             //error
-            n.value.errors.push(this._error(this._tokens.peek(), []));
+            this._error(n, []);
             n.children.push(this._nodeFactory(null));
         }
 
-        return this._node(n, this._endPos());
+        return this._node(n);
 
     }
 
     private _forExpressionList(breakOn: TokenType | string) {
 
-        let n = this._tempNode(NodeType.ForExpressionList, this._startPos());
+        let n = this._tempNode(NodeType.ForExpressionList);
         let followOn = [',', breakOn];
         let t: Token;
 
@@ -2589,18 +2593,13 @@ export class Parser<T> {
                 break;
             } else {
                 //error
-                let recover = expressionStartTokenTypes.slice(0);
-                recover.push(breakOn);
-                n.value.errors.push(this._error(this._tokens.peek(), followOn, recover));
-                t = this._tokens.peek();
-                if (t.type === breakOn || !this._isExpressionStartToken(t)) {
-                    break;
-                }
+                this._error(n, followOn);
+                break;
             }
 
         }
 
-        return this._node(n, this._endPos());
+        return this._node(n);
 
     }
 
