@@ -2808,7 +2808,7 @@ export class Parser<T> {
 
     private _typeExpression() {
 
-        let n = this._tempNode(NodeType.TypeExpression, this._startPos());
+        let n = this._tempNode(NodeType.TypeExpression);
 
         if (this._tokens.consume('?')) {
             n.value.flag = Flag.Nullable;
@@ -2826,13 +2826,13 @@ export class Parser<T> {
                 break;
             default:
                 //error
-                n.value.errors.push(this._error(this._tokens.peek(),
+                this._error(n,
                     [TokenType.T_CALLABLE, TokenType.T_ARRAY, TokenType.T_STRING, TokenType.T_NAMESPACE, TokenType.T_NS_SEPARATOR]
-                ));
+                );
                 break;
         }
 
-        return this._node(n, this._endPos());
+        return this._node(n);
 
     }
 
@@ -3166,40 +3166,40 @@ export class Parser<T> {
 
     private _cloneExpression() {
 
-        let n = this._tempNode(NodeType.Clone, this._startPos());
+        let n = this._tempNode(NodeType.Clone);
         this._tokens.next();
         n.children.push(this._expression());
-        return this._node(n, this._endPos());
+        return this._node(n);
 
     }
 
     private _listExpression() {
 
-        let n = this._tempNode(NodeType.ArrayPairList, this._startPos());
+        let n = this._tempNode(NodeType.ArrayPairList);
         let t = this._tokens.next();
 
         if (!this._tokens.consume('(')) {
             //error
-            n.value.errors.push(this._error(this._tokens.peek(), ['(']));
-            return this._node(n, this._endPos());
+            this._error(n, ['(']);
+            return this._node(n);
         }
 
         this._followOnStack.push([')']);
-        Array.prototype.push.apply(n.children, this._arrayPairList(n, ')'));
+        this._arrayPairList(n, ')');
         this._followOnStack.pop();
 
         if (!this._tokens.consume(')')) {
             //error
-            n.value.errors.push(this._error(this._tokens.peek(), [')']));
+            this._error(n, [')']);
         }
 
-        return this._node(n, this._endPos());
+        return this._node(n);
 
     }
 
     private _unaryExpression() {
 
-        let n = this._tempNode(NodeType.Error, this._startPos());
+        let n = this._tempNode(NodeType.Error);
         let t = this._tokens.next();
         n.value.type = this._unaryOpToNodeType(t);
         if (n.value.type === NodeType.UnaryPreDec ||
@@ -3209,13 +3209,13 @@ export class Parser<T> {
         } else {
             n.children.push(this._expression(this._opPrecedenceMap[t.text][0]))
         }
-        return this._node(n, this._endPos());
+        return this._node(n);
 
     }
 
     private _closure() {
 
-        let n = this._tempNode(NodeType.Closure, this._startPos());
+        let n = this._tempNode(NodeType.Closure);
         if (this._tokens.consume(TokenType.T_STATIC)) {
             n.value.flag = Flag.ModifierStatic;
         }
@@ -3234,31 +3234,44 @@ export class Parser<T> {
             this._followOnStack.push([':', '{']);
             n.children.push(this._closureUse());
             this._followOnStack.pop();
+        } else {
+            n.children.push(this._nodeFactory(null));
         }
 
         if (this._tokens.peek().type === ':') {
             this._followOnStack.push(['{']);
             n.children.push(this._returnType());
             this._followOnStack.pop();
+        } else {
+            n.children.push(this._nodeFactory(null));
         }
 
-        let block = this._curlyInnerStatementList();
-        if (block) {
-            n.children.push(block)
+        if(!this._tokens.consume('{')){
+            this._error(n, ['{']);
+            n.children.push(this._nodeFactory(null));
+            return this._node(n);
         }
-        return this._node(n, this._endPos());
+
+        this._followOnStack.push(['}']);
+        n.children.push(this._innerStatementList(['}']));
+        this._followOnStack.pop();
+        
+        if(!this._tokens.consume('}')){
+            this._error(n, ['}']);
+        }
+        
+        return this._node(n);
 
     }
 
     private _closureUse() {
 
-        let n = this._tempNode(NodeType.ClosureUse, this._startPos());
-        let t: Token;
-        this._tokens.next();
+        let n = this._tempNode(NodeType.ClosureUse);
+        let t = this._tokens.next();
 
         if (!this._tokens.consume('(')) {
-            n.value.errors.push(this._error(this._tokens.peek(), ['(']));
-            return this._node(n, this._endPos());
+            this._error(n, ['(']);
+            return this._node(n);
         }
 
         let followOn: (TokenType | string)[] = [',', ')'];
@@ -3277,26 +3290,19 @@ export class Parser<T> {
                 break;
             } else {
                 //error
-                let recover = ['&', TokenType.T_VARIABLE, ')'];
-                n.value.errors.push(this._error(t, [',', ')'], recover));
-                t = this._tokens.peek();
-                if (t.type === ')') {
-                    this._tokens.next();
-                    break;
-                } else if (t.type !== '&' && t.type !== TokenType.T_VARIABLE) {
-                    break;
-                }
+                this._error(n, followOn);
+                break;
             }
 
         }
 
-        return this._node(n, this._endPos());
+        return this._node(n);
 
     }
 
     private _closureUseVariable() {
 
-        let n = this._tempNode(NodeType.ClosureUseVariable, this._startPos());
+        let n = this._tempNode(NodeType.ClosureUseVariable);
 
         if (this._tokens.consume('&')) {
             n.value.flag = Flag.PassByRef;
@@ -3306,26 +3312,26 @@ export class Parser<T> {
             n.children.push(this._nodeFactory(this._tokens.current));
         } else {
             //error
-            n.value.errors.push(this._error(this._tokens.peek(), [TokenType.T_VARIABLE]));
+            this._error(n, [TokenType.T_VARIABLE]);
         }
 
-        return this._node(n, this._endPos());
+        return this._node(n);
 
     }
 
     private _parameterList() {
 
-        let n = this._tempNode(NodeType.ParameterList, this._startPos());
+        let n = this._tempNode(NodeType.ParameterList);
         let t: Token;
 
         if (!this._tokens.consume('(')) {
             //error
-            n.value.errors.push(this._error(this._tokens.peek(), ['(']));
-            return this._node(n, this._endPos());
+            this._error(n, ['(']);
+            return this._node(n);
         }
 
         if (this._tokens.consume(')')) {
-            return this._node(n, this._endPos());
+            return this._node(n);
         }
 
         let followOn: (TokenType | string)[] = [',', ')'];
@@ -3344,31 +3350,13 @@ export class Parser<T> {
                 break;
             } else {
                 //error
-                let recover = parameterStartTokenTypes.slice(0);
-                recover.push(')');
-                n.value.errors.push(this._error(t, [',', ')'], recover));
-                if (this._tokens.peek().type === ')') {
-                    this._tokens.next();
-                    break;
-                } else if (!this._isParameterStartToken(this._tokens.peek())) {
-                    break;
-                }
+                this._error(n, followOn);
+                break;
             }
         }
 
         return this._node(n, this._endPos());
 
-    }
-
-    private _isParameterStartToken(t: Token) {
-        switch (t.type) {
-            case '&':
-            case TokenType.T_ELLIPSIS:
-            case TokenType.T_VARIABLE:
-                return true;
-            default:
-                return this._isTypeExpressionStartToken(t);
-        }
     }
 
     private _isTypeExpressionStartToken(t: Token) {
@@ -3387,7 +3375,7 @@ export class Parser<T> {
 
     private _parameter() {
 
-        let n = this._tempNode(NodeType.Parameter, this._startPos());
+        let n = this._tempNode(NodeType.Parameter);
 
         if (this._isTypeExpressionStartToken(this._tokens.peek())) {
             this._followOnStack.push(['&', TokenType.T_ELLIPSIS, TokenType.T_VARIABLE]);
@@ -3404,15 +3392,18 @@ export class Parser<T> {
         if (this._tokens.consume(TokenType.T_VARIABLE)) {
             n.children.push(this._nodeFactory(this._tokens.current));
         } else {
-            n.value.errors.push(this._error(this._tokens.peek(), [TokenType.T_VARIABLE]));
-            return this._node(n, this._endPos());
+            n.children.push(this._nodeFactory(null), this._nodeFactory(null));
+            this._error(n, [TokenType.T_VARIABLE]);
+            return this._node(n);
         }
 
         if (this._tokens.consume('=')) {
             n.children.push(this._expression());
+        } else {
+            n.children.push(this._nodeFactory(null));
         }
 
-        return this._node(n, this._endPos());
+        return this._node(n);
 
     }
 
