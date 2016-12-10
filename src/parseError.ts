@@ -6,7 +6,7 @@
 
 import { TokenType, Token } from './lexer';
 import { TokenIterator } from './tokenIterator';
-import { NodeType } from './parser';
+import { AstNodeType } from './parser';
 
 export class ParseError {
 
