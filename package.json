@@ -4,7 +4,8 @@
   "description": "PHP 7 Parser",
   "main": "out/php7parser.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha",
+    "build": "tsc"
   },
   "author": "Ben Mewburn",
   "license": "MIT",

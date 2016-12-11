@@ -4,11 +4,13 @@
         "removeComments": true,
 		"target": "ES6",
 		"module": "commonjs",
-		"outDir": "out"
+		"outDir": "out",
+		"declaration": true
 	},
 	"exclude": [
 		"node_modules",
         "out",
-		"test"
+		"test",
+		".vscode"
 	]
 }
