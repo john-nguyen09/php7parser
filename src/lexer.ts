@@ -53,7 +53,6 @@ class LexerState {
     char: number;
     lastLexemeEndedWithNewline: boolean;
     hereDocLabel: string;
-    lastDocComment: string;
     doubleQuoteScannedLength: number;
 
     constructor() {
@@ -108,7 +107,7 @@ class LexerState {
     }
 
     clear() {
-        this.input = this.lexeme = this.hereDocLabel = this.doubleQuoteScannedLength = this.lastDocComment = null;
+        this.input = this.lexeme = this.hereDocLabel = this.doubleQuoteScannedLength = null;
         this.mode = [LexerMode.Initial];
         this.char = -1;
         this.line = 0;
@@ -182,7 +181,6 @@ function action8(s: LexerState) {
 }
 
 function action9(s: LexerState) {
-    s.lastDocComment = null;
     s.advancePosition(false);
     if (s.mode.length > 1) {
         s.mode = s.mode.slice(0, -1);
@@ -228,7 +226,6 @@ function action11(s: LexerState) {
     s.advancePosition(true);
 
     if (isDocComment) {
-        s.lastDocComment = s.lexeme;
         return TokenType.T_DOC_COMMENT;
     }
 

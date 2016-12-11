@@ -55,7 +55,7 @@ export enum AstNodeFlag {
     MagicFunction, MagicMethod, MagicClass, MagicTrait, UseClass, UseFunction, UseConstant
 }
 
-export interface NodeFactory<T> {
+export interface AstNodeFactory<T> {
     (value: AstNode | Token, children?: T[]): T;
 }
 
@@ -207,17 +207,12 @@ interface TempNode<T> {
     children: T[];
 }
 
-export interface DocComment {
-    text: string;
-    range: Range;
-}
-
 export interface AstNode {
     type: AstNodeType;
     range: Range;
     value?: string;
     flag?: AstNodeFlag;
-    doc?: DocComment;
+    doc?: Token;
     errors?: ParseError[];
 }
 
@@ -261,7 +256,7 @@ var recoverStatementStartTokenTypes: (TokenType | string)[] = [
 
 export class Parser<T> {
 
-    private _nodeFactory: NodeFactory<T>;
+    private _nodeFactory: AstNodeFactory<T>;
     private _opPrecedenceMap = opPrecedenceMap;
     private _tokens: TokenIterator
     private _followOnStack: (TokenType | string)[][];
@@ -269,7 +264,7 @@ export class Parser<T> {
     private _variableAtomType: AstNodeType;
 
 
-    constructor(nodeFactory: NodeFactory<T>) {
+    constructor(nodeFactory: AstNodeFactory<T>) {
         this._nodeFactory = nodeFactory;
     }
 
