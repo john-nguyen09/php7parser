@@ -68,8 +68,21 @@ export class TokenIterator {
     }
 
     peek(n = 0) {
-        let pos = this._pos + n + 1;
-        return pos < this._tokens.length ? this._tokens[pos] : this._endToken;
+
+        let k = n + 1
+        let pos = this._pos;
+
+        while (k) {
+            if (++pos < this._tokens.length) {
+                if (!this._shouldSkip(this._tokens[pos])) {
+                    --k;
+                }
+            } else {
+                return this._endToken;
+            }
+        }
+
+        return this._tokens[pos];
     }
 
     skip(until: (TokenType | string)[]) {
@@ -84,6 +97,20 @@ export class TokenIterator {
         }
 
         return t;
+    }
+
+    private _shouldSkip(t: Token) {
+        switch (t.type) {
+            case TokenType.T_DOC_COMMENT:
+            case TokenType.T_WHITESPACE:
+            case TokenType.T_COMMENT:
+            case TokenType.T_OPEN_TAG:
+            case TokenType.T_OPEN_TAG_WITH_ECHO:
+            case TokenType.T_CLOSE_TAG:
+                return true;
+            default:
+                return false;
+        }
     }
 
 }
