@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Token, Lexer, TokenType, Iterator, Position, Range } from './lexer';
+import { Token, Lexer, TokenType, Position, Range } from './lexer';
 import { ParseError } from './parseError';
 import { TokenIterator } from './tokenIterator';
 
