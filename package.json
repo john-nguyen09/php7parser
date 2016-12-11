@@ -2,7 +2,8 @@
   "name": "php7parser",
   "version": "1.0.0",
   "description": "PHP 7 Parser",
-  "main": "out/php7parser.js",
+  "main": "./lib/php7parser.js",
+  "types": "./lib/php7parser.d.ts",
   "scripts": {
     "test": "mocha",
     "build": "tsc"
