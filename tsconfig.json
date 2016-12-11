@@ -4,12 +4,12 @@
         "removeComments": true,
 		"target": "ES6",
 		"module": "commonjs",
-		"outDir": "out",
+		"outDir": "lib",
 		"declaration": true
 	},
 	"exclude": [
 		"node_modules",
-        "out",
+        "lib",
 		"test",
 		".vscode"
 	]
