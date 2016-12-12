@@ -808,7 +808,7 @@ var ruleTable: [RegExp, (TokenType | LexerAction)][][] = [
 ];
 
 export interface Token {
-    type: TokenType | string,
+    tokenType: TokenType | string,
     text: string,
     mode: LexerMode[],
     range: Range
@@ -896,7 +896,7 @@ export class Lexer {
         }
 
         return {
-            type: type,
+            tokenType: type,
             text: this._state.lexeme,
             mode: lexerModeStack,
             range: {

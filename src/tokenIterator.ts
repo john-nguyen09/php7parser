@@ -12,7 +12,7 @@ export class TokenIterator {
     private _pos: number;
     private _current: Token;
     private _endToken: Token = {
-        type: TokenType.T_EOF,
+        tokenType: TokenType.T_EOF,
         text: null,
         mode: null,
         range: null
@@ -35,7 +35,7 @@ export class TokenIterator {
     }
 
     consume(tokenType: TokenType | string) {
-        return this.peek().type === tokenType ? this.next() : null;
+        return this.peek().tokenType === tokenType ? this.next() : null;
     }
 
     next(): Token {
@@ -46,7 +46,7 @@ export class TokenIterator {
 
         ++this._pos;
 
-        switch (this._tokens[this._pos].type) {
+        switch (this._tokens[this._pos].tokenType) {
             case TokenType.T_DOC_COMMENT:
                 this._lastDocComment = this._tokens[this._pos];
                 return this.next();
@@ -91,7 +91,7 @@ export class TokenIterator {
 
         while (true) {
             t = this.peek();
-            if (until.indexOf(t.type) !== -1 || t.type === TokenType.T_EOF) {
+            if (until.indexOf(t.tokenType) !== -1 || t.tokenType === TokenType.T_EOF) {
                 break;
             }
         }
@@ -100,7 +100,7 @@ export class TokenIterator {
     }
 
     private _shouldSkip(t: Token) {
-        switch (t.type) {
+        switch (t.tokenType) {
             case TokenType.T_DOC_COMMENT:
             case TokenType.T_WHITESPACE:
             case TokenType.T_COMMENT:
