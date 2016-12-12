@@ -9,7 +9,7 @@ import { ParseError } from './parseError';
 import { TokenIterator } from './tokenIterator';
 
 export enum AstNodeType {
-    None, Error, TopStatementList, Namespace, NamespaceName, UseElement,
+    None, Error, TopStatementList, Namespace, NamespaceName, UseElement, UseStatement,
     UseGroup, UseList, HaltCompiler, ConstantDeclarationList, ConstantDeclaration,
     ArrayPair, Name, Call, Unpack, ArgumentList, Dimension, ClassConstant,
     StaticProperty, StaticMethodCall, MethodCall, Property, Closure,
@@ -3828,7 +3828,7 @@ export class Parser<T> {
 
     private _useStatement() {
 
-        let n = this._tempNode(AstNodeType.UseList);
+        let n = this._tempNode(AstNodeType.UseStatement);
         this._tokens.next();
 
         if (this._tokens.consume(TokenType.T_FUNCTION)) {
@@ -3837,6 +3837,7 @@ export class Parser<T> {
             n.value.flag = AstNodeFlag.UseConstant;
         }
 
+        let useList = this._tempNode(AstNodeType.UseStatement);
         let useElement = this._tempNode(AstNodeType.UseElement);
         this._tokens.consume(TokenType.T_NS_SEPARATOR);
 
@@ -3860,12 +3861,12 @@ export class Parser<T> {
 
         useElement.children.push(namespaceName);
         this._followOnStack.push([',', ';']);
-        n.children.push(this._useElement(useElement, false, true));
+        useList.children.push(this._useElement(useElement, false, true));
         this._followOnStack.pop();
 
         if (this._tokens.consume(',')) {
             this._followOnStack.push([';']);
-            this._useList(n, false, true, ';');
+            n.children.push(this._useList(useList, false, true, ';'));
             this._followOnStack.pop();
         }
 
