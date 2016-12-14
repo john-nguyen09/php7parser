@@ -16,7 +16,7 @@ export enum AstNodeType {
     ParameterList, Parameter, Isset, Empty, Eval, Include, YieldFrom, Yield, Print,
     Backticks, EncapsulatedVariableList, AnonymousClassDeclaration, New,
     NameList, ClassStatementList, PropertyDeclaration, PropertyDeclarationList,
-    ClassConstantDeclaration, ClassConstantDeclarationList, TypeExpression,
+    ClassConstantDeclaration, ClassConstantDeclarationList, TypeExpression, Block,
     InnerStatementList, FunctionDeclaration, MethodDeclaration, UseTrait, TraitAdaptationList,
     MethodReference, TraitPrecendence, TraitAlias, ClassDeclaration, TraitDeclaration,
     InterfaceDeclaration, Variable, ArrayPairList, ClosureUseVariable, ClosureUseList,
@@ -1458,9 +1458,9 @@ export class Parser<T> {
 
     }
 
-    private _innerStatementList(breakOn: (TokenType | string)[], tempNode: TempNode<T> = null) {
+    private _innerStatementList(breakOn: (TokenType | string)[]) {
 
-        let n = tempNode ? tempNode : this._tempNode(AstNodeType.InnerStatementList);
+        let n = this._tempNode(AstNodeType.InnerStatementList);
         let t: Token;
         let followOn = recoverInnerStatementStartTokenTypes;
 
@@ -1485,9 +1485,7 @@ export class Parser<T> {
             }
         }
 
-        if (!tempNode) {
-            return this._node(n);
-        }
+        return this._node(n);
 
     }
 
@@ -1666,23 +1664,45 @@ export class Parser<T> {
 
     }
 
+    private _block() {
+
+        let n = this._tempNode(AstNodeType.Block);
+
+        if (!this._tokens.consume('{')) {
+            let err = new ParseError(this._tokens.current, ['{']);
+            if (this._isInnerStatementStartToken(this._tokens.peek())) {
+                n.value.errors = [err];
+            } else if (this._tokens.peek(1).tokenType === '{') {
+                this._tokens.next();
+                this._tokens.next();
+                n.value.errors = [err];
+            } else {
+                this._error(n, ['{']);
+                n.children.push(this._nodeFactory(null));
+                return this._node(n);
+            }
+        }
+
+        this._followOnStack.push(['}']);
+        this._innerStatementList(['}']);
+        this._followOnStack.pop();
+
+        if (!this._tokens.consume('}')) {
+            this._error(n, ['}'], ['}']);
+            this._tokens.consume('}');
+        }
+
+        return this._node(n);
+
+    }
+
     private _statement() {
 
         let t = this._tokens.peek();
 
         switch (t.tokenType) {
             case '{':
-                let n = this._tempNode(AstNodeType.InnerStatementList);
-                this._tokens.next();
-                this._followOnStack.push(['}']);
-                this._innerStatementList(['}'], n);
-                this._followOnStack.pop();
-                if (!this._tokens.consume('}')) {
-                    if (this._error(n, ['}'], ['}']).tokenType === '}') {
-                        this._tokens.next();
-                    }
-                }
-                return this._node(n);
+                return this._block();
             case TokenType.T_IF:
                 return this._ifStatementList();
             case TokenType.T_WHILE:
@@ -1742,20 +1762,9 @@ export class Parser<T> {
         let n = this._tempNode(AstNodeType.Try);
         let t = this._tokens.next(); //try
 
-        if (!this._tokens.consume('{')) {
-            this._error(n, ['{'], [...recoverInnerStatementStartTokenTypes, '{', '}', TokenType.T_CATCH, TokenType.T_FINALLY]);
-            this._tokens.consume('{');
-            this._tokens.consume(';');
-        }
-
-        this._followOnStack.push(['}', TokenType.T_CATCH, TokenType.T_FINALLY]);
-        n.children.push(this._innerStatementList(['}']));
+        this._followOnStack.push([TokenType.T_CATCH, TokenType.T_FINALLY]);
+        n.children.push(this._block());
         this._followOnStack.pop();
-        if (!this._tokens.consume('}')) {
-            this._error(n, ['}'], ['}', TokenType.T_CATCH, TokenType.T_FINALLY]);
-            this._tokens.consume('}');
-        }
-
         this._followOnStack.push([TokenType.T_FINALLY]);
         n.children.push(this._catchList());
         this._followOnStack.pop();
@@ -1792,26 +1801,9 @@ export class Parser<T> {
 
     private _finallyStatement() {
 
-        let n = this._tempNode(AstNodeType.InnerStatementList);
-        let t = this._tokens.next(); //T_FINALLY
-
-        if (!this._tokens.consume('{')) {
-            //error
-            this._error(n, ['{'], [...recoverInnerStatementStartTokenTypes, '{', '}']);
-            this._tokens.consume('{');
-            this._tokens.consume(';');
-        }
-
-        this._followOnStack.push(['}']);
-        this._innerStatementList(['}'], n);
-        this._followOnStack.pop();
-
-        if (!this._tokens.consume('}')) {
-            //error
-            this._error(n, ['}'], ['}']);
-            this._tokens.consume('}');
-        }
-
+        let n = this._tempNode(AstNodeType.Finally);
+        this._tokens.next(); //T_FINALLY
+        n.children.push(this._block());
         return this._node(n);
 
     }
