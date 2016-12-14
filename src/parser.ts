@@ -12,7 +12,7 @@ export enum AstNodeType {
     None, Error, TopStatementList, Namespace, NamespaceName, UseElement, UseStatement,
     UseGroup, UseList, HaltCompiler, ConstantDeclarationList, ConstantDeclaration,
     ArrayPair, Name, Call, Unpack, ArgumentList, Dimension, ClassConstant,
-    StaticProperty, StaticMethodCall, MethodCall, Property, Closure,
+    StaticProperty, StaticMethodCall, MethodCall, Property, Closure, EncapsulatedExpression,
     ParameterList, Parameter, Isset, Empty, Eval, Include, YieldFrom, Yield, Print,
     Backticks, EncapsulatedVariableList, AnonymousClassDeclaration, New,
     NameList, ClassStatementList, PropertyDeclaration, PropertyDeclarationList,
@@ -3684,6 +3684,38 @@ export class Parser<T> {
 
     }
 
+    private _encapsulatedExpression(open:string|TokenType,close:string|TokenType){
+
+        let n = this._tempNode(AstNodeType.EncapsulatedExpression);
+
+        if(!this._tokens.consume(open)){
+            let err = new ParseError(this._tokens.peek(), [open]);
+            if(this._isExpressionStartToken(this._tokens.peek())){
+                n.value.errors = [err];
+            } else if(this._tokens.peek(1).tokenType === open){
+                this._tokens.next();
+                this._tokens.next();
+                n.value.errors = [err];
+            } else {
+                this._error(n, [open], [close]);
+                this._tokens.consume(close);
+                n.children.push(this._nodeFactory(null));
+                return this._node(n);
+            }
+        }
+
+        this._followOnStack.push([close]);
+        n.children.push(this._expression());
+        this._followOnStack.pop();
+
+        if(!this._tokens.consume(close)){
+            this._error(n, [close], [close]);
+            this._tokens.consume(close);
+        }
+
+        return this._node(n);
+
+    }
 
     private _variableAtom() {
 
@@ -3694,17 +3726,7 @@ export class Parser<T> {
                 this._variableAtomType = AstNodeType.Variable;
                 return this._simpleVariable();
             case '(':
-                this._variableAtomType = AstNodeType.ErrorVariable;
-                let err = this._tempNode(AstNodeType.ErrorVariable);
-                this._followOnStack.push([')']);
-                err.children.push(this._expression());
-                this._followOnStack.pop();
-                if (!this._tokens.consume(')')) {
-                    this._error(err, [')'], [')']);
-                    this._tokens.consume(')');
-                    return this._node(err);
-                }
-                return err.children.pop();
+                return this._encapsulatedExpression('(', ')');
             case TokenType.T_ARRAY:
                 this._variableAtomType = AstNodeType.ArrayPairList;
                 return this._longArray();
