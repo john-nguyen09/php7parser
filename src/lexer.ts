@@ -54,6 +54,7 @@ class LexerState {
     lastLexemeEndedWithNewline: boolean;
     hereDocLabel: string;
     doubleQuoteScannedLength: number;
+    tokenCount:number
 
     constructor() {
         this.clear();
@@ -112,6 +113,7 @@ class LexerState {
         this.char = -1;
         this.line = 0;
         this.lastLexemeEndedWithNewline = false;
+        this.tokenCount = 0;
     }
 
 }
@@ -809,6 +811,7 @@ var ruleTable: [RegExp, (TokenType | LexerAction)][][] = [
 
 export interface Token {
     tokenType: TokenType | string,
+    index:number,
     text: string,
     mode: LexerMode[],
     range: Range
@@ -897,6 +900,7 @@ export class Lexer {
 
         return {
             tokenType: type,
+            index:this._state.tokenCount++,
             text: this._state.lexeme,
             mode: lexerModeStack,
             range: {

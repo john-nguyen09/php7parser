@@ -209,8 +209,8 @@ interface TempNode<T> {
 
 export interface AstNode {
     astNodeType: AstNodeType;
-    range: Range;
-    value?: string;
+    startTokenIndex: number;
+    endTokenIndex:number;
     flag?: AstNodeFlag;
     doc?: Token;
     errors?: ParseError[];
@@ -276,31 +276,29 @@ export class Parser<T> {
 
     }
 
-    private _tempNode(type: AstNodeType = 0, startPos: Position = null): TempNode<T> {
+    private _tempNode(type: AstNodeType = 0, startPos?: number): TempNode<T> {
 
-        if (!startPos) {
+        if (startPos === undefined) {
             startPos = this._startPos();
         }
 
         return {
             value: {
                 astNodeType: type,
-                range: {
-                    start: startPos,
-                    end: null
-                }
+                startTokenIndex:startPos,
+                endTokenIndex:0,
             },
             children: []
         };
     }
 
 
-    private _node(tempNode: TempNode<T>, endPos: Position = null) {
+    private _node(tempNode: TempNode<T>, endPos?: number) {
 
         if (!endPos) {
             endPos = this._endPos();
         }
-        tempNode.value.range.end = endPos;
+        tempNode.value.endTokenIndex = endPos;
         return this._nodeFactory(tempNode.value, tempNode.children);
 
     }
@@ -309,14 +307,14 @@ export class Parser<T> {
         let t = this._tokens.peek();
 
         if (t.tokenType === TokenType.T_EOF) {
-            t = this._tokens.current;
+            return this._tokens.current.index;
         }
 
-        return t.range.start;
+        return t.index;
     }
 
     private _endPos() {
-        return this._tokens.current.range.end;
+        return this._tokens.current.index;
     }
 
     private _topStatementList(isCurly: boolean) {
@@ -484,7 +482,7 @@ export class Parser<T> {
 
     }
 
-    private _binaryNode(lhs: T, rhs: T, type: AstNodeType, startPos: Position) {
+    private _binaryNode(lhs: T, rhs: T, type: AstNodeType, startPos: number) {
         let tempNode = this._tempNode(type, startPos);
         tempNode.children.push(lhs);
         tempNode.children.push(rhs);
@@ -606,7 +604,7 @@ export class Parser<T> {
 
     }
 
-    private _ternaryExpression(lhs: T, precedence: number, startPos: Position) {
+    private _ternaryExpression(lhs: T, precedence: number, startPos: number) {
 
         let n = this._tempNode(AstNodeType.TernaryExpression, startPos);
         n.children.push(lhs);
@@ -652,7 +650,7 @@ export class Parser<T> {
             case TokenType.T_NAMESPACE:
             case '(':
                 this._isBinaryOpPredicate = isBinaryOp;
-                let possibleUnaryStart = t.range.start;
+                let possibleUnaryStart = t.index;
                 let variable = this._variable();
                 t = this._tokens.peek();
                 if (t.tokenType === TokenType.T_INC || t.tokenType === TokenType.T_DEC) {
@@ -1304,7 +1302,7 @@ export class Parser<T> {
 
         } else if (t.tokenType === TokenType.T_STRING || this._isSemiReservedToken(t)) {
 
-            let methodRef = this._tempNode(AstNodeType.MethodReference, n.value.range.start);
+            let methodRef = this._tempNode(AstNodeType.MethodReference, n.value.startTokenIndex);
             methodRef.children.push(this._nodeFactory(null), this._nodeFactory(this._tokens.next()));
             n.children.push(this._node(methodRef));
         } else {
@@ -3371,7 +3369,7 @@ export class Parser<T> {
         return variableAtom;
     }
 
-    private _staticMember(lhs: T, startPos: Position) {
+    private _staticMember(lhs: T, startPos: number) {
 
         let n = this._tempNode(AstNodeType.ErrorStaticMember, startPos)
         n.children.push(lhs);
@@ -3429,7 +3427,7 @@ export class Parser<T> {
 
     }
 
-    private _instanceMember(lhs: T, startPos: Position) {
+    private _instanceMember(lhs: T, startPos: number) {
 
         let n = this._tempNode(AstNodeType.Property, startPos);
         n.children.push(lhs);
@@ -3474,7 +3472,7 @@ export class Parser<T> {
 
     }
 
-    private _dimension(lhs: T, startPos: Position) {
+    private _dimension(lhs: T, startPos: number) {
 
         let n = this._tempNode(AstNodeType.Dimension, startPos);
         let close = this._tokens.peek().tokenType === '[' ? ']' : '}';
