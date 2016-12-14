@@ -63,16 +63,16 @@ interface Predicate {
     (t: Token): boolean;
 }
 
-enum Associativity {
+const enum Associativity {
     None,
     Left,
     Right
 }
 
-enum OpType {
-    None = 0,
-    Unary = 1,
-    Binary = 2
+const enum OpType {
+    None,
+    Unary,
+    Binary
 }
 
 var opPrecedenceMap: { [op: string]: [number, number, number] } = {
