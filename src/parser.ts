@@ -804,25 +804,7 @@ export class Parser<T> {
 
         let n = this._tempNode(type);
         let t = this._tokens.next();
-
-        if (!this._tokens.consume('(')) {
-            //error
-            this._error(n, ['(']);
-            n.children.push(this._nodeFactory(null));
-            return this._node(n);
-        }
-
-        this._followOnStack.push([')']);
-        n.children.push(this._expression());
-        this._followOnStack.pop();
-
-        if (!this._tokens.consume(')')) {
-            //error
-            if (this._error(n, [')'], [')']).tokenType === ')') {
-                this._tokens.next();
-            }
-        }
-
+        n.children.push(this._encapsulatedExpression('(', ')'));
         return this._node(n);
 
     }
@@ -1944,20 +1926,9 @@ export class Parser<T> {
         let n = this._tempNode(AstNodeType.Switch);
         this._tokens.next();
 
-        if (this._tokens.consume('(')) {
-            this._followOnStack.push([')']);
-            n.children.push(this._expression());
-            this._followOnStack.pop();
-
-        } else {
-            //error
-            this._error(n, ['('], [':', '{', TokenType.T_CASE, TokenType.T_DEFAULT]);
-            n.children.push(this._nodeFactory(null));
-        }
-
-        if (!this._tokens.consume(')')) {
-            this._error(n, [')'], [':', '{', TokenType.T_CASE, TokenType.T_DEFAULT]);
-        }
+        this._followOnStack.push([':', '{', TokenType.T_CASE, TokenType.T_DEFAULT]);
+        n.children.push(this._encapsulatedExpression('(', ')'));
+        this._followOnStack.pop();
 
         if (!this._tokens.consume('{') && !this._tokens.consume(':')) {
             this._error(n, ['{', ':'], [TokenType.T_CASE, TokenType.T_DEFAULT, '}', TokenType.T_ENDSWITCH]);
@@ -2515,24 +2486,9 @@ export class Parser<T> {
             return this._node(n);
         }
 
-        if (!this._tokens.consume('(')) {
-            //error
-            n.children.push(this._nodeFactory(null));
-            this._error(n, ['('], [';']);
-            this._tokens.consume(';');
-            return this._node(n);
-        }
-
-        this._followOnStack.push([')', ';']);
-        n.children.push(this._expression());
+        this._followOnStack.push([';']);
+        n.children.push(this._encapsulatedExpression('(', ')'));
         this._followOnStack.pop();
-
-        if (!this._tokens.consume(')')) {
-            //error
-            this._error(n, [')'], [';']);
-            this._tokens.consume(';');
-            return this._node(n);
-        }
 
         if (!this._tokens.consume(';')) {
             this._error(n, [';'], [';']);
@@ -2548,23 +2504,11 @@ export class Parser<T> {
         let n = this._tempNode(AstNodeType.While);
         this._tokens.next();
 
-        if (!this._tokens.consume('(')) {
-
-            this._followOnStack.push([')']);
-            n.children.push(this._expression());
-            this._followOnStack.pop();
-        } else {
-            //error
-            this._error(n, ['('], [...recoverStatementStartTokenTypes, ')', ':']);
-            n.children.push(this._nodeFactory(null));
-
-        }
-
-
-        if (!this._tokens.consume(')')) {
-            //error
-            this._error(n, [')'], [...recoverStatementStartTokenTypes, ':']);
-        }
+        let recover = recoverStatementStartTokenTypes.slice(0);
+        recover.push(':');
+        this._followOnStack.push(recover);
+        n.children.push(this._encapsulatedExpression('(', ')'));
+        this._followOnStack.pop();
 
         if (this._tokens.consume(':')) {
             this._followOnStack.push([TokenType.T_ENDWHILE, ';']);
@@ -2640,22 +2584,12 @@ export class Parser<T> {
         let t = this._tokens.peek();
 
         if (t.tokenType === TokenType.T_IF || t.tokenType === TokenType.T_ELSEIF) {
-            this._tokens.next();
-            if (this._tokens.consume('(')) {
-                this._followOnStack.push([')']);
-                n.children.push(this._expression());
-                this._followOnStack.pop();
-
-            } else {
-                //error
-                this._error(n, ['('], [...recoverStatementStartTokenTypes, ')', ':']);
-                n.children.push(this._nodeFactory(null));
-            }
-
-            if (!this._tokens.consume(')')) {
-                //error
-                this._error(n, [')'], [...recoverStatementStartTokenTypes, ':']);
-            }
+            
+            let recover = recoverStatementStartTokenTypes.slice(0);
+            recover.push(':');
+            this._followOnStack.push(recover);
+            n.children.push(this._encapsulatedExpression('(', ')'));
+            this._followOnStack.pop();
 
         } else if (t.tokenType === TokenType.T_ELSE) {
             this._tokens.next();
@@ -3087,7 +3021,7 @@ export class Parser<T> {
 
     private _unaryExpression() {
 
-        let n = this._tempNode(AstNodeType.Error);
+        let n = this._tempNode(AstNodeType.UnaryExpression);
         let t = this._tokens.next();
         n.value.flag = this._unaryOpToNodeFlag(t);
 
@@ -3358,14 +3292,7 @@ export class Parser<T> {
         switch (t.tokenType) {
             case '{':
                 n.value.astNodeType = AstNodeType.StaticMethodCall;
-                this._tokens.next();
-                this._followOnStack.push(['}']);
-                n.children.push(this._expression());
-                this._followOnStack.pop();
-                if (!this._tokens.consume('}')) {
-                    this._error(n, ['}'], ['}']);
-                    this._tokens.consume('}');
-                }
+                n.children.push(this._encapsulatedExpression('{', '}'));
                 break;
             case '$':
             case TokenType.T_VARIABLE:
@@ -3428,17 +3355,7 @@ export class Parser<T> {
             case TokenType.T_STRING:
                 return this._nodeFactory(this._tokens.next());
             case '{':
-                let err = this._tempNode(AstNodeType.ErrorPropertyName);
-                this._tokens.next();
-                this._followOnStack.push(['{']);
-                err.children.push(this._expression());
-                this._followOnStack.pop();
-                if (!this._tokens.consume('}')) {
-                    this._error(err, ['}'], ['}']);
-                    this._tokens.consume('}');
-                    return this._node(err);
-                }
-                return err.children.pop();
+                return this._encapsulatedExpression('{', '}');
             case '$':
             case TokenType.T_VARIABLE:
                 return this._simpleVariable();
@@ -3769,14 +3686,7 @@ export class Parser<T> {
             this._tokens.next();
             t = this._tokens.peek();
             if (t.tokenType === '{') {
-                this._tokens.next();
-                this._followOnStack.push(['}']);
-                n.children.push(this._expression());
-                this._followOnStack.pop();
-                if (!this._tokens.consume('}')) {
-                    this._error(n, ['}'], ['}']);
-                    this._tokens.consume('}');
-                }
+                n.children.push(this._encapsulatedExpression('{', '}'));
             } else if (t.tokenType === '$' || t.tokenType === TokenType.T_VARIABLE) {
                 n.children.push(this._simpleVariable());
             } else {
