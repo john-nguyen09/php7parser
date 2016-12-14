@@ -368,7 +368,7 @@ export class Parser<T> {
             case TokenType.T_CONST:
                 return this._constantDeclarationStatement();
             case TokenType.T_FUNCTION:
-                return this._functionDeclarationStatement();
+                return this._functionDeclaration();
             case TokenType.T_CLASS:
             case TokenType.T_ABSTRACT:
             case TokenType.T_FINAL:
@@ -1495,7 +1495,7 @@ export class Parser<T> {
 
         switch (t.tokenType) {
             case TokenType.T_FUNCTION:
-                return this._functionDeclarationStatement();
+                return this._functionDeclaration();
             case TokenType.T_ABSTRACT:
             case TokenType.T_FINAL:
             case TokenType.T_CLASS:
@@ -1554,7 +1554,7 @@ export class Parser<T> {
         return this._node(n);
     }
 
-    private _functionDeclarationStatement() {
+    private _functionDeclaration() {
 
         let n = this._tempNode(AstNodeType.FunctionDeclaration);
 
@@ -1581,21 +1581,8 @@ export class Parser<T> {
             n.children.push(this._nodeFactory(null));
         }
 
-        if (!this._tokens.consume('{')) {
-            n.children.push(this._nodeFactory(null));
-            this._error(n, ['{']);
-            return this._node(n);
-        }
+        n.children.push(this._block());
 
-        this._followOnStack.push(['}']);
-        n.children.push(this._innerStatementList(['}']));
-        this._followOnStack.pop();
-
-        if (!this._tokens.consume('}')) {
-            if (this._error(n, ['}'], ['}']).tokenType === '}') {
-                this._tokens.next();
-            }
-        }
         return this._node(n);
 
     }
