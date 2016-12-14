@@ -1200,7 +1200,7 @@ export class Parser<T> {
                 if (t.tokenType === TokenType.T_VARIABLE) {
                     return this._propertyDeclarationStatement(n);
                 } else if (t.tokenType === TokenType.T_FUNCTION) {
-                    return this._methodDeclarationStatement(n);
+                    return this._methodDeclaration(n);
                 } else if (t.tokenType === TokenType.T_CONST) {
                     return this._classConstantDeclarationStatement(n);
                 } else {
@@ -1211,7 +1211,7 @@ export class Parser<T> {
                     return this._node(n);
                 }
             case TokenType.T_FUNCTION:
-                return this._methodDeclarationStatement(n);
+                return this._methodDeclaration(n);
             case TokenType.T_VAR:
                 this._tokens.next();
                 n.value.flag = AstNodeFlag.ModifierPublic;
@@ -1405,7 +1405,7 @@ export class Parser<T> {
 
     }
 
-    private _methodDeclarationStatement(n: TempNode<T>) {
+    private _methodDeclaration(n: TempNode<T>) {
 
         n.value.astNodeType = AstNodeType.MethodDeclaration;
         this._tokens.next(); //T_FUNCTION
@@ -1438,20 +1438,8 @@ export class Parser<T> {
         if (t.tokenType === ';' && (n.value.flag & AstNodeFlag.ModifierAbstract)) {
             this._tokens.next();
             n.children.push(this._nodeFactory(null));
-        } else if (t.tokenType === '{') {
-            this._tokens.next();
-            this._followOnStack.push(['}']);
-            n.children.push(this._innerStatementList(['}']));
-            this._followOnStack.pop();
-            if (!this._tokens.consume('}')) {
-                if (this._error(n, ['}'], ['}']).tokenType === '}') {
-                    this._tokens.next();
-                }
-            }
         } else {
-            //error
-            n.children.push(this._nodeFactory(null));
-            this._error(n, [';', '{']);
+            n.children.push(this._block());
         }
 
         return this._node(n);
