@@ -23,20 +23,9 @@ export enum AstNodeType {
     Clone, Heredoc, DoubleQuotes, EmptyStatement, IfList, If, While, DoWhile,
     ForExpressionList, For, Break, Continue, Return, GlobalVariableList, StaticVariableList,
     StaticVariable, Echo, Unset, Throw, Goto, Label, Foreach, CaseList, Switch,
-    Case, Declare, Try, Catch, CatchNameList, Finally, TernaryExpression,
-    UnaryBoolNot, UnaryBitwiseNot, UnaryMinus, UnaryPlus, UnarySilence, UnaryPreInc,
-    UnaryPostInc, UnaryPreDec, UnaryPostDec, UnaryReference, BinaryBitwiseOr,
-    BinaryBitwiseAnd, BinaryBitwiseXor, BinaryConcat, BinaryAdd, BinarySubtract,
-    BinaryMultiply, BinaryDivide, BinaryModulus, BinaryPower, BinaryShiftLeft,
-    BinaryShiftRight, BinaryBoolAnd, BinaryBoolOr, BinaryLogicalAnd, BinaryLogicalOr,
-    BinaryLogicalXor, BinaryIsIdentical, BinaryIsNotIdentical, BinaryIsEqual,
-    BinaryIsNotEqual, BinaryIsSmaller, BinaryIsSmallerOrEqual, BinaryIsGreater,
-    BinaryIsGreaterOrEqual, BinarySpaceship, BinaryCoalesce, BinaryAssign, BinaryConcatAssign,
-    BinaryAddAssign, BinarySubtractAssign, BinaryMultiplyAssign, BinaryDivideAssign,
-    BinaryModulusAssign, BinaryPowerAssign, BinaryShiftLeftAssign, BinaryShiftRightAssign,
-    BinaryBitwiseOrAssign, BinaryBitwiseAndAssign, BinaryBitwiseXorAssign, BinaryInstanceOf,
-    MagicConstant, CatchList, ErrorStaticMember, ErrorArgument, ErrorVariable, ErrorExpression,
-    ErrorClassStatement, ErrorPropertyName, ErrorTraitAdaptation
+    Case, Declare, Try, Catch, CatchNameList, Finally, TernaryExpression, BinaryExpression,
+    UnaryExpression, MagicConstant, CatchList, ErrorStaticMember, ErrorArgument,
+    ErrorVariable, ErrorExpression, ErrorClassStatement, ErrorPropertyName, ErrorTraitAdaptation
 }
 
 export enum AstNodeFlag {
@@ -50,9 +39,20 @@ export enum AstNodeFlag {
     ReturnsRef = 1 << 6,
     PassByRef = 1 << 7,
     Variadic = 1 << 8,
-
-    Nullable, NameFq, NameNotFq, NameRelative, MagicLine, MagicFile, MagicDir, MagicNamespace,
-    MagicFunction, MagicMethod, MagicClass, MagicTrait, UseClass, UseFunction, UseConstant
+    Nullable = 1 << 16, NameFullyQualified, NameNotFullyQualified, NameRelative,
+    MagicLine, MagicFile, MagicDir, MagicNamespace, MagicFunction, MagicMethod,
+    MagicClass, MagicTrait, UseClass, UseFunction, UseConstant,
+    UnaryBoolNot, UnaryBitwiseNot, UnaryMinus, UnaryPlus, UnarySilence, UnaryPreInc,
+    UnaryPostInc, UnaryPreDec, UnaryPostDec, UnaryReference, BinaryBitwiseOr,
+    BinaryBitwiseAnd, BinaryBitwiseXor, BinaryConcat, BinaryAdd, BinarySubtract,
+    BinaryMultiply, BinaryDivide, BinaryModulus, BinaryPower, BinaryShiftLeft,
+    BinaryShiftRight, BinaryBoolAnd, BinaryBoolOr, BinaryLogicalAnd, BinaryLogicalOr,
+    BinaryLogicalXor, BinaryIsIdentical, BinaryIsNotIdentical, BinaryIsEqual,
+    BinaryIsNotEqual, BinaryIsSmaller, BinaryIsSmallerOrEqual, BinaryIsGreater,
+    BinaryIsGreaterOrEqual, BinarySpaceship, BinaryCoalesce, BinaryAssign, BinaryConcatAssign,
+    BinaryAddAssign, BinarySubtractAssign, BinaryMultiplyAssign, BinaryDivideAssign,
+    BinaryModulusAssign, BinaryPowerAssign, BinaryShiftLeftAssign, BinaryShiftRightAssign,
+    BinaryBitwiseOrAssign, BinaryBitwiseAndAssign, BinaryBitwiseXorAssign, BinaryInstanceOf
 }
 
 export interface AstNodeFactory<T> {
@@ -210,10 +210,14 @@ interface TempNode<T> {
 export interface AstNode {
     astNodeType: AstNodeType;
     startTokenIndex: number;
-    endTokenIndex:number;
+    endTokenIndex: number;
     flag?: AstNodeFlag;
     doc?: Token;
     errors?: ParseError[];
+}
+
+export interface ExpressionAstNode {
+
 }
 
 var recoverTopStatementStartTokenTypes: (TokenType | string)[] = [
@@ -285,8 +289,8 @@ export class Parser<T> {
         return {
             value: {
                 astNodeType: type,
-                startTokenIndex:startPos,
-                endTokenIndex:0,
+                startTokenIndex: startPos,
+                endTokenIndex: 0,
             },
             children: []
         };
@@ -473,7 +477,7 @@ export class Parser<T> {
                     rhs = op.tokenType === TokenType.T_INSTANCEOF ? this._newVariable() : this._expression(precedence);
                 }
 
-                lhs = this._binaryNode(lhs, rhs, this._binaryOpToNodeType(op), startPos);
+                lhs = this._binaryNode(lhs, rhs, this._binaryOpToNodeFlag(op), startPos);
             }
 
         }
@@ -482,121 +486,122 @@ export class Parser<T> {
 
     }
 
-    private _binaryNode(lhs: T, rhs: T, type: AstNodeType, startPos: number) {
-        let tempNode = this._tempNode(type, startPos);
+    private _binaryNode(lhs: T, rhs: T, flag: AstNodeFlag, startPos: number) {
+        let tempNode = this._tempNode(AstNodeType.BinaryExpression, startPos);
+        tempNode.value.flag = flag;
         tempNode.children.push(lhs);
         tempNode.children.push(rhs);
         return this._node(tempNode);
     }
 
-    private _unaryOpToNodeType(op: Token, isPost = false) {
+    private _unaryOpToNodeFlag(op: Token, isPost = false) {
         switch (op.tokenType) {
             case '&':
-                return AstNodeType.UnaryReference;
+                return AstNodeFlag.UnaryReference;
             case '!':
-                return AstNodeType.UnaryBoolNot;
+                return AstNodeFlag.UnaryBoolNot;
             case '~':
-                return AstNodeType.UnaryBitwiseNot;
+                return AstNodeFlag.UnaryBitwiseNot;
             case '-':
-                return AstNodeType.UnaryMinus;
+                return AstNodeFlag.UnaryMinus;
             case '+':
-                return AstNodeType.UnaryPlus;
+                return AstNodeFlag.UnaryPlus;
             case '@':
-                return AstNodeType.UnarySilence;
+                return AstNodeFlag.UnarySilence;
             case TokenType.T_INC:
-                return isPost ? AstNodeType.UnaryPreInc : AstNodeType.UnaryPostInc;
+                return isPost ? AstNodeFlag.UnaryPreInc : AstNodeFlag.UnaryPostInc;
             case TokenType.T_DEC:
-                return isPost ? AstNodeType.UnaryPreDec : AstNodeType.UnaryPostDec;
+                return isPost ? AstNodeFlag.UnaryPreDec : AstNodeFlag.UnaryPostDec;
             default:
                 throw new Error(`Unknow operator ${op.text}`);
         }
     }
 
-    private _binaryOpToNodeType(op: Token) {
+    private _binaryOpToNodeFlag(op: Token) {
 
         switch (op.tokenType) {
             case '|':
-                return AstNodeType.BinaryBitwiseOr;
+                return AstNodeFlag.BinaryBitwiseOr;
             case '&':
-                return AstNodeType.BinaryBitwiseAnd;
+                return AstNodeFlag.BinaryBitwiseAnd;
             case '^':
-                return AstNodeType.BinaryBitwiseXor;
+                return AstNodeFlag.BinaryBitwiseXor;
             case '.':
-                return AstNodeType.BinaryConcat;
+                return AstNodeFlag.BinaryConcat;
             case '+':
-                return AstNodeType.BinaryAdd;
+                return AstNodeFlag.BinaryAdd;
             case '-':
-                return AstNodeType.BinarySubtract;
+                return AstNodeFlag.BinarySubtract;
             case '*':
-                return AstNodeType.BinaryMultiply;
+                return AstNodeFlag.BinaryMultiply;
             case '/':
-                return AstNodeType.BinaryDivide;
+                return AstNodeFlag.BinaryDivide;
             case '%':
-                return AstNodeType.BinaryModulus;
+                return AstNodeFlag.BinaryModulus;
             case TokenType.T_POW:
-                return AstNodeType.BinaryPower;
+                return AstNodeFlag.BinaryPower;
             case TokenType.T_SL:
-                return AstNodeType.BinaryShiftLeft;
+                return AstNodeFlag.BinaryShiftLeft;
             case TokenType.T_SR:
-                return AstNodeType.BinaryShiftRight;
+                return AstNodeFlag.BinaryShiftRight;
             case TokenType.T_BOOLEAN_AND:
-                return AstNodeType.BinaryBoolAnd;
+                return AstNodeFlag.BinaryBoolAnd;
             case TokenType.T_BOOLEAN_OR:
-                return AstNodeType.BinaryBoolOr;
+                return AstNodeFlag.BinaryBoolOr;
             case TokenType.T_LOGICAL_AND:
-                return AstNodeType.BinaryLogicalAnd;
+                return AstNodeFlag.BinaryLogicalAnd;
             case TokenType.T_LOGICAL_OR:
-                return AstNodeType.BinaryLogicalOr;
+                return AstNodeFlag.BinaryLogicalOr;
             case TokenType.T_LOGICAL_XOR:
-                return AstNodeType.BinaryLogicalXor;
+                return AstNodeFlag.BinaryLogicalXor;
             case TokenType.T_IS_IDENTICAL:
-                return AstNodeType.BinaryIsIdentical;
+                return AstNodeFlag.BinaryIsIdentical;
             case TokenType.T_IS_NOT_IDENTICAL:
-                return AstNodeType.BinaryIsNotIdentical;
+                return AstNodeFlag.BinaryIsNotIdentical;
             case TokenType.T_IS_EQUAL:
-                return AstNodeType.BinaryIsEqual;
+                return AstNodeFlag.BinaryIsEqual;
             case TokenType.T_IS_NOT_EQUAL:
-                return AstNodeType.BinaryIsNotEqual;
+                return AstNodeFlag.BinaryIsNotEqual;
             case '<':
-                return AstNodeType.BinaryIsSmaller;
+                return AstNodeFlag.BinaryIsSmaller;
             case TokenType.T_IS_SMALLER_OR_EQUAL:
-                return AstNodeType.BinaryIsSmallerOrEqual;
+                return AstNodeFlag.BinaryIsSmallerOrEqual;
             case '>':
-                return AstNodeType.BinaryIsGreater;
+                return AstNodeFlag.BinaryIsGreater;
             case TokenType.T_IS_GREATER_OR_EQUAL:
-                return AstNodeType.BinaryIsGreaterOrEqual;
+                return AstNodeFlag.BinaryIsGreaterOrEqual;
             case TokenType.T_SPACESHIP:
-                return AstNodeType.BinarySpaceship;
+                return AstNodeFlag.BinarySpaceship;
             case TokenType.T_COALESCE:
-                return AstNodeType.BinaryCoalesce;
+                return AstNodeFlag.BinaryCoalesce;
             case '=':
-                return AstNodeType.BinaryAssign;
+                return AstNodeFlag.BinaryAssign;
             case TokenType.T_CONCAT_EQUAL:
-                return AstNodeType.BinaryConcatAssign;
+                return AstNodeFlag.BinaryConcatAssign;
             case TokenType.T_PLUS_EQUAL:
-                return AstNodeType.BinaryAddAssign;
+                return AstNodeFlag.BinaryAddAssign;
             case TokenType.T_MINUS_EQUAL:
-                return AstNodeType.BinarySubtractAssign;
+                return AstNodeFlag.BinarySubtractAssign;
             case TokenType.T_MUL_EQUAL:
-                return AstNodeType.BinaryMultiplyAssign;
+                return AstNodeFlag.BinaryMultiplyAssign;
             case TokenType.T_DIV_EQUAL:
-                return AstNodeType.BinaryDivideAssign;
+                return AstNodeFlag.BinaryDivideAssign;
             case TokenType.T_MOD_EQUAL:
-                return AstNodeType.BinaryModulusAssign;
+                return AstNodeFlag.BinaryModulusAssign;
             case TokenType.T_POW_EQUAL:
-                return AstNodeType.BinaryPowerAssign;
+                return AstNodeFlag.BinaryPowerAssign;
             case TokenType.T_SL_EQUAL:
-                return AstNodeType.BinaryShiftLeftAssign;
+                return AstNodeFlag.BinaryShiftLeftAssign;
             case TokenType.T_SR_EQUAL:
-                return AstNodeType.BinaryShiftRightAssign;
+                return AstNodeFlag.BinaryShiftRightAssign;
             case TokenType.T_OR_EQUAL:
-                return AstNodeType.BinaryBitwiseOrAssign;
+                return AstNodeFlag.BinaryBitwiseOrAssign;
             case TokenType.T_AND_EQUAL:
-                return AstNodeType.BinaryBitwiseAndAssign;
+                return AstNodeFlag.BinaryBitwiseAndAssign;
             case TokenType.T_XOR_EQUAL:
-                return AstNodeType.BinaryBitwiseXorAssign;
+                return AstNodeFlag.BinaryBitwiseXorAssign;
             case TokenType.T_INSTEADOF:
-                return AstNodeType.BinaryInstanceOf;
+                return AstNodeFlag.BinaryInstanceOf;
             default:
                 throw new Error(`Unknown operator ${op.text}`);
 
@@ -655,9 +660,9 @@ export class Parser<T> {
                 t = this._tokens.peek();
                 if (t.tokenType === TokenType.T_INC || t.tokenType === TokenType.T_DEC) {
                     this._tokens.next();
-                    let unary = this._tempNode(
-                        t.tokenType === TokenType.T_INC ? AstNodeType.UnaryPostInc : AstNodeType.UnaryPostDec, possibleUnaryStart
-                    );
+                    let unary = this._tempNode(AstNodeType.UnaryExpression, possibleUnaryStart);
+                    unary.value.flag = t.tokenType === TokenType.T_INC ?
+                        AstNodeFlag.UnaryPostInc : AstNodeFlag.UnaryPostDec
                     unary.children.push(variable);
                     return this._node(unary);
                 } else {
@@ -1017,7 +1022,8 @@ export class Parser<T> {
                 n.children.push(this._simpleVariable());
                 break;
             case '-':
-                let unary = this._tempNode(AstNodeType.UnaryMinus);
+                let unary = this._tempNode(AstNodeType.UnaryExpression);
+                unary.value.flag = AstNodeFlag.UnaryMinus;
                 this._tokens.next();
                 if (this._tokens.consume(TokenType.T_NUM_STRING)) {
                     unary.children.push(this._nodeFactory(this._tokens.current));
@@ -2196,7 +2202,8 @@ export class Parser<T> {
         switch (this._tokens.peek().tokenType) {
 
             case '&':
-                let unary = this._tempNode(AstNodeType.UnaryReference);
+                let unary = this._tempNode(AstNodeType.UnaryExpression);
+                unary.value.flag = AstNodeFlag.UnaryReference;
                 this._tokens.next();
                 unary.children.push(this._variable());
                 return this._node(unary);
@@ -3055,7 +3062,7 @@ export class Parser<T> {
         switch (t.tokenType) {
             case TokenType.T_STATIC:
                 n.value.astNodeType = AstNodeType.Name;
-                n.value.flag = AstNodeFlag.NameNotFq;
+                n.value.flag = AstNodeFlag.NameNotFullyQualified;
                 n.children.push(this._nodeFactory(this._tokens.next()));
                 return this._node(n);
             case TokenType.T_VARIABLE:
@@ -3115,14 +3122,19 @@ export class Parser<T> {
 
         let n = this._tempNode(AstNodeType.Error);
         let t = this._tokens.next();
-        n.value.astNodeType = this._unaryOpToNodeType(t);
-        if (n.value.astNodeType === AstNodeType.UnaryPreDec ||
-            n.value.astNodeType === AstNodeType.UnaryPreInc ||
-            n.value.astNodeType === AstNodeType.UnaryReference) {
-            n.children.push(this._variable());
-        } else {
-            n.children.push(this._expression(this._opPrecedenceMap[t.text][0]))
+        n.value.flag = this._unaryOpToNodeFlag(t);
+
+        switch (n.value.flag) {
+            case AstNodeFlag.UnaryPreDec:
+            case AstNodeFlag.UnaryPreInc:
+            case AstNodeFlag.UnaryReference:
+                n.children.push(this._variable());
+                break;
+            default:
+                n.children.push(this._expression(this._opPrecedenceMap[t.text][0]));
+                break;
         }
+
         return this._node(n);
 
     }
@@ -3567,7 +3579,7 @@ export class Parser<T> {
         let n = this._tempNode(AstNodeType.Name);
 
         if (this._tokens.consume(TokenType.T_NS_SEPARATOR)) {
-            n.value.flag = AstNodeFlag.NameFq;
+            n.value.flag = AstNodeFlag.NameFullyQualified;
         } else if (this._tokens.consume(TokenType.T_NAMESPACE)) {
             n.value.flag = AstNodeFlag.NameRelative;
             if (!this._tokens.consume(TokenType.T_NS_SEPARATOR)) {
@@ -3578,7 +3590,7 @@ export class Parser<T> {
                 }
             }
         } else {
-            n.value.flag = AstNodeFlag.NameNotFq;
+            n.value.flag = AstNodeFlag.NameNotFullyQualified;
         }
 
         n.children.push(this._namespaceName());
@@ -3737,7 +3749,7 @@ export class Parser<T> {
             case TokenType.T_STATIC:
                 this._variableAtomType = AstNodeType.Name;
                 n = this._tempNode(AstNodeType.Name);
-                n.value.flag = AstNodeFlag.NameNotFq;
+                n.value.flag = AstNodeFlag.NameNotFullyQualified;
                 n.children.push(this._nodeFactory(this._tokens.next()));
                 return this._node(n);
             case TokenType.T_STRING:
