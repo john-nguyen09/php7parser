@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
         "noImplicitAny": true,
-        "removeComments": true,
+        "removeComments": false,
 		"target": "ES6",
 		"module": "commonjs",
 		"outDir": "lib",
