@@ -5,8 +5,6 @@
 'use strict';
 
 import { Token, Lexer, TokenType, Position, Range } from './lexer';
-import { ParseError } from './parseError';
-import { TokenIterator } from './tokenIterator';
 
 export enum NonTerminalType {
     None, Error, TopStatementList, Namespace, NamespaceName, UseElement, UseStatement,
@@ -59,271 +57,386 @@ export interface AstNodeFactory<T> {
     (value: NonTerminal | Token, children?: T[]): T;
 }
 
-interface Predicate {
-    (t: Token): boolean;
-}
-
-const enum Associativity {
-    None,
-    Left,
-    Right
-}
-
-const enum OpType {
-    None,
-    Unary,
-    Binary
-}
-
-var opPrecedenceMap: { [op: string]: [number, number, number] } = {
-    'clone': [50, Associativity.None, OpType.Unary],
-    'new': [50, Associativity.None, OpType.Unary],
-    '[': [49, Associativity.Left, OpType.Unary],
-    '**': [48, Associativity.Right, OpType.Binary],
-    '++': [47, Associativity.Right, OpType.Unary],
-    '--': [47, Associativity.Right, OpType.Unary],
-    '@': [47, Associativity.Right, OpType.Unary],
-    '~': [47, Associativity.Right, OpType.Unary],
-    '(int)': [47, Associativity.Right, OpType.Unary],
-    '(string)': [47, Associativity.Right, OpType.Unary],
-    '(float)': [47, Associativity.Right, OpType.Unary],
-    '(array)': [47, Associativity.Right, OpType.Unary],
-    '(object)': [47, Associativity.Right, OpType.Unary],
-    '(bool)': [47, Associativity.Right, OpType.Unary],
-    'instanceof': [46, Associativity.None, OpType.Binary],
-    '!': [45, Associativity.Right, OpType.Unary],
-    '*': [44, Associativity.Left, OpType.Binary],
-    '/': [44, Associativity.Left, OpType.Binary],
-    '%': [44, Associativity.Left, OpType.Binary],
-    '+': [43, Associativity.Left, OpType.Binary | OpType.Unary],
-    '-': [43, Associativity.Left, OpType.Binary | OpType.Unary],
-    '.': [43, Associativity.Left, OpType.Binary],
-    '<<': [42, Associativity.Left, OpType.Binary],
-    '>>': [42, Associativity.Left, OpType.Binary],
-    '<': [41, Associativity.None, OpType.Binary],
-    '>': [41, Associativity.None, OpType.Binary],
-    '<=': [41, Associativity.None, OpType.Binary],
-    '>=': [41, Associativity.None, OpType.Binary],
-    '==': [40, Associativity.None, OpType.Binary],
-    '===': [40, Associativity.None, OpType.Binary],
-    '!=': [40, Associativity.None, OpType.Binary],
-    '!==': [40, Associativity.None, OpType.Binary],
-    '<>': [40, Associativity.None, OpType.Binary],
-    '<=>': [40, Associativity.None, OpType.Binary],
-    '&': [39, Associativity.Left, OpType.Binary | OpType.Unary],
-    '^': [38, Associativity.Left, OpType.Binary],
-    '|': [37, Associativity.Left, OpType.Binary],
-    '&&': [36, Associativity.Left, OpType.Binary],
-    '||': [35, Associativity.Left, OpType.Binary],
-    '??': [34, Associativity.Right, OpType.Binary],
-    '?': [33, Associativity.Left, OpType.Binary], //?: ternary
-    ':': [33, Associativity.Left, OpType.Binary], //?: ternary
-    '=': [32, Associativity.Right, OpType.Binary],
-    '.=': [32, Associativity.Right, OpType.Binary],
-    '+=': [32, Associativity.Right, OpType.Binary],
-    '-=': [32, Associativity.Right, OpType.Binary],
-    '*=': [32, Associativity.Right, OpType.Binary],
-    '/=': [32, Associativity.Right, OpType.Binary],
-    '%=': [32, Associativity.Right, OpType.Binary],
-    '**=': [32, Associativity.Right, OpType.Binary],
-    '&=': [32, Associativity.Right, OpType.Binary],
-    '|=': [32, Associativity.Right, OpType.Binary],
-    '^=': [32, Associativity.Right, OpType.Binary],
-    '<<=': [32, Associativity.Right, OpType.Binary],
-    '>>=': [32, Associativity.Right, OpType.Binary],
-    'and': [31, Associativity.Left, OpType.Binary],
-    'xor': [30, Associativity.Left, OpType.Binary],
-    'or': [29, Associativity.Left, OpType.Binary],
-};
-
-function isBinaryOp(t: Token) {
-    return isVariableOnlyBinaryOp(t) || isVariableAndExpressionBinaryOp(t);
-}
-
-function isVariableAndExpressionBinaryOp(t: Token) {
-    switch (t.tokenType) {
-        case '|':
-        case '&':
-        case '^':
-        case '.':
-        case '+':
-        case '-':
-        case '*':
-        case '/':
-        case '%':
-        case TokenType.T_POW:
-        case TokenType.T_SL:
-        case TokenType.T_SR:
-        case TokenType.T_BOOLEAN_AND:
-        case TokenType.T_BOOLEAN_OR:
-        case TokenType.T_LOGICAL_AND:
-        case TokenType.T_LOGICAL_OR:
-        case TokenType.T_LOGICAL_XOR:
-        case TokenType.T_IS_IDENTICAL:
-        case TokenType.T_IS_NOT_IDENTICAL:
-        case TokenType.T_IS_EQUAL:
-        case TokenType.T_IS_NOT_EQUAL:
-        case '<':
-        case TokenType.T_IS_SMALLER_OR_EQUAL:
-        case '>':
-        case TokenType.T_IS_GREATER_OR_EQUAL:
-        case TokenType.T_SPACESHIP:
-        case TokenType.T_COALESCE:
-            return true;
-        default:
-            return false;
-
-    }
-}
-
-function isAssignBinaryOp(t: Token) {
-    return t.tokenType === '=';
-}
-
-function isVariableOnlyBinaryOp(t: Token) {
-    switch (t.tokenType) {
-        case '=':
-        case TokenType.T_PLUS_EQUAL:
-        case TokenType.T_MINUS_EQUAL:
-        case TokenType.T_MUL_EQUAL:
-        case TokenType.T_POW_EQUAL:
-        case TokenType.T_DIV_EQUAL:
-        case TokenType.T_CONCAT_EQUAL:
-        case TokenType.T_MOD_EQUAL:
-        case TokenType.T_AND_EQUAL:
-        case TokenType.T_OR_EQUAL:
-        case TokenType.T_XOR_EQUAL:
-        case TokenType.T_SL_EQUAL:
-        case TokenType.T_SR_EQUAL:
-            return true;
-        default:
-            return false;
-    }
-}
-
-
-interface TempNode<T> {
-    value: NonTerminal;
-    children: T[];
-}
-
 export interface NonTerminal {
     astNodeType: NonTerminalType;
-    startTokenIndex: number;
-    endTokenIndex: number;
+    startToken: Token;
+    endToken: Token;
     flag?: NonTerminalFlag;
     doc?: Token;
     errors?: ParseError[];
 }
 
-export interface ExpressionAstNode {
+export class ParseError {
+
+    private _unexpected: Token;
+    private _expected: (TokenType | string)[];
+
+    constructor(unexpected: Token, expected: (TokenType | string)[] = []) {
+        this._unexpected = unexpected;
+        this._expected = expected;
+    }
+
+    get unexpected(){
+        return this._unexpected;
+    }
+
+    get expected(){
+        return this._expected;
+    }
 
 }
 
-var recoverTopStatementStartTokenTypes: (TokenType | string)[] = [
-    TokenType.T_NAMESPACE, TokenType.T_USE, TokenType.T_HALT_COMPILER, TokenType.T_CONST,
-    TokenType.T_FUNCTION, TokenType.T_CLASS, TokenType.T_ABSTRACT, TokenType.T_FINAL,
-    TokenType.T_TRAIT, TokenType.T_INTERFACE, TokenType.T_IF, TokenType.T_WHILE, TokenType.T_DO,
-    TokenType.T_FOR, TokenType.T_SWITCH, TokenType.T_BREAK, TokenType.T_CONTINUE, TokenType.T_RETURN,
-    TokenType.T_GLOBAL, TokenType.T_STATIC, TokenType.T_ECHO, TokenType.T_INLINE_HTML,
-    TokenType.T_UNSET, TokenType.T_FOREACH, TokenType.T_DECLARE, TokenType.T_TRY,
-    TokenType.T_THROW, TokenType.T_GOTO, ';'
-];
+export namespace Parser {
 
-var recoverInnerStatementStartTokenTypes: (TokenType | string)[] = [
-    TokenType.T_FUNCTION, TokenType.T_ABSTRACT, TokenType.T_FINAL, TokenType.T_CLASS, TokenType.T_TRAIT,
-    TokenType.T_INTERFACE, TokenType.T_IF, TokenType.T_WHILE, TokenType.T_DO,
-    TokenType.T_FOR, TokenType.T_SWITCH, TokenType.T_BREAK, TokenType.T_CONTINUE, TokenType.T_RETURN,
-    TokenType.T_GLOBAL, TokenType.T_STATIC, TokenType.T_ECHO, TokenType.T_INLINE_HTML,
-    TokenType.T_UNSET, TokenType.T_FOREACH, TokenType.T_DECLARE, TokenType.T_TRY,
-    TokenType.T_THROW, TokenType.T_GOTO, ';'
-];
-
-var recoverClassStatementStartTokenTypes: (TokenType | string)[] = [
-    TokenType.T_PUBLIC, TokenType.T_PROTECTED, TokenType.T_PRIVATE, TokenType.T_STATIC,
-    TokenType.T_ABSTRACT, TokenType.T_FINAL, TokenType.T_FUNCTION, TokenType.T_VAR,
-    TokenType.T_CONST, TokenType.T_USE
-];
-
-var parameterStartTokenTypes: (TokenType | string)[] = [
-    '&', TokenType.T_ELLIPSIS, TokenType.T_VARIABLE, TokenType.T_NS_SEPARATOR,
-    TokenType.T_STRING, TokenType.T_NAMESPACE, '?', TokenType.T_ARRAY,
-    TokenType.T_CALLABLE
-];
-
-var recoverStatementStartTokenTypes: (TokenType | string)[] = [
-    TokenType.T_IF, TokenType.T_WHILE, TokenType.T_DO, TokenType.T_FOR, TokenType.T_SWITCH,
-    TokenType.T_BREAK, TokenType.T_CONTINUE, TokenType.T_RETURN, '{', ';',
-    TokenType.T_GLOBAL, TokenType.T_STATIC, TokenType.T_ECHO, TokenType.T_INLINE_HTML, TokenType.T_UNSET,
-    TokenType.T_FOREACH, TokenType.T_DECLARE, TokenType.T_TRY, TokenType.T_THROW, TokenType.T_GOTO
-];
-
-export class Parser<T> {
-
-    private _nodeFactory: AstNodeFactory<T>;
-    private _opPrecedenceMap = opPrecedenceMap;
-    private _tokens: TokenIterator
-    private _followOnStack: (TokenType | string)[][];
-    private _isBinaryOpPredicate: Predicate;
-    private _variableAtomType: NonTerminalType;
-
-
-    constructor(nodeFactory: AstNodeFactory<T>) {
-        this._nodeFactory = nodeFactory;
+    interface Predicate {
+        (t: Token): boolean;
     }
 
-    parse(tokens: Token[]) {
+    const enum Associativity {
+        None,
+        Left,
+        Right
+    }
 
-        this._followOnStack = [];
-        this._tokens = new TokenIterator(tokens);
-        return this._topStatementList(false);
+    const enum OpType {
+        None,
+        Unary,
+        Binary
+    }
+
+    var opPrecedenceMap: { [op: string]: [number, number, number] } = {
+        'clone': [50, Associativity.None, OpType.Unary],
+        'new': [50, Associativity.None, OpType.Unary],
+        '[': [49, Associativity.Left, OpType.Unary],
+        '**': [48, Associativity.Right, OpType.Binary],
+        '++': [47, Associativity.Right, OpType.Unary],
+        '--': [47, Associativity.Right, OpType.Unary],
+        '@': [47, Associativity.Right, OpType.Unary],
+        '~': [47, Associativity.Right, OpType.Unary],
+        '(int)': [47, Associativity.Right, OpType.Unary],
+        '(string)': [47, Associativity.Right, OpType.Unary],
+        '(float)': [47, Associativity.Right, OpType.Unary],
+        '(array)': [47, Associativity.Right, OpType.Unary],
+        '(object)': [47, Associativity.Right, OpType.Unary],
+        '(bool)': [47, Associativity.Right, OpType.Unary],
+        'instanceof': [46, Associativity.None, OpType.Binary],
+        '!': [45, Associativity.Right, OpType.Unary],
+        '*': [44, Associativity.Left, OpType.Binary],
+        '/': [44, Associativity.Left, OpType.Binary],
+        '%': [44, Associativity.Left, OpType.Binary],
+        '+': [43, Associativity.Left, OpType.Binary | OpType.Unary],
+        '-': [43, Associativity.Left, OpType.Binary | OpType.Unary],
+        '.': [43, Associativity.Left, OpType.Binary],
+        '<<': [42, Associativity.Left, OpType.Binary],
+        '>>': [42, Associativity.Left, OpType.Binary],
+        '<': [41, Associativity.None, OpType.Binary],
+        '>': [41, Associativity.None, OpType.Binary],
+        '<=': [41, Associativity.None, OpType.Binary],
+        '>=': [41, Associativity.None, OpType.Binary],
+        '==': [40, Associativity.None, OpType.Binary],
+        '===': [40, Associativity.None, OpType.Binary],
+        '!=': [40, Associativity.None, OpType.Binary],
+        '!==': [40, Associativity.None, OpType.Binary],
+        '<>': [40, Associativity.None, OpType.Binary],
+        '<=>': [40, Associativity.None, OpType.Binary],
+        '&': [39, Associativity.Left, OpType.Binary | OpType.Unary],
+        '^': [38, Associativity.Left, OpType.Binary],
+        '|': [37, Associativity.Left, OpType.Binary],
+        '&&': [36, Associativity.Left, OpType.Binary],
+        '||': [35, Associativity.Left, OpType.Binary],
+        '??': [34, Associativity.Right, OpType.Binary],
+        '?': [33, Associativity.Left, OpType.Binary], //?: ternary
+        ':': [33, Associativity.Left, OpType.Binary], //?: ternary
+        '=': [32, Associativity.Right, OpType.Binary],
+        '.=': [32, Associativity.Right, OpType.Binary],
+        '+=': [32, Associativity.Right, OpType.Binary],
+        '-=': [32, Associativity.Right, OpType.Binary],
+        '*=': [32, Associativity.Right, OpType.Binary],
+        '/=': [32, Associativity.Right, OpType.Binary],
+        '%=': [32, Associativity.Right, OpType.Binary],
+        '**=': [32, Associativity.Right, OpType.Binary],
+        '&=': [32, Associativity.Right, OpType.Binary],
+        '|=': [32, Associativity.Right, OpType.Binary],
+        '^=': [32, Associativity.Right, OpType.Binary],
+        '<<=': [32, Associativity.Right, OpType.Binary],
+        '>>=': [32, Associativity.Right, OpType.Binary],
+        'and': [31, Associativity.Left, OpType.Binary],
+        'xor': [30, Associativity.Left, OpType.Binary],
+        'or': [29, Associativity.Left, OpType.Binary],
+    };
+
+    function isBinaryOp(t: Token) {
+        return isVariableOnlyBinaryOp(t) || isVariableAndExpressionBinaryOp(t);
+    }
+
+    function isVariableAndExpressionBinaryOp(t: Token) {
+        switch (t.tokenType) {
+            case '|':
+            case '&':
+            case '^':
+            case '.':
+            case '+':
+            case '-':
+            case '*':
+            case '/':
+            case '%':
+            case TokenType.T_POW:
+            case TokenType.T_SL:
+            case TokenType.T_SR:
+            case TokenType.T_BOOLEAN_AND:
+            case TokenType.T_BOOLEAN_OR:
+            case TokenType.T_LOGICAL_AND:
+            case TokenType.T_LOGICAL_OR:
+            case TokenType.T_LOGICAL_XOR:
+            case TokenType.T_IS_IDENTICAL:
+            case TokenType.T_IS_NOT_IDENTICAL:
+            case TokenType.T_IS_EQUAL:
+            case TokenType.T_IS_NOT_EQUAL:
+            case '<':
+            case TokenType.T_IS_SMALLER_OR_EQUAL:
+            case '>':
+            case TokenType.T_IS_GREATER_OR_EQUAL:
+            case TokenType.T_SPACESHIP:
+            case TokenType.T_COALESCE:
+                return true;
+            default:
+                return false;
+
+        }
+    }
+
+    function isAssignBinaryOp(t: Token) {
+        return t.tokenType === '=';
+    }
+
+    function isVariableOnlyBinaryOp(t: Token) {
+        switch (t.tokenType) {
+            case '=':
+            case TokenType.T_PLUS_EQUAL:
+            case TokenType.T_MINUS_EQUAL:
+            case TokenType.T_MUL_EQUAL:
+            case TokenType.T_POW_EQUAL:
+            case TokenType.T_DIV_EQUAL:
+            case TokenType.T_CONCAT_EQUAL:
+            case TokenType.T_MOD_EQUAL:
+            case TokenType.T_AND_EQUAL:
+            case TokenType.T_OR_EQUAL:
+            case TokenType.T_XOR_EQUAL:
+            case TokenType.T_SL_EQUAL:
+            case TokenType.T_SR_EQUAL:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    interface TempNode {
+        value: NonTerminal;
+        children: any[];
+    }
+
+    var recoverTopStatementStartTokenTypes: (TokenType | string)[] = [
+        TokenType.T_NAMESPACE, TokenType.T_USE, TokenType.T_HALT_COMPILER, TokenType.T_CONST,
+        TokenType.T_FUNCTION, TokenType.T_CLASS, TokenType.T_ABSTRACT, TokenType.T_FINAL,
+        TokenType.T_TRAIT, TokenType.T_INTERFACE, TokenType.T_IF, TokenType.T_WHILE, TokenType.T_DO,
+        TokenType.T_FOR, TokenType.T_SWITCH, TokenType.T_BREAK, TokenType.T_CONTINUE, TokenType.T_RETURN,
+        TokenType.T_GLOBAL, TokenType.T_STATIC, TokenType.T_ECHO, TokenType.T_INLINE_HTML,
+        TokenType.T_UNSET, TokenType.T_FOREACH, TokenType.T_DECLARE, TokenType.T_TRY,
+        TokenType.T_THROW, TokenType.T_GOTO, ';'
+    ];
+
+    var recoverInnerStatementStartTokenTypes: (TokenType | string)[] = [
+        TokenType.T_FUNCTION, TokenType.T_ABSTRACT, TokenType.T_FINAL, TokenType.T_CLASS, TokenType.T_TRAIT,
+        TokenType.T_INTERFACE, TokenType.T_IF, TokenType.T_WHILE, TokenType.T_DO,
+        TokenType.T_FOR, TokenType.T_SWITCH, TokenType.T_BREAK, TokenType.T_CONTINUE, TokenType.T_RETURN,
+        TokenType.T_GLOBAL, TokenType.T_STATIC, TokenType.T_ECHO, TokenType.T_INLINE_HTML,
+        TokenType.T_UNSET, TokenType.T_FOREACH, TokenType.T_DECLARE, TokenType.T_TRY,
+        TokenType.T_THROW, TokenType.T_GOTO, ';'
+    ];
+
+    var recoverClassStatementStartTokenTypes: (TokenType | string)[] = [
+        TokenType.T_PUBLIC, TokenType.T_PROTECTED, TokenType.T_PRIVATE, TokenType.T_STATIC,
+        TokenType.T_ABSTRACT, TokenType.T_FINAL, TokenType.T_FUNCTION, TokenType.T_VAR,
+        TokenType.T_CONST, TokenType.T_USE
+    ];
+
+    var parameterStartTokenTypes: (TokenType | string)[] = [
+        '&', TokenType.T_ELLIPSIS, TokenType.T_VARIABLE, TokenType.T_NS_SEPARATOR,
+        TokenType.T_STRING, TokenType.T_NAMESPACE, '?', TokenType.T_ARRAY,
+        TokenType.T_CALLABLE
+    ];
+
+    var recoverStatementStartTokenTypes: (TokenType | string)[] = [
+        TokenType.T_IF, TokenType.T_WHILE, TokenType.T_DO, TokenType.T_FOR, TokenType.T_SWITCH,
+        TokenType.T_BREAK, TokenType.T_CONTINUE, TokenType.T_RETURN, '{', ';',
+        TokenType.T_GLOBAL, TokenType.T_STATIC, TokenType.T_ECHO, TokenType.T_INLINE_HTML, TokenType.T_UNSET,
+        TokenType.T_FOREACH, TokenType.T_DECLARE, TokenType.T_TRY, TokenType.T_THROW, TokenType.T_GOTO
+    ];
+
+    var endToken: Token = {
+        tokenType: TokenType.T_EOF,
+        index: -1,
+        text: null,
+        mode: null,
+        range: null
+    };
+
+    var nodeFactory: AstNodeFactory<any>;
+    var tokens: Token[];
+    var followOnStack: (TokenType | string)[][];
+    var isBinaryOpPredicate: Predicate;
+    var variableAtomType: NonTerminalType;
+    var pos: number;
+    var docComment: Token;
+
+    export function parse<T>(tokenArray: Token[], astNodeFactory: AstNodeFactory<T>) {
+
+        nodeFactory = astNodeFactory;
+        tokens = tokenArray;
+        pos = -1;
+
+        if (!tokenArray.length) {
+            return null;
+        }
+
+        return topStatementList(false);
 
     }
 
-    private _tempNode(type: NonTerminalType = 0, startPos?: number): TempNode<T> {
+    function current() {
+        return pos >= 0 ? tokens[pos] : null;
+    }
 
-        if (startPos === undefined) {
-            startPos = this._startPos();
+    function lastDocComment() {
+        let t = docComment;
+        docComment = null;
+        return t;
+    }
+
+    function consume(tokenType: TokenType | string) {
+        return peek().tokenType === tokenType ? next() : null;
+    }
+
+    function next(): Token {
+
+        if (pos === tokens.length - 1) {
+            return endToken;
+        }
+
+        ++pos;
+
+        switch (tokens[pos].tokenType) {
+            case TokenType.T_DOC_COMMENT:
+                docComment = tokens[pos];
+                return this.next();
+            case '}':
+                docComment = null;
+                break;
+            case TokenType.T_WHITESPACE:
+            case TokenType.T_COMMENT:
+            case TokenType.T_OPEN_TAG:
+            case TokenType.T_OPEN_TAG_WITH_ECHO:
+            case TokenType.T_CLOSE_TAG:
+                return this.next();
+            default:
+                break;
+        }
+
+        return tokens[pos];
+
+    }
+
+    function peek(n = 0) {
+
+        let k = n + 1
+        let peekPos = pos;
+
+        while (k) {
+            if (++peekPos < tokens.length) {
+                if (!shouldSkip(tokens[peekPos])) {
+                    --k;
+                }
+            } else {
+                return endToken;
+            }
+        }
+
+        return tokens[peekPos];
+    }
+
+    function skip(until: (TokenType | string)[]) {
+
+        let t: Token;
+
+        while (true) {
+            t = peek();
+            if (until.indexOf(t.tokenType) !== -1 || t.tokenType === TokenType.T_EOF) {
+                break;
+            }
+        }
+
+        return t;
+    }
+
+    function shouldSkip(t: Token) {
+        switch (t.tokenType) {
+            case TokenType.T_DOC_COMMENT:
+            case TokenType.T_WHITESPACE:
+            case TokenType.T_COMMENT:
+            case TokenType.T_OPEN_TAG:
+            case TokenType.T_OPEN_TAG_WITH_ECHO:
+            case TokenType.T_CLOSE_TAG:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+
+    function tempNode(type: NonTerminalType = 0, startToken?: Token): TempNode {
+
+        if (startToken === undefined) {
+            startToken = start();
         }
 
         return {
             value: {
                 astNodeType: type,
-                startTokenIndex: startPos,
-                endTokenIndex: 0,
+                startToken: startToken,
+                endToken: null,
             },
             children: []
         };
     }
 
 
-    private _node(tempNode: TempNode<T>, endPos?: number) {
+    function node(temp: TempNode, endToken?: Token) {
 
-        if (!endPos) {
-            endPos = this._endPos();
+        if (!endToken) {
+            endToken = end();
         }
-        tempNode.value.endTokenIndex = endPos;
-        return this._nodeFactory(tempNode.value, tempNode.children);
+        temp.value.endToken = endToken;
+        return nodeFactory(temp.value, temp.children);
 
     }
 
-    private _startPos() {
-        let t = this._tokens.peek();
+    function start() {
+        let t = peek();
 
         if (t.tokenType === TokenType.T_EOF) {
-            return this._tokens.current.index;
+            return current();
         }
 
-        return t.index;
+        return t;
     }
 
-    private _endPos() {
-        return this._tokens.current.index;
+    function end() {
+        return current();
     }
 
-    private _topStatementList(isCurly: boolean) {
+    function topStatementList(isCurly: boolean) {
 
-        let n = this._tempNode(NonTerminalType.TopStatementList);
+        let n = tempNode(NonTerminalType.TopStatementList);
         let t: Token;
         let breakOn = isCurly ? '}' : TokenType.T_EOF;
         let followOn = recoverTopStatementStartTokenTypes.slice(0);
@@ -331,18 +444,18 @@ export class Parser<T> {
 
         while (true) {
 
-            t = this._tokens.peek();
-            if (this._isTopStatementStartToken(t)) {
-                this._followOnStack.push(followOn)
-                n.children.push(this._topStatement());
-                this._followOnStack.pop();
+            t = peek();
+            if (isTopStatementStartToken(t)) {
+                followOnStack.push(followOn)
+                n.children.push(topStatement());
+                followOnStack.pop();
             } else if (t.tokenType === breakOn) {
                 break;
             } else {
                 //error
-                t = this._error(n, followOn, followOn);
+                t = error(n, followOn, followOn);
                 if (t.tokenType === ';') {
-                    this._tokens.next();
+                    next();
                 } else if (t.tokenType === TokenType.T_EOF) {
                     break;
                 }
@@ -350,113 +463,112 @@ export class Parser<T> {
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _topStatement() {
+    function topStatement() {
 
-        let t = this._tokens.peek();
+        let t = peek();
 
         switch (t.tokenType) {
             case TokenType.T_NAMESPACE:
-                return this._namespaceStatement();
+                return namespaceStatement();
             case TokenType.T_USE:
-                return this._useStatement();
+                return useStatement();
             case TokenType.T_HALT_COMPILER:
-                return this._haltCompilerStatement();
+                return haltCompilerStatement();
             case TokenType.T_CONST:
-                return this._constantDeclarationStatement();
+                return constantDeclarationStatement();
             case TokenType.T_FUNCTION:
-                return this._functionDeclaration();
+                return functionDeclaration();
             case TokenType.T_CLASS:
             case TokenType.T_ABSTRACT:
             case TokenType.T_FINAL:
-                return this._classDeclarationStatement();
+                return classDeclarationStatement();
             case TokenType.T_TRAIT:
-                return this._traitDeclarationStatement();
+                return traitDeclarationStatement();
             case TokenType.T_INTERFACE:
-                return this._interfaceDeclarationStatement();
+                return interfaceDeclarationStatement();
             default:
-                return this._statement();
+                return statement();
         }
 
     }
 
-    private _constantDeclarationStatement() {
+    function constantDeclarationStatement() {
 
-        let n = this._tempNode(NonTerminalType.ConstantDeclarationList);
-        this._tokens.next();
+        let n = tempNode(NonTerminalType.ConstantDeclarationList);
+        next();
         let followOn: (TokenType | string)[] = [',', ';'];
         let t: Token;
 
         while (true) {
 
-            this._followOnStack.push(followOn);
-            n.children.push(this._constantDeclaration());
-            this._followOnStack.pop();
-            t = this._tokens.peek();
+            followOnStack.push(followOn);
+            n.children.push(constantDeclaration());
+            followOnStack.pop();
+            t = peek();
             if (t.tokenType === ',') {
-                this._tokens.next();
+                next();
             } else if (t.tokenType === ';') {
-                this._tokens.next();
+                next();
                 break;
             } else {
-                if (this._error(n, [',', ';'], [';']).tokenType === ';') {
-                    this._tokens.next();
-                }
+                error(n, [',', ';'], [';']);
+                consume(';');
                 break;
             }
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _constantDeclaration() {
+    function constantDeclaration() {
 
-        let n = this._tempNode(NonTerminalType.ConstantDeclaration);
+        let n = tempNode(NonTerminalType.ConstantDeclaration);
         let t: Token;
 
-        if (this._tokens.consume(TokenType.T_STRING)) {
-            n.children.push(this._nodeFactory(this._tokens.current));
-            n.value.doc = this._tokens.lastDocComment;
+        if (consume(TokenType.T_STRING)) {
+            n.children.push(nodeFactory(current()));
+            n.value.doc = lastDocComment();
         } else {
-            this._error(n, [TokenType.T_STRING]);
-            n.children.push(this._nodeFactory(null), this._nodeFactory(null));
-            return this._node(n);
+            error(n, [TokenType.T_STRING]);
+            n.children.push(nodeFactory(null), nodeFactory(null));
+            return node(n);
         }
 
-        if (!this._tokens.consume('=')) {
-            this._error(n, ['=']);
-            n.children.push(this._nodeFactory(null));
-            return this._node(n);
+        if (!consume('=')) {
+            error(n, ['=']);
+            n.children.push(nodeFactory(null));
+            return node(n);
         }
 
-        n.children.push(this._expression());
-        return this._node(n);
+        n.children.push(expression());
+        return node(n);
 
     }
 
-    private _expression(minPrecedence = 0) {
+    function expression(minPrecedence = 0) {
 
         let precedence: number;
         let associativity: Associativity;
         let op: Token;
-        let startPos = this._startPos();
+        let startToken = start();
         let opFlag: NonTerminalFlag;
-        this._isBinaryOpPredicate = isVariableAndExpressionBinaryOp;
-        let lhs = this._atom();
+        isBinaryOpPredicate = isVariableAndExpressionBinaryOp;
+        let lhs = atom();
 
         while (true) {
 
-            op = this._tokens.peek();
+            op = peek();
 
-            if (!this._isBinaryOpPredicate(op)) {
+            if (!isBinaryOpPredicate(op)) {
                 break;
             }
 
-            [precedence, associativity] = this._opPrecedenceMap[op.text];
+            [precedence, associativity] = opPrecedenceMap[op.text];
 
             if (precedence < minPrecedence) {
                 break;
@@ -466,18 +578,18 @@ export class Parser<T> {
                 ++precedence;
             }
 
-            this._tokens.next();
+            next();
             if (op.tokenType === '?') {
-                lhs = this._ternaryExpression(lhs, precedence, startPos);
+                lhs = ternaryExpression(lhs, precedence, startToken);
             } else {
-                let rhs: T;
-                if (op.tokenType === '=' && this._tokens.peek().tokenType === '&') {
-                    rhs = this._unaryExpression();
+                let rhs: any;
+                if (op.tokenType === '=' && peek().tokenType === '&') {
+                    rhs = unaryExpression();
                 } else {
-                    rhs = op.tokenType === TokenType.T_INSTANCEOF ? this._newVariable() : this._expression(precedence);
+                    rhs = op.tokenType === TokenType.T_INSTANCEOF ? newVariable() : expression(precedence);
                 }
 
-                lhs = this._binaryNode(lhs, rhs, this._binaryOpToNodeFlag(op), startPos);
+                lhs = binaryNode(lhs, rhs, binaryOpToNodeFlag(op), startToken);
             }
 
         }
@@ -486,15 +598,15 @@ export class Parser<T> {
 
     }
 
-    private _binaryNode(lhs: T, rhs: T, flag: NonTerminalFlag, startPos: number) {
-        let tempNode = this._tempNode(NonTerminalType.BinaryExpression, startPos);
-        tempNode.value.flag = flag;
-        tempNode.children.push(lhs);
-        tempNode.children.push(rhs);
-        return this._node(tempNode);
+    function binaryNode(lhs: any, rhs: any, flag: NonTerminalFlag, startToken: Token) {
+        let n = tempNode(NonTerminalType.BinaryExpression, startToken);
+        n.value.flag = flag;
+        n.children.push(lhs);
+        n.children.push(rhs);
+        return node(n);
     }
 
-    private _unaryOpToNodeFlag(op: Token, isPost = false) {
+    function unaryOpToNodeFlag(op: Token, isPost = false) {
         switch (op.tokenType) {
             case '&':
                 return NonTerminalFlag.UnaryReference;
@@ -517,7 +629,7 @@ export class Parser<T> {
         }
     }
 
-    private _binaryOpToNodeFlag(op: Token) {
+    function binaryOpToNodeFlag(op: Token) {
 
         switch (op.tokenType) {
             case '|':
@@ -609,40 +721,40 @@ export class Parser<T> {
 
     }
 
-    private _ternaryExpression(lhs: T, precedence: number, startPos: number) {
+    function ternaryExpression(lhs: any, precedence: number, startToken: Token) {
 
-        let n = this._tempNode(NonTerminalType.TernaryExpression, startPos);
+        let n = tempNode(NonTerminalType.TernaryExpression, startToken);
         n.children.push(lhs);
 
-        if (this._tokens.consume(':')) {
-            n.children.push(this._nodeFactory(null));
+        if (consume(':')) {
+            n.children.push(nodeFactory(null));
         } else {
-            this._followOnStack.push([':']);
-            n.children.push(this._expression(precedence));
-            this._followOnStack.pop();
+            followOnStack.push([':']);
+            n.children.push(expression(precedence));
+            followOnStack.pop();
 
-            if (!this._tokens.consume(':')) {
+            if (!consume(':')) {
                 //error
-                this._error(n, [':']);
-                n.children.push(this._nodeFactory(null));
-                return this._node(n);
+                error(n, [':']);
+                n.children.push(nodeFactory(null));
+                return node(n);
             }
 
         }
 
-        n.children.push(this._expression(precedence));
-        return this._node(n);
+        n.children.push(expression(precedence));
+        return node(n);
 
     }
 
-    private _atom() {
+    function atom() {
 
-        let t = this._tokens.peek();
+        let t = peek();
 
         switch (t.tokenType) {
             case TokenType.T_STATIC:
-                if (this._tokens.peek(1).tokenType === TokenType.T_FUNCTION) {
-                    return this._closure();
+                if (peek(1).tokenType === TokenType.T_FUNCTION) {
+                    return closure();
                 }
             //fall through
             case TokenType.T_VARIABLE:
@@ -654,19 +766,19 @@ export class Parser<T> {
             case TokenType.T_STRING:
             case TokenType.T_NAMESPACE:
             case '(':
-                this._isBinaryOpPredicate = isBinaryOp;
-                let possibleUnaryStart = t.index;
-                let variable = this._variable();
-                t = this._tokens.peek();
+                isBinaryOpPredicate = isBinaryOp;
+                let possibleUnaryStart = t;
+                let variableNode = variable();
+                t = peek();
                 if (t.tokenType === TokenType.T_INC || t.tokenType === TokenType.T_DEC) {
-                    this._tokens.next();
-                    let unary = this._tempNode(NonTerminalType.UnaryExpression, possibleUnaryStart);
+                    next();
+                    let unary = tempNode(NonTerminalType.UnaryExpression, possibleUnaryStart);
                     unary.value.flag = t.tokenType === TokenType.T_INC ?
                         NonTerminalFlag.UnaryPostInc : NonTerminalFlag.UnaryPostDec
-                    unary.children.push(variable);
-                    return this._node(unary);
+                    unary.children.push(variableNode);
+                    return node(unary);
                 } else {
-                    return variable;
+                    return variableNode;
                 }
             case TokenType.T_INC:
             case TokenType.T_DEC:
@@ -682,17 +794,17 @@ export class Parser<T> {
             case TokenType.T_OBJECT_CAST:
             case TokenType.T_BOOL_CAST:
             case TokenType.T_UNSET_CAST:
-                return this._unaryExpression();
+                return unaryExpression();
             case TokenType.T_LIST:
-                this._isBinaryOpPredicate = isAssignBinaryOp;
-                return this._listExpression();
+                isBinaryOpPredicate = isAssignBinaryOp;
+                return listExpression();
             case TokenType.T_CLONE:
-                return this._cloneExpression();
+                return cloneExpression();
             case TokenType.T_NEW:
-                return this._newExpression();
+                return newExpression();
             case TokenType.T_DNUMBER:
             case TokenType.T_LNUMBER:
-                return this._nodeFactory(this._tokens.next());
+                return nodeFactory(next());
             case TokenType.T_LINE:
             case TokenType.T_FILE:
             case TokenType.T_DIR:
@@ -701,44 +813,44 @@ export class Parser<T> {
             case TokenType.T_FUNC_C:
             case TokenType.T_NS_C:
             case TokenType.T_CLASS_C:
-                let magic = this._tempNode(NonTerminalType.MagicConstant);
-                magic.value.flag = this._magicConstantTokenToFlag(this._tokens.next());
-                return this._node(magic);
+                let magic = tempNode(NonTerminalType.MagicConstant);
+                magic.value.flag = magicConstantTokenToFlag(next());
+                return node(magic);
             case TokenType.T_START_HEREDOC:
-                return this._heredoc();
+                return heredoc();
             case '"':
-                return this._quotedEncapsulatedVariableList(NonTerminalType.DoubleQuotes, '"');
+                return quotedEncapsulatedVariableList(NonTerminalType.DoubleQuotes, '"');
             case '`':
-                return this._quotedEncapsulatedVariableList(NonTerminalType.Backticks, '`');
+                return quotedEncapsulatedVariableList(NonTerminalType.Backticks, '`');
             case TokenType.T_PRINT:
-                return this._keywordExpression(NonTerminalType.Print);
+                return keywordExpression(NonTerminalType.Print);
             case TokenType.T_YIELD:
-                return this._yield();
+                return yieldExpression();
             case TokenType.T_YIELD_FROM:
-                return this._keywordExpression(NonTerminalType.YieldFrom);
+                return keywordExpression(NonTerminalType.YieldFrom);
             case TokenType.T_FUNCTION:
-                return this._closure();
+                return closure();
             case TokenType.T_INCLUDE:
             case TokenType.T_INCLUDE_ONCE:
             case TokenType.T_REQUIRE:
             case TokenType.T_REQUIRE_ONCE:
-                return this._keywordExpression(NonTerminalType.Include);
+                return keywordExpression(NonTerminalType.Include);
             case TokenType.T_EVAL:
-                return this._keywordParenthesisedExpression(NonTerminalType.Eval);
+                return keywordParenthesisedExpression(NonTerminalType.Eval);
             case TokenType.T_EMPTY:
-                return this._keywordParenthesisedExpression(NonTerminalType.Empty);
+                return keywordParenthesisedExpression(NonTerminalType.Empty);
             case TokenType.T_ISSET:
-                return this._isset();
+                return isset();
             default:
                 //error
-                let err = this._tempNode(NonTerminalType.ErrorExpression);
-                this._error(err, []);
-                return this._node(err);
+                let err = tempNode(NonTerminalType.ErrorExpression);
+                error(err, []);
+                return node(err);
         }
 
     }
 
-    private _magicConstantTokenToFlag(t: Token) {
+    function magicConstantTokenToFlag(t: Token) {
         switch (t.tokenType) {
             case TokenType.T_LINE:
                 return NonTerminalFlag.MagicLine;
@@ -761,143 +873,141 @@ export class Parser<T> {
         }
     }
 
-    private _isset() {
+    function isset() {
 
-        let n = this._tempNode(NonTerminalType.Isset);
-        let t = this._tokens.next();
+        let n = tempNode(NonTerminalType.Isset);
+        let t = next();
 
-        if (!this._tokens.consume('(')) {
+        if (!consume('(')) {
             //error
-            this._error(n, ['(']);
-            return this._node(n);
+            error(n, ['(']);
+            return node(n);
         }
 
         let followOn: (TokenType | string)[] = [',', ')'];
 
         while (true) {
 
-            this._followOnStack.push(followOn);
-            n.children.push(this._expression());
-            this._followOnStack.pop();
-            t = this._tokens.peek();
+            followOnStack.push(followOn);
+            n.children.push(expression());
+            followOnStack.pop();
+            t = peek();
 
             if (t.tokenType === ',') {
-                this._tokens.next();
+                next();
             } else if (t.tokenType === ')') {
-                this._tokens.next();
+                next();
                 break;
             } else {
                 //error
-                if (this._error(n, followOn, [')']).tokenType === ')') {
-                    this._tokens.next();
+                if (error(n, followOn, [')']).tokenType === ')') {
+                    next();
                 }
                 break;
             }
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _keywordParenthesisedExpression(type: NonTerminalType) {
+    function keywordParenthesisedExpression(type: NonTerminalType) {
 
-        let n = this._tempNode(type);
-        let t = this._tokens.next();
-        n.children.push(this._encapsulatedExpression('(', ')'));
-        return this._node(n);
+        let n = tempNode(type);
+        let t = next();
+        n.children.push(encapsulatedExpression('(', ')'));
+        return node(n);
 
     }
 
-    private _keywordExpression(nodeType: NonTerminalType) {
+    function keywordExpression(nodeType: NonTerminalType) {
 
-        let n = this._tempNode(nodeType);
-        this._tokens.next();
-        n.children.push(this._expression());
-        return this._node(n);
+        let n = tempNode(nodeType);
+        next();
+        n.children.push(expression());
+        return node(n);
     }
 
+    function yieldExpression() {
 
+        let n = tempNode(NonTerminalType.Yield);
+        next();
 
-    private _yield() {
-
-        let n = this._tempNode(NonTerminalType.Yield);
-        this._tokens.next();
-
-        if (!this._isExpressionStartToken(this._tokens.peek())) {
-            n.children.push(this._nodeFactory(null), this._nodeFactory(null));
-            return this._node(n);
+        if (!isExpressionStartToken(peek())) {
+            n.children.push(nodeFactory(null), nodeFactory(null));
+            return node(n);
         }
 
-        this._followOnStack.push([TokenType.T_DOUBLE_ARROW]);
-        n.children.push(this._expression());
-        this._followOnStack.pop();
+        followOnStack.push([TokenType.T_DOUBLE_ARROW]);
+        n.children.push(expression());
+        followOnStack.pop();
 
-        if (!this._tokens.consume(TokenType.T_DOUBLE_ARROW)) {
-            n.children.push(this._nodeFactory(null));
-            return this._node(n);
+        if (!consume(TokenType.T_DOUBLE_ARROW)) {
+            n.children.push(nodeFactory(null));
+            return node(n);
         }
 
-        n.children.push(this._expression());
-        return this._node(n);
+        n.children.push(expression());
+        return node(n);
 
     }
 
-    private _quotedEncapsulatedVariableList(type: NonTerminalType, closeTokenType: TokenType | string) {
+    function quotedEncapsulatedVariableList(type: NonTerminalType, closeTokenType: TokenType | string) {
 
-        let n = this._tempNode(type);
-        this._tokens.next();
-        this._followOnStack.push([closeTokenType]);
-        n.children.push(this._encapsulatedVariableList(closeTokenType));
-        this._followOnStack.pop();
+        let n = tempNode(type);
+        next();
+        followOnStack.push([closeTokenType]);
+        n.children.push(encapsulatedVariableList(closeTokenType));
+        followOnStack.pop();
 
-        if (!this._tokens.consume(closeTokenType)) {
+        if (!consume(closeTokenType)) {
             //error
-            if (this._error(n, [closeTokenType], [closeTokenType]).tokenType === closeTokenType) {
-                this._tokens.next();
+            if (error(n, [closeTokenType], [closeTokenType]).tokenType === closeTokenType) {
+                next();
             }
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _encapsulatedVariableList(breakOn: TokenType | string) {
+    function encapsulatedVariableList(breakOn: TokenType | string) {
 
-        let n = this._tempNode(NonTerminalType.EncapsulatedVariableList);
+        let n = tempNode(NonTerminalType.EncapsulatedVariableList);
         let followOn: (TokenType | string)[] = [
             TokenType.T_ENCAPSED_AND_WHITESPACE, TokenType.T_VARIABLE,
             TokenType.T_DOLLAR_OPEN_CURLY_BRACES, TokenType.T_CURLY_OPEN, breakOn
         ];
 
-        this._followOnStack.push(followOn);
+        followOnStack.push(followOn);
         while (true) {
 
-            switch (this._tokens.peek().tokenType) {
+            switch (peek().tokenType) {
                 case TokenType.T_ENCAPSED_AND_WHITESPACE:
-                    n.children.push(this._nodeFactory(this._tokens.next()));
+                    n.children.push(nodeFactory(next()));
                     continue;
                 case TokenType.T_VARIABLE:
-                    let t = this._tokens.peek(1);
+                    let t = peek(1);
                     if (t.tokenType === '[') {
-                        n.children.push(this._encapsulatedDimension());
+                        n.children.push(encapsulatedDimension());
                     } else if (t.tokenType === TokenType.T_OBJECT_OPERATOR) {
-                        n.children.push(this._encapsulatedProperty());
+                        n.children.push(encapsulatedProperty());
                     } else {
-                        n.children.push(this._simpleVariable());
+                        n.children.push(simpleVariable());
                     }
                     continue;
                 case TokenType.T_DOLLAR_OPEN_CURLY_BRACES:
-                    n.children.push(this._dollarCurlyOpenEncapsulatedVariable());
+                    n.children.push(dollarCurlyOpenEncapsulatedVariable());
                     continue;
                 case TokenType.T_CURLY_OPEN:
-                    n.children.push(this._curlyOpenEncapsulatedVariable());
+                    n.children.push(curlyOpenEncapsulatedVariable());
                     continue;
                 case breakOn:
                     break;
                 default:
                     //error
-                    if (followOn.indexOf(this._error(n, followOn).tokenType) === -1) {
+                    if (followOn.indexOf(error(n, followOn).tokenType) === -1) {
                         break;
                     }
             }
@@ -906,248 +1016,248 @@ export class Parser<T> {
 
         }
 
-        this._followOnStack.pop();
-        return this._node(n);
+        followOnStack.pop();
+        return node(n);
 
     }
 
-    private _curlyOpenEncapsulatedVariable() {
+    function curlyOpenEncapsulatedVariable() {
 
         //errNode placeholder for unclosed braces
-        let errNode = this._tempNode(NonTerminalType.ErrorVariable);
-        this._tokens.next();
-        this._followOnStack.push(['}']);
-        errNode.children.push(this._variable());
-        this._followOnStack.pop();
+        let errNode = tempNode(NonTerminalType.ErrorVariable);
+        next();
+        followOnStack.push(['}']);
+        errNode.children.push(variable());
+        followOnStack.pop();
 
-        if (this._tokens.consume('}')) {
+        if (consume('}')) {
             //discard errNode
             return errNode.children.pop();
         } else {
-            if (this._error(errNode, ['}'], ['}']).tokenType === '}') {
-                this._tokens.next();
+            if (error(errNode, ['}'], ['}']).tokenType === '}') {
+                next();
             }
-            return this._node(errNode);
+            return node(errNode);
         }
 
     }
 
-    private _dollarCurlyOpenEncapsulatedVariable() {
+    function dollarCurlyOpenEncapsulatedVariable() {
 
         //err node is just a placeholder should closing brace not found
-        let errNode = this._tempNode(NonTerminalType.ErrorVariable);
-        let n: TempNode<T>;
-        this._tokens.next(); //${
-        let t = this._tokens.peek();
+        let errNode = tempNode(NonTerminalType.ErrorVariable);
+        let n: TempNode;
+        next(); //${
+        let t = peek();
 
         if (t.tokenType === TokenType.T_STRING_VARNAME) {
 
-            if (this._tokens.peek(1).tokenType === '[') {
-                n = this._tempNode(NonTerminalType.Dimension);
-                n.children.push(this._simpleVariable());
-                this._tokens.next();
-                this._followOnStack.push([']', '}']);
-                n.children.push(this._expression());
-                this._followOnStack.pop();
-                if (!this._tokens.consume(']')) {
+            if (peek(1).tokenType === '[') {
+                n = tempNode(NonTerminalType.Dimension);
+                n.children.push(simpleVariable());
+                next();
+                followOnStack.push([']', '}']);
+                n.children.push(expression());
+                followOnStack.pop();
+                if (!consume(']')) {
                     //error
-                    if (this._error(n, [']'], [']', '}']).tokenType === ']') {
-                        this._tokens.next();
+                    if (error(n, [']'], [']', '}']).tokenType === ']') {
+                        next();
                     }
                 }
 
             } else {
-                n = this._tempNode(NonTerminalType.Variable);
-                n.children.push(this._nodeFactory(this._tokens.next()));
+                n = tempNode(NonTerminalType.Variable);
+                n.children.push(nodeFactory(next()));
             }
 
-            errNode.children.push(this._node(n));
+            errNode.children.push(node(n));
 
-        } else if (this._isExpressionStartToken(t)) {
-            this._followOnStack.push(['}']);
-            errNode.children.push(this._expression());
-            this._followOnStack.pop();
+        } else if (isExpressionStartToken(t)) {
+            followOnStack.push(['}']);
+            errNode.children.push(expression());
+            followOnStack.pop();
         } else {
             //error
-            this._error(errNode, [], ['}']);
+            error(errNode, [], ['}']);
         }
 
-        if (this._tokens.consume('}')) {
-            return errNode.value.errors.length ? this._node(errNode) : errNode.children.pop();
+        if (consume('}')) {
+            return errNode.value.errors.length ? node(errNode) : errNode.children.pop();
         } else {
             //error
-            if (this._error(errNode, ['}'], ['}']).tokenType === '}') {
-                this._tokens.next();
+            if (error(errNode, ['}'], ['}']).tokenType === '}') {
+                next();
             }
-            return this._node(errNode);
+            return node(errNode);
         }
 
 
     }
 
-    private _encapsulatedDimension() {
+    function encapsulatedDimension() {
 
-        let n = this._tempNode(NonTerminalType.Dimension);
-        n.children.push(this._simpleVariable());
+        let n = tempNode(NonTerminalType.Dimension);
+        n.children.push(simpleVariable());
 
         //will always be [
-        this._tokens.next();
+        next();
 
-        this._followOnStack.push([']']);
+        followOnStack.push([']']);
 
-        switch (this._tokens.peek().tokenType) {
+        switch (peek().tokenType) {
             case TokenType.T_STRING:
             case TokenType.T_NUM_STRING:
-                n.children.push(this._nodeFactory(this._tokens.next()));
+                n.children.push(nodeFactory(next()));
                 break;
             case TokenType.T_VARIABLE:
-                n.children.push(this._simpleVariable());
+                n.children.push(simpleVariable());
                 break;
             case '-':
-                let unary = this._tempNode(NonTerminalType.UnaryExpression);
+                let unary = tempNode(NonTerminalType.UnaryExpression);
                 unary.value.flag = NonTerminalFlag.UnaryMinus;
-                this._tokens.next();
-                if (this._tokens.consume(TokenType.T_NUM_STRING)) {
-                    unary.children.push(this._nodeFactory(this._tokens.current));
+                next();
+                if (consume(TokenType.T_NUM_STRING)) {
+                    unary.children.push(nodeFactory(current()));
                 } else {
-                    this._error(unary, [TokenType.T_NUM_STRING]);
+                    error(unary, [TokenType.T_NUM_STRING]);
                 }
-                n.children.push(this._node(unary));
+                n.children.push(node(unary));
                 break;
             default:
                 //error
-                n.children.push(this._nodeFactory(null));
-                this._error(n, [
+                n.children.push(nodeFactory(null));
+                error(n, [
                     TokenType.T_STRING, TokenType.T_NUM_STRING, TokenType.T_VARIABLE, '-'
                 ]);
                 break;
         }
 
-        this._followOnStack.pop();
+        followOnStack.pop();
 
-        if (!this._tokens.consume(']')) {
+        if (!consume(']')) {
             //error
-            if (this._error(n, [']'], [']']).tokenType === ']') {
-                this._tokens.next();
+            if (error(n, [']'], [']']).tokenType === ']') {
+                next();
             }
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _encapsulatedProperty() {
-        let n = this._tempNode(NonTerminalType.Property);
-        n.children.push(this._simpleVariable());
+    function encapsulatedProperty() {
+        let n = tempNode(NonTerminalType.Property);
+        n.children.push(simpleVariable());
 
         // will always be TokenType.T_OBJECT_OPERATOR
-        this._tokens.next();
+        next();
 
-        if (this._tokens.consume(TokenType.T_STRING)) {
-            n.children.push(this._nodeFactory(this._tokens.current));
+        if (consume(TokenType.T_STRING)) {
+            n.children.push(nodeFactory(current()));
         } else {
             //error
-            this._error(n, [TokenType.T_STRING]);
+            error(n, [TokenType.T_STRING]);
         }
 
-        return this._node(n);
+        return node(n);
     }
 
-    private _heredoc() {
+    function heredoc() {
 
-        let n = this._tempNode(NonTerminalType.Heredoc);
-        let t = this._tokens.next();
+        let n = tempNode(NonTerminalType.Heredoc);
+        let t = next();
 
-        this._followOnStack.push([TokenType.T_END_HEREDOC]);
-        n.children.push(this._encapsulatedVariableList(TokenType.T_END_HEREDOC));
-        this._followOnStack.pop();
+        followOnStack.push([TokenType.T_END_HEREDOC]);
+        n.children.push(encapsulatedVariableList(TokenType.T_END_HEREDOC));
+        followOnStack.pop();
 
-        if (!this._tokens.consume(TokenType.T_END_HEREDOC)) {
+        if (!consume(TokenType.T_END_HEREDOC)) {
             //error
-            if (this._error(n, [TokenType.T_END_HEREDOC], [TokenType.T_END_HEREDOC]).tokenType === TokenType.T_END_HEREDOC) {
-                this._tokens.next();
+            if (error(n, [TokenType.T_END_HEREDOC], [TokenType.T_END_HEREDOC]).tokenType === TokenType.T_END_HEREDOC) {
+                next();
             }
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _anonymousClassDeclaration() {
+    function anonymousClassDeclaration() {
 
-        let n = this._tempNode(NonTerminalType.AnonymousClassDeclaration);
-        this._tokens.next();
-        n.value.doc = this._tokens.lastDocComment;
+        let n = tempNode(NonTerminalType.AnonymousClassDeclaration);
+        next();
+        n.value.doc = lastDocComment();
 
-        if (this._tokens.peek().tokenType === '(') {
-            this._followOnStack.push([TokenType.T_EXTENDS, TokenType.T_IMPLEMENTS, '{']);
-            n.children.push(this._argumentList());
-            this._followOnStack.pop();
+        if (peek().tokenType === '(') {
+            followOnStack.push([TokenType.T_EXTENDS, TokenType.T_IMPLEMENTS, '{']);
+            n.children.push(argumentList());
+            followOnStack.pop();
         } else {
-            n.children.push(this._nodeFactory(null));
+            n.children.push(nodeFactory(null));
         }
 
-        if (this._tokens.consume(TokenType.T_EXTENDS)) {
-            this._followOnStack.push([TokenType.T_IMPLEMENTS, '{']);
-            n.children.push(this._name());
-            this._followOnStack.pop();
+        if (consume(TokenType.T_EXTENDS)) {
+            followOnStack.push([TokenType.T_IMPLEMENTS, '{']);
+            n.children.push(name());
+            followOnStack.pop();
         } else {
-            n.children.push(this._nodeFactory(null));
+            n.children.push(nodeFactory(null));
         }
 
-        if (this._tokens.consume(TokenType.T_IMPLEMENTS)) {
-            this._followOnStack.push(['{']);
-            n.children.push(this._nameList());
-            this._followOnStack.pop();
+        if (consume(TokenType.T_IMPLEMENTS)) {
+            followOnStack.push(['{']);
+            n.children.push(nameList());
+            followOnStack.pop();
         } else {
-            n.children.push(this._nodeFactory(null));
+            n.children.push(nodeFactory(null));
         }
 
-        n.children.push(this._classStatementList());
-        return this._node(n);
+        n.children.push(classStatementList());
+        return node(n);
 
     }
 
-    private _classStatementList() {
+    function classStatementList() {
 
-        let n = this._tempNode(NonTerminalType.ClassStatementList);
+        let n = tempNode(NonTerminalType.ClassStatementList);
         let t: Token;
 
-        if (!this._tokens.consume('{')) {
+        if (!consume('{')) {
             //error
-            this._error(n, ['{']);
-            return this._node(n);
+            error(n, ['{']);
+            return node(n);
         }
 
         let followOn: (TokenType | string)[] = recoverClassStatementStartTokenTypes.slice(0);
         followOn.push('}');
 
         while (true) {
-            t = this._tokens.peek();
+            t = peek();
 
             if (t.tokenType === '}') {
-                this._tokens.next();
+                next();
                 break;
-            } else if (this._isClassStatementStartToken(t)) {
-                this._followOnStack.push(followOn);
-                n.children.push(this._classStatement());
-                this._followOnStack.pop();
+            } else if (isClassStatementStartToken(t)) {
+                followOnStack.push(followOn);
+                n.children.push(classStatement());
+                followOnStack.pop();
             } else {
                 //error
-                t = this._error(n, followOn, followOn);
-                if (!this._isClassStatementStartToken(t) && t.tokenType !== '}') {
+                t = error(n, followOn, followOn);
+                if (!isClassStatementStartToken(t) && t.tokenType !== '}') {
                     break;
                 }
             }
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _isClassStatementStartToken(t: Token) {
+    function isClassStatementStartToken(t: Token) {
         switch (t.tokenType) {
             case TokenType.T_PUBLIC:
             case TokenType.T_PROTECTED:
@@ -1165,10 +1275,10 @@ export class Parser<T> {
         }
     }
 
-    private _classStatement() {
+    function classStatement() {
 
-        let n = this._tempNode(NonTerminalType.ErrorClassStatement);
-        let t = this._tokens.peek();
+        let n = tempNode(NonTerminalType.ErrorClassStatement);
+        let t = peek();
 
         switch (t.tokenType) {
             case TokenType.T_PUBLIC:
@@ -1177,32 +1287,32 @@ export class Parser<T> {
             case TokenType.T_STATIC:
             case TokenType.T_ABSTRACT:
             case TokenType.T_FINAL:
-                n.value.flag = this._memberModifierList();
-                t = this._tokens.peek();
+                n.value.flag = memberModifierList();
+                t = peek();
                 if (t.tokenType === TokenType.T_VARIABLE) {
-                    return this._propertyDeclarationStatement(n);
+                    return propertyDeclarationStatement(n);
                 } else if (t.tokenType === TokenType.T_FUNCTION) {
-                    return this._methodDeclaration(n);
+                    return methodDeclaration(n);
                 } else if (t.tokenType === TokenType.T_CONST) {
-                    return this._classConstantDeclarationStatement(n);
+                    return classConstantDeclarationStatement(n);
                 } else {
                     //error
-                    this._error(n,
+                    error(n,
                         [TokenType.T_VARIABLE, TokenType.T_FUNCTION, TokenType.T_CONST]
                     );
-                    return this._node(n);
+                    return node(n);
                 }
             case TokenType.T_FUNCTION:
-                return this._methodDeclaration(n);
+                return methodDeclaration(n);
             case TokenType.T_VAR:
-                this._tokens.next();
+                next();
                 n.value.flag = NonTerminalFlag.ModifierPublic;
-                return this._propertyDeclarationStatement(n);
+                return propertyDeclarationStatement(n);
             case TokenType.T_CONST:
                 n.value.flag = NonTerminalFlag.ModifierPublic;
-                return this._classConstantDeclarationStatement(n);
+                return classConstantDeclarationStatement(n);
             case TokenType.T_USE:
-                return this._useTraitStatement();
+                return useTraitStatement();
             default:
                 //error
                 //should never get here
@@ -1212,49 +1322,49 @@ export class Parser<T> {
 
     }
 
-    private _useTraitStatement() {
+    function useTraitStatement() {
 
-        let n = this._tempNode(NonTerminalType.UseTrait);
-        let t = this._tokens.next();
-        this._followOnStack.push([';', '{']);
-        n.children.push(this._nameList());
-        this._followOnStack.pop();
-        n.children.push(this._traitAdaptationList());
-        return this._node(n);
+        let n = tempNode(NonTerminalType.UseTrait);
+        let t = next();
+        followOnStack.push([';', '{']);
+        n.children.push(nameList());
+        followOnStack.pop();
+        n.children.push(traitAdaptationList());
+        return node(n);
 
     }
 
-    private _traitAdaptationList() {
+    function traitAdaptationList() {
 
-        let n = this._tempNode(NonTerminalType.TraitAdaptationList);
+        let n = tempNode(NonTerminalType.TraitAdaptationList);
         let t: Token;
 
-        if (this._tokens.consume(';')) {
-            return this._node(n);
+        if (consume(';')) {
+            return node(n);
         }
 
-        if (!this._tokens.consume('{')) {
-            this._error(n, ['{']);
-            return this._node(n, this._endPos());
+        if (!consume('{')) {
+            error(n, ['{']);
+            return node(n, end());
         }
 
-        this._followOnStack.push(['}']);
+        followOnStack.push(['}']);
 
         while (true) {
 
-            t = this._tokens.peek();
+            t = peek();
 
             if (t.tokenType === '}') {
-                this._tokens.next();
+                next();
                 break;
             } else if (t.tokenType === TokenType.T_STRING ||
                 t.tokenType === TokenType.T_NAMESPACE ||
                 t.tokenType === TokenType.T_NS_SEPARATOR ||
-                this._isSemiReservedToken(t)) {
-                n.children.push(this._traitAdaptation());
+                isSemiReservedToken(t)) {
+                n.children.push(traitAdaptation());
             } else {
                 //error
-                t = this._error(n, [
+                t = error(n, [
                     '}', TokenType.T_STRING, TokenType.T_NAMESPACE, TokenType.T_NS_SEPARATOR
                 ]);
                 if (t.tokenType !== '}') {
@@ -1264,353 +1374,353 @@ export class Parser<T> {
 
         }
 
-        this._followOnStack.pop();
-        return this._node(n);
+        followOnStack.pop();
+        return node(n);
 
     }
 
-    private _traitAdaptation() {
+    function traitAdaptation() {
 
-        let n = this._tempNode(NonTerminalType.ErrorTraitAdaptation);
-        let t = this._tokens.peek();
-        let t2 = this._tokens.peek(1);
+        let n = tempNode(NonTerminalType.ErrorTraitAdaptation);
+        let t = peek();
+        let t2 = peek(1);
 
         if (t.tokenType === TokenType.T_NAMESPACE ||
             t.tokenType === TokenType.T_NS_SEPARATOR ||
             (t.tokenType === TokenType.T_STRING &&
                 (t2.tokenType === TokenType.T_PAAMAYIM_NEKUDOTAYIM || t2.tokenType === TokenType.T_NS_SEPARATOR))) {
 
-            this._followOnStack.push([TokenType.T_INSTEADOF, TokenType.T_AS]);
-            n.children.push(this._methodReference());
-            this._followOnStack.pop();
+            followOnStack.push([TokenType.T_INSTEADOF, TokenType.T_AS]);
+            n.children.push(methodReference());
+            followOnStack.pop();
 
-            if (this._tokens.consume(TokenType.T_INSTEADOF)) {
-                return this._traitPrecedence(n);
+            if (consume(TokenType.T_INSTEADOF)) {
+                return traitPrecedence(n);
             }
 
-        } else if (t.tokenType === TokenType.T_STRING || this._isSemiReservedToken(t)) {
+        } else if (t.tokenType === TokenType.T_STRING || isSemiReservedToken(t)) {
 
-            let methodRef = this._tempNode(NonTerminalType.MethodReference, n.value.startTokenIndex);
-            methodRef.children.push(this._nodeFactory(null), this._nodeFactory(this._tokens.next()));
-            n.children.push(this._node(methodRef));
+            let methodRef = tempNode(NonTerminalType.MethodReference, n.value.startToken);
+            methodRef.children.push(nodeFactory(null), nodeFactory(next()));
+            n.children.push(node(methodRef));
         } else {
             //error
-            this._error(n, [TokenType.T_NAMESPACE, TokenType.T_NS_SEPARATOR, TokenType.T_STRING]);
-            return this._node(n);
+            error(n, [TokenType.T_NAMESPACE, TokenType.T_NS_SEPARATOR, TokenType.T_STRING]);
+            return node(n);
         }
 
-        return this._traitAlias(n);
+        return traitAlias(n);
 
 
     }
 
-    private _traitAlias(n: TempNode<T>) {
+    function traitAlias(n: TempNode) {
 
 
-        if (this._tokens.consume(TokenType.T_AS)) {
-            this._error(n, [TokenType.T_AS]);
-            n.children.push(this._nodeFactory(null));
-            return this._node(n);
+        if (consume(TokenType.T_AS)) {
+            error(n, [TokenType.T_AS]);
+            n.children.push(nodeFactory(null));
+            return node(n);
         }
 
-        let t = this._tokens.peek();
+        let t = peek();
 
-        if (t.tokenType === TokenType.T_STRING || this._isReservedToken(t)) {
-            n.children.push(this._nodeFactory(this._tokens.next()));
+        if (t.tokenType === TokenType.T_STRING || isReservedToken(t)) {
+            n.children.push(nodeFactory(next()));
         } else if (t.tokenType === TokenType.T_PUBLIC || t.tokenType === TokenType.T_PROTECTED || t.tokenType === TokenType.T_PRIVATE) {
-            n.value.flag = this._memberModifierToFlag(this._tokens.next());
-            t = this._tokens.peek();
-            if (t.tokenType === TokenType.T_STRING || this._isSemiReservedToken(t)) {
-                n.children.push(this._nodeFactory(this._tokens.next()));
+            n.value.flag = memberModifierToFlag(next());
+            t = peek();
+            if (t.tokenType === TokenType.T_STRING || isSemiReservedToken(t)) {
+                n.children.push(nodeFactory(next()));
             } else {
-                n.children.push(this._nodeFactory(null));
+                n.children.push(nodeFactory(null));
             }
         } else {
             //error
-            this._error(n, [TokenType.T_STRING, TokenType.T_PUBLIC, TokenType.T_PROTECTED, TokenType.T_PRIVATE]);
-            n.children.push(this._nodeFactory(null));
-            return this._node(n);
+            error(n, [TokenType.T_STRING, TokenType.T_PUBLIC, TokenType.T_PROTECTED, TokenType.T_PRIVATE]);
+            n.children.push(nodeFactory(null));
+            return node(n);
         }
 
-        if (!this._tokens.consume(';')) {
+        if (!consume(';')) {
             //error
-            if (this._error(n, [';'], [';']).tokenType === ';') {
-                this._tokens.next();
+            if (error(n, [';'], [';']).tokenType === ';') {
+                next();
             }
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _traitPrecedence(n: TempNode<T>) {
+    function traitPrecedence(n: TempNode) {
 
         n.value.astNodeType = NonTerminalType.TraitPrecendence;
-        this._followOnStack.push([';']);
-        n.children.push(this._nameList());
-        this._followOnStack.pop();
+        followOnStack.push([';']);
+        n.children.push(nameList());
+        followOnStack.pop();
 
-        if (!this._tokens.consume(';')) {
+        if (!consume(';')) {
             //error
-            if (this._error(n, [';'], [';']).tokenType === ';') {
-                this._tokens.next();
+            if (error(n, [';'], [';']).tokenType === ';') {
+                next();
             }
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _methodReference() {
+    function methodReference() {
 
-        let n = this._tempNode(NonTerminalType.MethodReference, this._startPos());
+        let n = tempNode(NonTerminalType.MethodReference);
 
-        this._followOnStack.push([TokenType.T_PAAMAYIM_NEKUDOTAYIM]);
-        n.children.push(this._name());
-        this._followOnStack.pop();
+        followOnStack.push([TokenType.T_PAAMAYIM_NEKUDOTAYIM]);
+        n.children.push(name());
+        followOnStack.pop();
 
-        if (this._tokens.consume(TokenType.T_PAAMAYIM_NEKUDOTAYIM)) {
+        if (consume(TokenType.T_PAAMAYIM_NEKUDOTAYIM)) {
             //error
-            this._error(n, [TokenType.T_PAAMAYIM_NEKUDOTAYIM], [TokenType.T_STRING]);
+            error(n, [TokenType.T_PAAMAYIM_NEKUDOTAYIM], [TokenType.T_STRING]);
         }
 
-        let t = this._tokens.peek();
+        let t = peek();
 
-        if (t.tokenType === TokenType.T_STRING || this._isSemiReservedToken(t)) {
-            n.children.push(this._nodeFactory(this._tokens.next()));
+        if (t.tokenType === TokenType.T_STRING || isSemiReservedToken(t)) {
+            n.children.push(nodeFactory(next()));
         } else {
-            n.children.push(this._nodeFactory(null));
-            this._error(n, [TokenType.T_STRING]);
+            n.children.push(nodeFactory(null));
+            error(n, [TokenType.T_STRING]);
         }
 
-        return this._node(n, this._endPos());
+        return node(n);
 
     }
 
-    private _methodDeclaration(n: TempNode<T>) {
+    function methodDeclaration(n: TempNode) {
 
         n.value.astNodeType = NonTerminalType.MethodDeclaration;
-        this._tokens.next(); //T_FUNCTION
-        n.value.doc = this._tokens.lastDocComment;
+        next(); //T_FUNCTION
+        n.value.doc = lastDocComment();
 
-        if (this._tokens.consume('&')) {
+        if (consume('&')) {
             n.value.flag |= NonTerminalFlag.ReturnsRef;
         }
 
-        let t = this._tokens.peek();
-        if (t.tokenType !== TokenType.T_STRING && !this._isSemiReservedToken(t)) {
+        let t = peek();
+        if (t.tokenType !== TokenType.T_STRING && !isSemiReservedToken(t)) {
             //error
-            this._error(n, [TokenType.T_STRING], [';', ':', '{', '(']);
-            n.children.push(this._nodeFactory(null));
+            error(n, [TokenType.T_STRING], [';', ':', '{', '(']);
+            n.children.push(nodeFactory(null));
         } else {
-            n.children.push(this._nodeFactory(this._tokens.next()));
+            n.children.push(nodeFactory(next()));
         }
 
-        this._followOnStack.push([':', ';', '{']);
-        n.children.push(this._parameterList());
-        this._followOnStack.pop();
+        followOnStack.push([':', ';', '{']);
+        n.children.push(parameterList());
+        followOnStack.pop();
 
-        if (this._tokens.peek().tokenType === ':') {
-            n.children.push(this._returnType());
+        if (peek().tokenType === ':') {
+            n.children.push(returnType());
         } else {
-            n.children.push(this._nodeFactory(null));
+            n.children.push(nodeFactory(null));
         }
 
-        t = this._tokens.peek();
+        t = peek();
         if (t.tokenType === ';' && (n.value.flag & NonTerminalFlag.ModifierAbstract)) {
-            this._tokens.next();
-            n.children.push(this._nodeFactory(null));
+            next();
+            n.children.push(nodeFactory(null));
         } else {
-            n.children.push(this._block());
+            n.children.push(block());
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _innerStatementList(breakOn: (TokenType | string)[]) {
+    function innerStatementList(breakOn: (TokenType | string)[]) {
 
-        let n = this._tempNode(NonTerminalType.InnerStatementList);
+        let n = tempNode(NonTerminalType.InnerStatementList);
         let t: Token;
         let followOn = recoverInnerStatementStartTokenTypes;
 
         while (true) {
 
-            t = this._tokens.peek();
+            t = peek();
 
-            if (this._isInnerStatementStartToken(t)) {
-                this._followOnStack.push(followOn);
-                n.children.push(this._innerStatement());
-                this._followOnStack.pop();
+            if (isInnerStatementStartToken(t)) {
+                followOnStack.push(followOn);
+                n.children.push(innerStatement());
+                followOnStack.pop();
             } else if (breakOn.indexOf(t.tokenType) !== -1) {
                 break;
             } else {
                 //error
-                t = this._error(n, followOn, followOn);
+                t = error(n, followOn, followOn);
                 if (t.tokenType === ';') {
-                    this._tokens.next();
-                } else if (!this._isInnerStatementStartToken(t) && breakOn.indexOf(t.tokenType) === -1) {
+                    next();
+                } else if (!isInnerStatementStartToken(t) && breakOn.indexOf(t.tokenType) === -1) {
                     break;
                 }
             }
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _innerStatement() {
+    function innerStatement() {
 
-        let t = this._tokens.peek();
+        let t = peek();
 
         switch (t.tokenType) {
             case TokenType.T_FUNCTION:
-                return this._functionDeclaration();
+                return functionDeclaration();
             case TokenType.T_ABSTRACT:
             case TokenType.T_FINAL:
             case TokenType.T_CLASS:
-                return this._classDeclarationStatement();
+                return classDeclarationStatement();
             case TokenType.T_TRAIT:
-                return this._traitDeclarationStatement();
+                return traitDeclarationStatement();
             case TokenType.T_INTERFACE:
-                return this._interfaceDeclarationStatement();
+                return interfaceDeclarationStatement();
             default:
-                return this._statement();
+                return statement();
 
         }
 
     }
 
-    private _interfaceDeclarationStatement() {
+    function interfaceDeclarationStatement() {
 
-        let n = this._tempNode(NonTerminalType.InterfaceDeclaration);
-        let t = this._tokens.next();
-        n.value.doc = this._tokens.lastDocComment;
+        let n = tempNode(NonTerminalType.InterfaceDeclaration);
+        let t = next();
+        n.value.doc = lastDocComment();
 
-        if (this._tokens.consume(TokenType.T_STRING)) {
-            n.children.push(this._nodeFactory(this._tokens.current));
+        if (consume(TokenType.T_STRING)) {
+            n.children.push(nodeFactory(current()));
         } else {
-            n.children.push(this._nodeFactory(null));
-            this._error(n, [TokenType.T_STRING], [TokenType.T_EXTENDS, '{']);
+            n.children.push(nodeFactory(null));
+            error(n, [TokenType.T_STRING], [TokenType.T_EXTENDS, '{']);
         }
 
-        if (this._tokens.consume(TokenType.T_EXTENDS)) {
-            this._followOnStack.push(['{']);
-            n.children.push(this._nameList());
-            this._followOnStack.pop();
+        if (consume(TokenType.T_EXTENDS)) {
+            followOnStack.push(['{']);
+            n.children.push(nameList());
+            followOnStack.pop();
         } else {
-            n.children.push(this._nodeFactory(null));
+            n.children.push(nodeFactory(null));
         }
 
-        n.children.push(this._classStatementList());
-        return this._node(n);
+        n.children.push(classStatementList());
+        return node(n);
 
     }
 
-    private _traitDeclarationStatement() {
+    function traitDeclarationStatement() {
 
-        let n = this._tempNode(NonTerminalType.TraitDeclaration);
-        let t = this._tokens.next();
-        n.value.doc = this._tokens.lastDocComment;
+        let n = tempNode(NonTerminalType.TraitDeclaration);
+        let t = next();
+        n.value.doc = lastDocComment();
 
-        if (this._tokens.consume(TokenType.T_STRING)) {
-            n.children.push(this._nodeFactory(this._tokens.current));
+        if (consume(TokenType.T_STRING)) {
+            n.children.push(nodeFactory(current()));
         } else {
-            n.children.push(this._nodeFactory(null));
-            this._error(n, [TokenType.T_STRING], ['{']);
+            n.children.push(nodeFactory(null));
+            error(n, [TokenType.T_STRING], ['{']);
         }
 
-        n.children.push(this._classStatementList());
-        return this._node(n);
+        n.children.push(classStatementList());
+        return node(n);
     }
 
-    private _functionDeclaration() {
+    function functionDeclaration() {
 
-        let n = this._tempNode(NonTerminalType.FunctionDeclaration);
+        let n = tempNode(NonTerminalType.FunctionDeclaration);
 
-        this._tokens.next(); //T_FUNCTION
+        next(); //T_FUNCTION
 
-        if (this._tokens.consume('&')) {
+        if (consume('&')) {
             n.value.flag = NonTerminalFlag.ReturnsRef;
         }
 
-        if (this._tokens.consume(TokenType.T_STRING)) {
-            n.children.push(this._nodeFactory(this._tokens.current));
+        if (consume(TokenType.T_STRING)) {
+            n.children.push(nodeFactory(current()));
         } else {
-            n.children.push(this._nodeFactory(null));
-            this._error(n, [TokenType.T_STRING], ['(', ':', '{']);
+            n.children.push(nodeFactory(null));
+            error(n, [TokenType.T_STRING], ['(', ':', '{']);
         }
 
-        n.children.push(this._parameterList());
+        n.children.push(parameterList());
 
-        if (this._tokens.consume(':')) {
-            this._followOnStack.push(['{']);
-            n.children.push(this._returnType());
-            this._followOnStack.pop();
+        if (consume(':')) {
+            followOnStack.push(['{']);
+            n.children.push(returnType());
+            followOnStack.pop();
         } else {
-            n.children.push(this._nodeFactory(null));
+            n.children.push(nodeFactory(null));
         }
 
-        n.children.push(this._block());
+        n.children.push(block());
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _classDeclarationStatement() {
+    function classDeclarationStatement() {
 
-        let n = this._tempNode(NonTerminalType.ClassDeclaration);
-        let t = this._tokens.peek();
+        let n = tempNode(NonTerminalType.ClassDeclaration);
+        let t = peek();
 
         if (t.tokenType === TokenType.T_ABSTRACT || t.tokenType === TokenType.T_FINAL) {
-            n.value.flag = this._classModifiers();
+            n.value.flag = classModifiers();
         }
 
-        if (!this._tokens.consume(TokenType.T_CLASS)) {
+        if (!consume(TokenType.T_CLASS)) {
             //error
-            this._error(n, [TokenType.T_CLASS], [TokenType.T_STRING, TokenType.T_EXTENDS, TokenType.T_IMPLEMENTS, '{']);
+            error(n, [TokenType.T_CLASS], [TokenType.T_STRING, TokenType.T_EXTENDS, TokenType.T_IMPLEMENTS, '{']);
         }
 
-        n.value.doc = this._tokens.lastDocComment;
+        n.value.doc = lastDocComment();
 
-        if (this._tokens.consume(TokenType.T_STRING)) {
-            n.children.push(this._nodeFactory(this._tokens.current));
+        if (consume(TokenType.T_STRING)) {
+            n.children.push(nodeFactory(current()));
         } else {
             //error
-            this._error(n, [TokenType.T_STRING], [TokenType.T_EXTENDS, TokenType.T_IMPLEMENTS, '{']);
-            n.children.push(this._nodeFactory(null));
+            error(n, [TokenType.T_STRING], [TokenType.T_EXTENDS, TokenType.T_IMPLEMENTS, '{']);
+            n.children.push(nodeFactory(null));
         }
 
-        if (this._tokens.consume(TokenType.T_EXTENDS)) {
-            this._followOnStack.push([TokenType.T_IMPLEMENTS, '{']);
-            n.children.push(this._nameList());
-            this._followOnStack.pop();
+        if (consume(TokenType.T_EXTENDS)) {
+            followOnStack.push([TokenType.T_IMPLEMENTS, '{']);
+            n.children.push(nameList());
+            followOnStack.pop();
         } else {
-            n.children.push(this._nodeFactory(null));
+            n.children.push(nodeFactory(null));
         }
 
-        if (this._tokens.consume(TokenType.T_IMPLEMENTS)) {
-            this._followOnStack.push(['{']);
-            n.children.push(this._nameList());
-            this._followOnStack.pop();
+        if (consume(TokenType.T_IMPLEMENTS)) {
+            followOnStack.push(['{']);
+            n.children.push(nameList());
+            followOnStack.pop();
         } else {
-            n.children.push(this._nodeFactory(null));
+            n.children.push(nodeFactory(null));
         }
 
-        n.children.push(this._classStatementList());
-        return this._node(n);
+        n.children.push(classStatementList());
+        return node(n);
 
     }
 
-    private _classModifiers() {
+    function classModifiers() {
 
         let flag = 0;
         let t: Token;
 
         while (true) {
-            t = this._tokens.peek();
+            t = peek();
             if (t.tokenType === TokenType.T_ABSTRACT || t.tokenType === TokenType.T_FINAL) {
-                flag |= this._memberModifierToFlag(this._tokens.next());
+                flag |= memberModifierToFlag(next());
             } else {
                 break;
             }
@@ -1621,549 +1731,549 @@ export class Parser<T> {
 
     }
 
-    private _block() {
+    function block() {
 
-        let n = this._tempNode(NonTerminalType.Block);
+        let n = tempNode(NonTerminalType.Block);
 
-        if (!this._tokens.consume('{')) {
-            let err = new ParseError(this._tokens.current, ['{']);
-            if (this._isInnerStatementStartToken(this._tokens.peek())) {
+        if (!consume('{')) {
+            let err = new ParseError(current(), ['{']);
+            if (isInnerStatementStartToken(peek())) {
                 n.value.errors = [err];
-            } else if (this._tokens.peek(1).tokenType === '{') {
-                this._tokens.next();
-                this._tokens.next();
+            } else if (peek(1).tokenType === '{') {
+                next();
+                next();
                 n.value.errors = [err];
             } else {
-                this._error(n, ['{']);
-                n.children.push(this._nodeFactory(null));
-                return this._node(n);
+                error(n, ['{']);
+                n.children.push(nodeFactory(null));
+                return node(n);
             }
         }
 
-        this._followOnStack.push(['}']);
-        this._innerStatementList(['}']);
-        this._followOnStack.pop();
+        followOnStack.push(['}']);
+        innerStatementList(['}']);
+        followOnStack.pop();
 
-        if (!this._tokens.consume('}')) {
-            this._error(n, ['}'], ['}']);
-            this._tokens.consume('}');
+        if (!consume('}')) {
+            error(n, ['}'], ['}']);
+            consume('}');
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _statement() {
+    function statement() {
 
-        let t = this._tokens.peek();
+        let t = peek();
 
         switch (t.tokenType) {
             case '{':
-                return this._block();
+                return block();
             case TokenType.T_IF:
-                return this._ifStatementList();
+                return ifStatementList();
             case TokenType.T_WHILE:
-                return this._whileStatement();
+                return whileStatement();
             case TokenType.T_DO:
-                return this._doWhileStatement();
+                return doWhileStatement();
             case TokenType.T_FOR:
-                return this._forStatement();
+                return forStatement();
             case TokenType.T_SWITCH:
-                return this._switchStatement();
+                return switchStatement();
             case TokenType.T_BREAK:
-                return this._keywordOptionalExpressionStatement(NonTerminalType.Break);
+                return keywordOptionalExpressionStatement(NonTerminalType.Break);
             case TokenType.T_CONTINUE:
-                return this._keywordOptionalExpressionStatement(NonTerminalType.Continue);
+                return keywordOptionalExpressionStatement(NonTerminalType.Continue);
             case TokenType.T_RETURN:
-                return this._keywordOptionalExpressionStatement(NonTerminalType.Return);
+                return keywordOptionalExpressionStatement(NonTerminalType.Return);
             case TokenType.T_GLOBAL:
-                return this._globalVariableDeclarationStatement();
+                return globalVariableDeclarationStatement();
             case TokenType.T_STATIC:
-                return this._staticVariableDeclarationStatement();
+                return staticVariableDeclarationStatement();
             case TokenType.T_ECHO:
-                return this._echoStatement();
+                return echoStatement();
             case TokenType.T_INLINE_HTML:
-                let echo = this._tempNode(NonTerminalType.Echo, this._startPos());
-                echo.children.push(this._nodeFactory(this._tokens.next()));
-                return this._node(echo, this._endPos());
+                let echo = tempNode(NonTerminalType.Echo, start());
+                echo.children.push(nodeFactory(next()));
+                return node(echo, end());
             case TokenType.T_UNSET:
-                return this._unsetStatement();
+                return unsetStatement();
             case TokenType.T_FOREACH:
-                return this._foreachStatement();
+                return foreachStatement();
             case TokenType.T_DECLARE:
-                return this._declareStatement();
+                return declareStatement();
             case TokenType.T_TRY:
-                return this._try();
+                return tryStatement();
             case TokenType.T_THROW:
-                return this._throwStatement();
+                return throwStatement();
             case TokenType.T_GOTO:
-                return this._gotoStatement();
+                return gotoStatement();
             case ';':
-                let empty = this._tempNode(NonTerminalType.EmptyStatement);
-                this._tokens.next();
-                return this._node(empty);
+                let empty = tempNode(NonTerminalType.EmptyStatement);
+                next();
+                return node(empty);
             case TokenType.T_STRING:
-                if (this._tokens.peek(1).tokenType === ':') {
-                    return this._labelStatement();
+                if (peek(1).tokenType === ':') {
+                    return labelStatement();
                 }
             //fall though
             default:
-                return this._expressionStatement();
+                return expressionStatement();
 
         }
 
     }
 
-    private _try() {
+    function tryStatement() {
 
-        let n = this._tempNode(NonTerminalType.Try);
-        let t = this._tokens.next(); //try
+        let n = tempNode(NonTerminalType.Try);
+        let t = next(); //try
 
-        this._followOnStack.push([TokenType.T_CATCH, TokenType.T_FINALLY]);
-        n.children.push(this._block());
-        this._followOnStack.pop();
-        this._followOnStack.push([TokenType.T_FINALLY]);
-        n.children.push(this._catchList());
-        this._followOnStack.pop();
+        followOnStack.push([TokenType.T_CATCH, TokenType.T_FINALLY]);
+        n.children.push(block());
+        followOnStack.pop();
+        followOnStack.push([TokenType.T_FINALLY]);
+        n.children.push(catchList());
+        followOnStack.pop();
 
-        if (this._tokens.peek().tokenType === TokenType.T_FINALLY) {
-            n.children.push(this._finallyStatement());
+        if (peek().tokenType === TokenType.T_FINALLY) {
+            n.children.push(finallyStatement());
         } else {
-            n.children.push(this._nodeFactory(null));
+            n.children.push(nodeFactory(null));
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _catchList() {
+    function catchList() {
 
-        let n = this._tempNode(NonTerminalType.CatchList);
-        this._followOnStack.push([TokenType.T_CATCH]);
+        let n = tempNode(NonTerminalType.CatchList);
+        followOnStack.push([TokenType.T_CATCH]);
 
         while (true) {
 
-            if (this._tokens.peek().tokenType === TokenType.T_CATCH) {
-                n.children.push(this._catchStatement());
+            if (peek().tokenType === TokenType.T_CATCH) {
+                n.children.push(catchStatement());
             } else {
                 break;
             }
 
         }
 
-        this._followOnStack.pop();
-        return this._node(n);
+        followOnStack.pop();
+        return node(n);
 
     }
 
-    private _finallyStatement() {
+    function finallyStatement() {
 
-        let n = this._tempNode(NonTerminalType.Finally);
-        this._tokens.next(); //T_FINALLY
-        n.children.push(this._block());
-        return this._node(n);
+        let n = tempNode(NonTerminalType.Finally);
+        next(); //T_FINALLY
+        n.children.push(block());
+        return node(n);
 
     }
 
-    private _catchStatement() {
+    function catchStatement() {
 
-        let n = this._tempNode(NonTerminalType.Catch);
-        this._tokens.next();
+        let n = tempNode(NonTerminalType.Catch);
+        next();
 
-        if (!this._tokens.consume('(')) {
-            this._error(n, ['('], ['{', ')', TokenType.T_VARIABLE]);
-            n.children.push(this._nodeFactory(null));
+        if (!consume('(')) {
+            error(n, ['('], ['{', ')', TokenType.T_VARIABLE]);
+            n.children.push(nodeFactory(null));
         }
 
-        this._followOnStack.push([TokenType.T_VARIABLE, ')', '{']);
-        n.children.push(this._catchNameList());
-        this._followOnStack.pop();
+        followOnStack.push([TokenType.T_VARIABLE, ')', '{']);
+        n.children.push(catchNameList());
+        followOnStack.pop();
 
-        if (this._tokens.consume(TokenType.T_VARIABLE)) {
-            n.children.push(this._nodeFactory(this._tokens.current));
+        if (consume(TokenType.T_VARIABLE)) {
+            n.children.push(nodeFactory(current()));
         } else {
             //error
-            this._error(n, [TokenType.T_VARIABLE], [')', '{']);
-            n.children.push(this._nodeFactory(null));
+            error(n, [TokenType.T_VARIABLE], [')', '{']);
+            n.children.push(nodeFactory(null));
         }
 
-        if (!this._tokens.consume(')')) {
+        if (!consume(')')) {
             //error
-            this._error(n, [')'], ['{']);
+            error(n, [')'], ['{']);
         }
 
-        if (!this._tokens.consume('{')) {
+        if (!consume('{')) {
             //error
-            this._error(n, ['{'], ['}']);
+            error(n, ['{'], ['}']);
         }
 
-        this._followOnStack.push(['}']);
-        n.children.push(this._innerStatementList(['}']));
-        this._followOnStack.pop();
+        followOnStack.push(['}']);
+        n.children.push(innerStatementList(['}']));
+        followOnStack.pop();
 
-        if (!this._tokens.consume('}')) {
+        if (!consume('}')) {
             //error
-            this._error(n, ['}'], ['}'])
-            this._tokens.consume('}');
+            error(n, ['}'], ['}'])
+            consume('}');
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _catchNameList() {
+    function catchNameList() {
 
-        let n = this._tempNode(NonTerminalType.NameList);
+        let n = tempNode(NonTerminalType.NameList);
         let followOn = ['|'];
         let t: Token;
 
         while (true) {
 
-            this._followOnStack.push(followOn);
-            n.children.push(this._name());
-            this._followOnStack.pop();
-            t = this._tokens.peek();
+            followOnStack.push(followOn);
+            n.children.push(name());
+            followOnStack.pop();
+            t = peek();
 
             if (t.tokenType === '|') {
-                this._tokens.next();
+                next();
             } else if (t.tokenType === ')') {
                 break;
             } else {
                 //error
-                this._error(n, ['|', ')']);
+                error(n, ['|', ')']);
                 break;
             }
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _declareStatement() {
+    function declareStatement() {
 
-        let n = this._tempNode(NonTerminalType.Declare);
-        this._tokens.next();
+        let n = tempNode(NonTerminalType.Declare);
+        next();
 
-        if (this._tokens.consume('(')) {
-            this._followOnStack.push([')']);
-            n.children.push(this._declareConstantDeclarationList());
-            this._followOnStack.pop();
+        if (consume('(')) {
+            followOnStack.push([')']);
+            n.children.push(declareConstantDeclarationList());
+            followOnStack.pop();
         } else {
-            n.children.push(this._nodeFactory(null));
-            this._error(n, ['('], [...recoverStatementStartTokenTypes, ':', ')']);
+            n.children.push(nodeFactory(null));
+            error(n, ['('], [...recoverStatementStartTokenTypes, ':', ')']);
         }
 
-        if (!this._tokens.consume(')')) {
+        if (!consume(')')) {
             //error
-            this._error(n, [')'], [...recoverStatementStartTokenTypes, ':']);
+            error(n, [')'], [...recoverStatementStartTokenTypes, ':']);
         }
 
-        let t = this._tokens.peek();
+        let t = peek();
 
         if (t.tokenType === ':') {
 
-            this._tokens.next();
-            this._followOnStack.push([TokenType.T_ENDDECLARE, ';']);
-            n.children.push(this._innerStatementList([TokenType.T_ENDDECLARE]));
-            this._followOnStack.pop();
+            next();
+            followOnStack.push([TokenType.T_ENDDECLARE, ';']);
+            n.children.push(innerStatementList([TokenType.T_ENDDECLARE]));
+            followOnStack.pop();
 
-            if (!this._tokens.consume(TokenType.T_ENDDECLARE)) {
+            if (!consume(TokenType.T_ENDDECLARE)) {
                 //error
-                this._error(n, [TokenType.T_ENDDECLARE], [';']);
+                error(n, [TokenType.T_ENDDECLARE], [';']);
             }
 
-            if (!this._tokens.consume(';')) {
+            if (!consume(';')) {
                 //error
-                this._error(n, [';'], [';']);
-                this._tokens.consume(';');
+                error(n, [';'], [';']);
+                consume(';');
             }
 
-        } else if (this._isStatementStartToken(t)) {
-            n.children.push(this._statement());
+        } else if (isStatementStartToken(t)) {
+            n.children.push(statement());
         } else {
             //error
-            n.children.push(this._nodeFactory(null));
-            this._error(n, []);
+            n.children.push(nodeFactory(null));
+            error(n, []);
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _declareConstantDeclarationList() {
+    function declareConstantDeclarationList() {
 
-        let n = this._tempNode(NonTerminalType.ConstantDeclarationList);
+        let n = tempNode(NonTerminalType.ConstantDeclarationList);
         let followOn = [','];
         let t: Token;
 
         while (true) {
 
-            this._followOnStack.push(followOn);
-            n.children.push(this._constantDeclaration());
-            this._followOnStack.pop();
-            t = this._tokens.peek();
+            followOnStack.push(followOn);
+            n.children.push(constantDeclaration());
+            followOnStack.pop();
+            t = peek();
 
             if (t.tokenType === ',') {
-                this._tokens.next();
+                next();
             } else if (t.tokenType === ')') {
                 break;
             } else {
-                this._error(n, [',', ')']);
+                error(n, [',', ')']);
                 break;
             }
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
 
 
-    private _switchStatement() {
+    function switchStatement() {
 
-        let n = this._tempNode(NonTerminalType.Switch);
-        this._tokens.next();
+        let n = tempNode(NonTerminalType.Switch);
+        next();
 
-        this._followOnStack.push([':', '{', TokenType.T_CASE, TokenType.T_DEFAULT]);
-        n.children.push(this._encapsulatedExpression('(', ')'));
-        this._followOnStack.pop();
+        followOnStack.push([':', '{', TokenType.T_CASE, TokenType.T_DEFAULT]);
+        n.children.push(encapsulatedExpression('(', ')'));
+        followOnStack.pop();
 
-        if (!this._tokens.consume('{') && !this._tokens.consume(':')) {
-            this._error(n, ['{', ':'], [TokenType.T_CASE, TokenType.T_DEFAULT, '}', TokenType.T_ENDSWITCH]);
+        if (!consume('{') && !consume(':')) {
+            error(n, ['{', ':'], [TokenType.T_CASE, TokenType.T_DEFAULT, '}', TokenType.T_ENDSWITCH]);
         }
 
-        this._tokens.consume(';');
-        this._followOnStack.push(['}', TokenType.T_ENDSWITCH]);
-        n.children.push(this._caseStatementList());
-        this._followOnStack.pop();
+        consume(';');
+        followOnStack.push(['}', TokenType.T_ENDSWITCH]);
+        n.children.push(caseStatementList());
+        followOnStack.pop();
 
-        let t = this._tokens.peek();
+        let t = peek();
 
         if (t.tokenType === '}') {
-            this._tokens.next();
+            next();
         } else if (t.tokenType === TokenType.T_ENDSWITCH) {
-            this._tokens.next();
-            if (!this._tokens.consume(';')) {
+            next();
+            if (!consume(';')) {
                 //error
-                this._error(n, [';'], [';']);
-                this._tokens.consume(';');
+                error(n, [';'], [';']);
+                consume(';');
             }
         } else {
-            this._error(n, ['}', TokenType.T_ENDSWITCH], ['}', ';']);
-            this._tokens.consume('}');
-            this._tokens.consume(';');
+            error(n, ['}', TokenType.T_ENDSWITCH], ['}', ';']);
+            consume('}');
+            consume(';');
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _caseStatementList() {
+    function caseStatementList() {
 
-        let n = this._tempNode(NonTerminalType.CaseList);
+        let n = tempNode(NonTerminalType.CaseList);
         let followOn: (TokenType | string)[] = [TokenType.T_CASE, TokenType.T_DEFAULT];
         let t: Token;
         let breakOn = ['}', TokenType.T_ENDSWITCH];
 
         while (true) {
 
-            t = this._tokens.peek();
+            t = peek();
 
             if (t.tokenType === TokenType.T_CASE || t.tokenType === TokenType.T_DEFAULT) {
-                this._followOnStack.push(followOn);
-                n.children.push(this._caseStatement());
-                this._followOnStack.pop();
+                followOnStack.push(followOn);
+                n.children.push(caseStatement());
+                followOnStack.pop();
             } else if (breakOn.indexOf(t.tokenType) !== -1) {
                 break;
             } else {
                 //error
                 let recover = [TokenType.T_CASE, TokenType.T_DEFAULT, '}', TokenType.T_ENDSWITCH];
-                if (recover.indexOf(this._error(n, recover, recover).tokenType) === -1) {
+                if (recover.indexOf(error(n, recover, recover).tokenType) === -1) {
                     break;
                 }
             }
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _caseStatement() {
+    function caseStatement() {
 
-        let n = this._tempNode(NonTerminalType.Case);
-        let t = this._tokens.peek();
+        let n = tempNode(NonTerminalType.Case);
+        let t = peek();
 
         if (t.tokenType === TokenType.T_CASE) {
-            this._tokens.next();
-            this._followOnStack.push([';', ':']);
-            n.children.push(this._expression());
-            this._followOnStack.pop();
+            next();
+            followOnStack.push([';', ':']);
+            n.children.push(expression());
+            followOnStack.pop();
         } else if (t.tokenType === TokenType.T_DEFAULT) {
-            this._tokens.next();
-            n.children.push(this._nodeFactory(null));
+            next();
+            n.children.push(nodeFactory(null));
         } else {
             //error
             //should never reach here
-            throw new Error(`Unexpected token ${this._tokens.peek().tokenType}`);
+            throw new Error(`Unexpected token ${peek().tokenType}`);
         }
 
-        if (!this._tokens.consume(':') && !this._tokens.consume(';')) {
-            this._error(n, [';', ':'], recoverInnerStatementStartTokenTypes);
-            this._tokens.consume(';');
+        if (!consume(':') && !consume(';')) {
+            error(n, [';', ':'], recoverInnerStatementStartTokenTypes);
+            consume(';');
         }
 
-        if (this._isInnerStatementStartToken(this._tokens.peek())) {
-            n.children.push(this._innerStatementList(['}', TokenType.T_ENDSWITCH, TokenType.T_CASE, TokenType.T_DEFAULT]));
+        if (isInnerStatementStartToken(peek())) {
+            n.children.push(innerStatementList(['}', TokenType.T_ENDSWITCH, TokenType.T_CASE, TokenType.T_DEFAULT]));
         } else {
-            n.children.push(this._nodeFactory(null));
+            n.children.push(nodeFactory(null));
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _labelStatement() {
+    function labelStatement() {
 
-        let n = this._tempNode(NonTerminalType.Label);
-        n.children.push(this._nodeFactory(this._tokens.next()));
-        this._tokens.next();
-        return this._node(n);
+        let n = tempNode(NonTerminalType.Label);
+        n.children.push(nodeFactory(next()));
+        next();
+        return node(n);
     }
 
-    private _gotoStatement() {
+    function gotoStatement() {
 
-        let n = this._tempNode(NonTerminalType.Goto);
-        let t = this._tokens.next();
+        let n = tempNode(NonTerminalType.Goto);
+        let t = next();
 
-        if (this._tokens.consume(TokenType.T_STRING)) {
-            n.children.push(this._nodeFactory(this._tokens.current));
+        if (consume(TokenType.T_STRING)) {
+            n.children.push(nodeFactory(current()));
         } else {
-            n.children.push(this._nodeFactory(null));
-            this._error(n, [TokenType.T_STRING], [';']);
+            n.children.push(nodeFactory(null));
+            error(n, [TokenType.T_STRING], [';']);
         }
 
-        if (!this._tokens.consume(';')) {
-            this._error(n, [';'], [';']);
-            this._tokens.consume(';');
+        if (!consume(';')) {
+            error(n, [';'], [';']);
+            consume(';');
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _throwStatement() {
+    function throwStatement() {
 
-        let n = this._tempNode(NonTerminalType.Throw);
-        this._tokens.next();
+        let n = tempNode(NonTerminalType.Throw);
+        next();
 
-        this._followOnStack.push([';']);
-        n.children.push(this._expression());
-        this._followOnStack.pop();
+        followOnStack.push([';']);
+        n.children.push(expression());
+        followOnStack.pop();
 
-        if (!this._tokens.consume(';')) {
-            this._error(n, [';'], [';']);
-            this._tokens.consume(';');
+        if (!consume(';')) {
+            error(n, [';'], [';']);
+            consume(';');
         }
 
-        return this._node(n);
+        return node(n);
     }
 
-    private _foreachStatement() {
+    function foreachStatement() {
 
-        let n = this._tempNode(NonTerminalType.Foreach);
-        let t = this._tokens.next();
+        let n = tempNode(NonTerminalType.Foreach);
+        let t = next();
 
-        if (this._tokens.consume('(')) {
-            this._followOnStack.push([')', TokenType.T_AS, TokenType.T_DOUBLE_ARROW]);
-            n.children.push(this._expression());
-            this._followOnStack.pop();
+        if (consume('(')) {
+            followOnStack.push([')', TokenType.T_AS, TokenType.T_DOUBLE_ARROW]);
+            n.children.push(expression());
+            followOnStack.pop();
         } else {
-            this._error(n, ['('], [...recoverStatementStartTokenTypes, ':', ')', TokenType.T_AS, TokenType.T_DOUBLE_ARROW]);
-            n.children.push(this._nodeFactory(null));
+            error(n, ['('], [...recoverStatementStartTokenTypes, ':', ')', TokenType.T_AS, TokenType.T_DOUBLE_ARROW]);
+            n.children.push(nodeFactory(null));
         }
 
-        if (!this._tokens.consume(TokenType.T_AS)) {
-            this._error(n, [TokenType.T_AS], [')', TokenType.T_DOUBLE_ARROW]);
+        if (!consume(TokenType.T_AS)) {
+            error(n, [TokenType.T_AS], [')', TokenType.T_DOUBLE_ARROW]);
         }
 
-        this._followOnStack.push([')', TokenType.T_DOUBLE_ARROW]);
-        n.children.push(this._foreachVariable());
+        followOnStack.push([')', TokenType.T_DOUBLE_ARROW]);
+        n.children.push(foreachVariable());
 
-        if (this._tokens.consume(TokenType.T_DOUBLE_ARROW)) {
-            n.children.push(this._foreachVariable());
+        if (consume(TokenType.T_DOUBLE_ARROW)) {
+            n.children.push(foreachVariable());
         } else {
-            n.children.push(this._nodeFactory(null));
+            n.children.push(nodeFactory(null));
         }
 
-        this._followOnStack.pop();
+        followOnStack.pop();
 
-        if (!this._tokens.consume(')')) {
-            this._error(n, [')'], [...recoverStatementStartTokenTypes, ':']);
+        if (!consume(')')) {
+            error(n, [')'], [...recoverStatementStartTokenTypes, ':']);
         }
 
-        t = this._tokens.peek();
+        t = peek();
 
         if (t.tokenType === ':') {
 
-            this._tokens.next();
+            next();
 
-            this._followOnStack.push([TokenType.T_ENDFOREACH, ';']);
-            n.children.push(this._innerStatementList([TokenType.T_ENDFOREACH]));
-            this._followOnStack.pop();
+            followOnStack.push([TokenType.T_ENDFOREACH, ';']);
+            n.children.push(innerStatementList([TokenType.T_ENDFOREACH]));
+            followOnStack.pop();
 
-            if (!this._tokens.consume(TokenType.T_ENDFOREACH)) {
-                this._error(n, [TokenType.T_ENDFOREACH], [';']);
+            if (!consume(TokenType.T_ENDFOREACH)) {
+                error(n, [TokenType.T_ENDFOREACH], [';']);
             }
 
-            if (!this._tokens.consume(';')) {
-                this._error(n, [';'], [';']);
-                this._tokens.consume(';');
+            if (!consume(';')) {
+                error(n, [';'], [';']);
+                consume(';');
             }
 
-        } else if (this._isStatementStartToken(t)) {
-            n.children.push(this._statement());
+        } else if (isStatementStartToken(t)) {
+            n.children.push(statement());
         } else {
             //error
-            this._error(n, []);
-            n.children.push(this._nodeFactory(null));
+            error(n, []);
+            n.children.push(nodeFactory(null));
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _foreachVariable() {
+    function foreachVariable() {
 
-        switch (this._tokens.peek().tokenType) {
+        switch (peek().tokenType) {
 
             case '&':
-                let unary = this._tempNode(NonTerminalType.UnaryExpression);
+                let unary = tempNode(NonTerminalType.UnaryExpression);
                 unary.value.flag = NonTerminalFlag.UnaryReference;
-                this._tokens.next();
-                unary.children.push(this._variable());
-                return this._node(unary);
+                next();
+                unary.children.push(variable());
+                return node(unary);
             case TokenType.T_LIST:
-                return this._listExpression();
+                return listExpression();
             case '[':
-                return this._shortArray();
+                return shortArray();
             default:
-                if (this._isVariableStartToken(this._tokens.peek())) {
-                    return this._variable();
+                if (isVariableStartToken(peek())) {
+                    return variable();
                 } else {
                     //error
-                    let err = this._tempNode(NonTerminalType.Error);
-                    this._error(err, ['&', TokenType.T_LIST, '[', TokenType.T_VARIABLE]);
-                    return this._node(err);
+                    let err = tempNode(NonTerminalType.Error);
+                    error(err, ['&', TokenType.T_LIST, '[', TokenType.T_VARIABLE]);
+                    return node(err);
                 }
 
         }
 
     }
 
-    private _isVariableStartToken(t: Token) {
+    function isVariableStartToken(t: Token) {
 
         switch (t.tokenType) {
             case TokenType.T_VARIABLE:
@@ -2183,521 +2293,521 @@ export class Parser<T> {
 
     }
 
-    private _unsetStatement() {
+    function unsetStatement() {
 
-        let n = this._tempNode(NonTerminalType.Unset);
-        let t = this._tokens.next();
+        let n = tempNode(NonTerminalType.Unset);
+        let t = next();
 
-        if (!this._tokens.consume('(')) {
+        if (!consume('(')) {
             //error
-            this._error(n, ['('], [';']);
-            this._tokens.consume(';');
-            return this._node(n);
+            error(n, ['('], [';']);
+            consume(';');
+            return node(n);
         }
 
         let followOn = [';', ')', ','];
 
         while (true) {
 
-            this._followOnStack.push(followOn);
-            n.children.push(this._variable());
-            this._followOnStack.pop();
+            followOnStack.push(followOn);
+            n.children.push(variable());
+            followOnStack.pop();
 
-            t = this._tokens.peek();
+            t = peek();
             if (t.tokenType === ',') {
-                this._tokens.next();
+                next();
             } else if (t.tokenType === ')') {
-                this._tokens.next();
+                next();
                 break;
             } else {
                 //error
-                this._error(n, [',', ')'], [';']);
+                error(n, [',', ')'], [';']);
                 break;
             }
 
         }
 
-        if (!this._tokens.consume(';')) {
-            this._error(n, [';'], [';']);
-            this._tokens.consume(';');
+        if (!consume(';')) {
+            error(n, [';'], [';']);
+            consume(';');
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _echoStatement() {
+    function echoStatement() {
 
-        let n = this._tempNode(NonTerminalType.Echo);
+        let n = tempNode(NonTerminalType.Echo);
         let t: Token;
-        this._tokens.next();
+        next();
         let followOn: (TokenType | string)[] = [',', ';'];
 
         while (true) {
 
-            this._followOnStack.push(followOn);
-            n.children.push(this._expression());
-            this._followOnStack.pop();
-            t = this._tokens.peek();
+            followOnStack.push(followOn);
+            n.children.push(expression());
+            followOnStack.pop();
+            t = peek();
 
             if (t.tokenType === ',') {
-                this._tokens.next();
+                next();
             } else if (t.tokenType === ';') {
-                this._tokens.next();
+                next();
                 break;
             } else {
                 //error
-                this._error(n, followOn, [';']);
-                this._tokens.consume(';');
+                error(n, followOn, [';']);
+                consume(';');
                 break;
             }
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _staticVariableDeclarationStatement() {
+    function staticVariableDeclarationStatement() {
 
-        let n = this._tempNode(NonTerminalType.StaticVariableList);
+        let n = tempNode(NonTerminalType.StaticVariableList);
         let t: Token;
-        this._tokens.next();
+        next();
         let followOn: (TokenType | string)[] = [',', ';'];
 
         while (true) {
 
-            this._followOnStack.push(followOn);
-            n.children.push(this._staticVariableDeclaration());
-            this._followOnStack.pop();
-            t = this._tokens.peek();
+            followOnStack.push(followOn);
+            n.children.push(staticVariableDeclaration());
+            followOnStack.pop();
+            t = peek();
 
             if (t.tokenType === ',') {
-                this._tokens.next();
+                next();
             } else if (t.tokenType === ';') {
-                this._tokens.next();
+                next();
                 break;
             } else {
                 //error
-                this._error(n, followOn, [';']);
-                this._tokens.consume(';');
+                error(n, followOn, [';']);
+                consume(';');
                 break;
             }
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
 
 
-    private _globalVariableDeclarationStatement() {
+    function globalVariableDeclarationStatement() {
 
-        let n = this._tempNode(NonTerminalType.GlobalVariableList);
-        let t = this._tokens.next();
+        let n = tempNode(NonTerminalType.GlobalVariableList);
+        let t = next();
         let followOn: (TokenType | string)[] = [',', ';'];
 
         while (true) {
 
-            this._followOnStack.push(followOn);
-            n.children.push(this._simpleVariable());
-            this._followOnStack.pop();
-            t = this._tokens.peek();
+            followOnStack.push(followOn);
+            n.children.push(simpleVariable());
+            followOnStack.pop();
+            t = peek();
 
             if (t.tokenType === ',') {
-                this._tokens.next();
+                next();
             } else if (t.tokenType === ';') {
-                this._tokens.next();
+                next();
                 break;
             } else {
                 //error
-                this._error(n, followOn, [';']);
-                this._tokens.consume(';');
+                error(n, followOn, [';']);
+                consume(';');
                 break;
             }
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _staticVariableDeclaration() {
+    function staticVariableDeclaration() {
 
-        let n = this._tempNode(NonTerminalType.StaticVariable);
+        let n = tempNode(NonTerminalType.StaticVariable);
 
-        if (this._tokens.peek().tokenType === TokenType.T_VARIABLE) {
-            n.children.push(this._nodeFactory(this._tokens.next()));
+        if (peek().tokenType === TokenType.T_VARIABLE) {
+            n.children.push(nodeFactory(next()));
         } else {
-            n.children.push(this._nodeFactory(null), this._nodeFactory(null));
-            this._error(n, [TokenType.T_VARIABLE]);
-            return this._node(n);
+            n.children.push(nodeFactory(null), nodeFactory(null));
+            error(n, [TokenType.T_VARIABLE]);
+            return node(n);
         }
 
-        if (!this._tokens.consume('=')) {
-            n.children.push(this._nodeFactory(null));
-            return this._node(n);
+        if (!consume('=')) {
+            n.children.push(nodeFactory(null));
+            return node(n);
         }
 
-        n.children.push(this._expression());
-        return this._node(n);
+        n.children.push(expression());
+        return node(n);
 
     }
 
-    private _keywordOptionalExpressionStatement(nodeType: NonTerminalType) {
-        let n = this._tempNode(nodeType);
-        this._tokens.next();
+    function keywordOptionalExpressionStatement(nodeType: NonTerminalType) {
+        let n = tempNode(nodeType);
+        next();
 
-        if (this._isExpressionStartToken(this._tokens.peek())) {
-            this._followOnStack.push([';']);
-            n.children.push(this._expression());
-            this._followOnStack.pop();
+        if (isExpressionStartToken(peek())) {
+            followOnStack.push([';']);
+            n.children.push(expression());
+            followOnStack.pop();
         } else {
-            n.children.push(this._nodeFactory(null));
+            n.children.push(nodeFactory(null));
         }
 
-        if (!this._tokens.consume(';')) {
-            this._error(n, [';'], [';']);
-            this._tokens.consume(';');
+        if (!consume(';')) {
+            error(n, [';'], [';']);
+            consume(';');
         }
 
-        return this._node(n);
+        return node(n);
     }
 
 
-    private _forStatement() {
+    function forStatement() {
 
-        let n = this._tempNode(NonTerminalType.For);
-        this._tokens.next(); //for
+        let n = tempNode(NonTerminalType.For);
+        next(); //for
 
-        if (!this._tokens.consume('(')) {
+        if (!consume('(')) {
             //error
-            n.children.push(this._nodeFactory(null), this._nodeFactory(null),
-                this._nodeFactory(null), this._nodeFactory(null));
-            this._error(n, ['(']);
-            return this._node(n);
+            n.children.push(nodeFactory(null), nodeFactory(null),
+                nodeFactory(null), nodeFactory(null));
+            error(n, ['(']);
+            return node(n);
         }
 
         for (let k = 0; k < 2; ++k) {
 
-            if (this._isExpressionStartToken(this._tokens.peek())) {
-                this._followOnStack.push([';', ')']);
-                n.children.push(this._forExpressionList(';'));
-                this._followOnStack.pop();
+            if (isExpressionStartToken(peek())) {
+                followOnStack.push([';', ')']);
+                n.children.push(forExpressionList(';'));
+                followOnStack.pop();
             } else {
-                n.children.push(this._nodeFactory(null));
+                n.children.push(nodeFactory(null));
             }
 
-            if (!this._tokens.consume(';')) {
+            if (!consume(';')) {
                 //error
-                this._error(n, [';'], [...recoverStatementStartTokenTypes, ':', ')']);
+                error(n, [';'], [...recoverStatementStartTokenTypes, ':', ')']);
                 break;
             }
 
         }
 
-        if (this._isExpressionStartToken(this._tokens.peek())) {
-            this._followOnStack.push([')']);
-            n.children.push(this._expression());
-            this._followOnStack.pop();
+        if (isExpressionStartToken(peek())) {
+            followOnStack.push([')']);
+            n.children.push(expression());
+            followOnStack.pop();
         } else {
-            n.children.push(this._nodeFactory(null));
+            n.children.push(nodeFactory(null));
         }
 
-        if (!this._tokens.consume(')')) {
+        if (!consume(')')) {
             //error
-            this._error(n, [')'], [...recoverStatementStartTokenTypes, ':']);
-            this._tokens.consume(';');
+            error(n, [')'], [...recoverStatementStartTokenTypes, ':']);
+            consume(';');
         }
 
-        if (this._tokens.consume(':')) {
+        if (consume(':')) {
 
-            this._followOnStack.push([TokenType.T_ENDFOR, ';']);
-            n.children.push(this._innerStatementList([TokenType.T_ENDFOR]));
-            this._followOnStack.pop();
+            followOnStack.push([TokenType.T_ENDFOR, ';']);
+            n.children.push(innerStatementList([TokenType.T_ENDFOR]));
+            followOnStack.pop();
 
-            if (!this._tokens.consume(TokenType.T_ENDFOR)) {
+            if (!consume(TokenType.T_ENDFOR)) {
                 //error
-                this._error(n, [TokenType.T_ENDFOR], [';']);
+                error(n, [TokenType.T_ENDFOR], [';']);
             }
 
-            if (!this._tokens.consume(';')) {
+            if (!consume(';')) {
                 //error
-                this._error(n, [';'], [';']);
-                this._tokens.consume(';');
+                error(n, [';'], [';']);
+                consume(';');
             }
-        } else if (this._isStatementStartToken(this._tokens.peek())) {
-            n.children.push(this._statement());
+        } else if (isStatementStartToken(peek())) {
+            n.children.push(statement());
         } else {
             //error
-            this._error(n, []);
-            n.children.push(this._nodeFactory(null));
+            error(n, []);
+            n.children.push(nodeFactory(null));
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _forExpressionList(breakOn: TokenType | string) {
+    function forExpressionList(breakOn: TokenType | string) {
 
-        let n = this._tempNode(NonTerminalType.ForExpressionList);
+        let n = tempNode(NonTerminalType.ForExpressionList);
         let followOn = [',', breakOn];
         let t: Token;
 
         while (true) {
 
-            this._followOnStack.push(followOn);
-            n.children.push(this._expression());
-            this._followOnStack.pop();
+            followOnStack.push(followOn);
+            n.children.push(expression());
+            followOnStack.pop();
 
-            t = this._tokens.peek();
+            t = peek();
 
             if (t.tokenType === ',') {
-                this._tokens.next();
+                next();
             } else if (t.tokenType == breakOn) {
                 break;
             } else {
                 //error
-                this._error(n, followOn);
+                error(n, followOn);
                 break;
             }
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _doWhileStatement() {
+    function doWhileStatement() {
 
-        let n = this._tempNode(NonTerminalType.DoWhile);
-        this._tokens.next();
+        let n = tempNode(NonTerminalType.DoWhile);
+        next();
 
-        this._followOnStack.push([TokenType.T_WHILE, ';']);
-        n.children.push(this._statement());
-        this._followOnStack.pop();
+        followOnStack.push([TokenType.T_WHILE, ';']);
+        n.children.push(statement());
+        followOnStack.pop();
 
-        if (!this._tokens.consume(TokenType.T_WHILE)) {
+        if (!consume(TokenType.T_WHILE)) {
             //error
-            n.children.push(this._nodeFactory(null));
-            this._error(n, [TokenType.T_WHILE], [';']);
-            this._tokens.consume(';');
-            return this._node(n);
+            n.children.push(nodeFactory(null));
+            error(n, [TokenType.T_WHILE], [';']);
+            consume(';');
+            return node(n);
         }
 
-        this._followOnStack.push([';']);
-        n.children.push(this._encapsulatedExpression('(', ')'));
-        this._followOnStack.pop();
+        followOnStack.push([';']);
+        n.children.push(encapsulatedExpression('(', ')'));
+        followOnStack.pop();
 
-        if (!this._tokens.consume(';')) {
-            this._error(n, [';'], [';']);
-            this._tokens.consume(';');
+        if (!consume(';')) {
+            error(n, [';'], [';']);
+            consume(';');
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _whileStatement() {
+    function whileStatement() {
 
-        let n = this._tempNode(NonTerminalType.While);
-        this._tokens.next();
+        let n = tempNode(NonTerminalType.While);
+        next();
 
         let recover = recoverStatementStartTokenTypes.slice(0);
         recover.push(':');
-        this._followOnStack.push(recover);
-        n.children.push(this._encapsulatedExpression('(', ')'));
-        this._followOnStack.pop();
+        followOnStack.push(recover);
+        n.children.push(encapsulatedExpression('(', ')'));
+        followOnStack.pop();
 
-        if (this._tokens.consume(':')) {
-            this._followOnStack.push([TokenType.T_ENDWHILE, ';']);
-            n.children.push(this._innerStatementList([TokenType.T_ENDWHILE]));
-            this._followOnStack.pop();
+        if (consume(':')) {
+            followOnStack.push([TokenType.T_ENDWHILE, ';']);
+            n.children.push(innerStatementList([TokenType.T_ENDWHILE]));
+            followOnStack.pop();
 
-            if (!this._tokens.consume(TokenType.T_ENDWHILE)) {
+            if (!consume(TokenType.T_ENDWHILE)) {
                 //error
-                this._error(n, [TokenType.T_ENDWHILE], [';']);
+                error(n, [TokenType.T_ENDWHILE], [';']);
             }
 
-            if (!this._tokens.consume(';')) {
-                this._error(n, [';'], [';']);
-                this._tokens.consume(';');
+            if (!consume(';')) {
+                error(n, [';'], [';']);
+                consume(';');
             }
-        } else if (this._isStatementStartToken(this._tokens.peek())) {
-            n.children.push(this._statement());
+        } else if (isStatementStartToken(peek())) {
+            n.children.push(statement());
         } else {
             //error
-            this._error(n, []);
+            error(n, []);
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _ifStatementList() {
+    function ifStatementList() {
 
-        let n = this._tempNode(NonTerminalType.IfList);
+        let n = tempNode(NonTerminalType.IfList);
         let discoverAlt = { isAlt: false };
         let followOn = [TokenType.T_ELSEIF, TokenType.T_ELSE, TokenType.T_ENDIF];
-        this._followOnStack.push(followOn);
-        n.children.push(this._ifStatement(false, discoverAlt));
-        this._followOnStack.pop();
+        followOnStack.push(followOn);
+        n.children.push(ifStatement(false, discoverAlt));
+        followOnStack.pop();
         let t: Token;
 
-        this._followOnStack.push(followOn);
+        followOnStack.push(followOn);
         while (true) {
 
-            t = this._tokens.peek();
+            t = peek();
 
             if (t.tokenType === TokenType.T_ELSEIF || t.tokenType === TokenType.T_ELSE) {
-                n.children.push(this._ifStatement(discoverAlt.isAlt));
+                n.children.push(ifStatement(discoverAlt.isAlt));
             } else {
                 break;
             }
 
         }
 
-        this._followOnStack.pop();
+        followOnStack.pop();
 
         if (discoverAlt.isAlt) {
 
-            if (!this._tokens.consume(TokenType.T_ENDIF)) {
+            if (!consume(TokenType.T_ENDIF)) {
                 //error
-                this._error(n, [TokenType.T_ENDIF], [';']);
+                error(n, [TokenType.T_ENDIF], [';']);
             }
 
-            if (!this._tokens.consume(';')) {
+            if (!consume(';')) {
                 //error
-                this._error(n, [';'], [';']);
-                this._tokens.consume(';');
+                error(n, [';'], [';']);
+                consume(';');
             }
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _ifStatement(isAlt: boolean, discoverAlt: { isAlt: boolean } = null) {
+    function ifStatement(isAlt: boolean, discoverAlt: { isAlt: boolean } = null) {
 
-        let n = this._tempNode(NonTerminalType.If);
-        let t = this._tokens.peek();
+        let n = tempNode(NonTerminalType.If);
+        let t = peek();
 
         if (t.tokenType === TokenType.T_IF || t.tokenType === TokenType.T_ELSEIF) {
-            
+
             let recover = recoverStatementStartTokenTypes.slice(0);
             recover.push(':');
-            this._followOnStack.push(recover);
-            n.children.push(this._encapsulatedExpression('(', ')'));
-            this._followOnStack.pop();
+            followOnStack.push(recover);
+            n.children.push(encapsulatedExpression('(', ')'));
+            followOnStack.pop();
 
         } else if (t.tokenType === TokenType.T_ELSE) {
-            this._tokens.next();
-            n.children.push(this._nodeFactory(null));
+            next();
+            n.children.push(nodeFactory(null));
         } else {
-            throw new Error(`Unexpected token ${this._tokens.peek().tokenType}`);
+            throw new Error(`Unexpected token ${peek().tokenType}`);
         }
 
-        if ((isAlt || discoverAlt) && this._tokens.consume(':')) {
+        if ((isAlt || discoverAlt) && consume(':')) {
             if (discoverAlt) {
                 discoverAlt.isAlt = true;
             }
 
-            n.children.push(this._innerStatementList([TokenType.T_ENDIF, TokenType.T_ELSEIF, TokenType.T_ELSE]));
-        } else if (this._isStatementStartToken(this._tokens.peek())) {
-            n.children.push(this._statement());
+            n.children.push(innerStatementList([TokenType.T_ENDIF, TokenType.T_ELSEIF, TokenType.T_ELSE]));
+        } else if (isStatementStartToken(peek())) {
+            n.children.push(statement());
         } else {
             //error
-            n.children.push(this._nodeFactory(null));
-            this._error(n, []);
+            n.children.push(nodeFactory(null));
+            error(n, []);
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _expressionStatement() {
+    function expressionStatement() {
 
-        let n = this._tempNode(NonTerminalType.ErrorExpression);
-        this._followOnStack.push([';']);
-        n.children.push(this._expression());
-        this._followOnStack.pop();
+        let n = tempNode(NonTerminalType.ErrorExpression);
+        followOnStack.push([';']);
+        n.children.push(expression());
+        followOnStack.pop();
 
-        if (!this._tokens.consume(';')) {
-            this._error(n, [';'], [';']);
-            this._tokens.consume(';');
-            return this._node(n);
+        if (!consume(';')) {
+            error(n, [';'], [';']);
+            consume(';');
+            return node(n);
         }
 
         return n.children.pop();
 
     }
 
-    private _returnType() {
-        this._tokens.next(); //:
-        return this._typeExpression();
+    function returnType() {
+        next(); //:
+        return typeExpression();
     }
 
-    private _typeExpression() {
+    function typeExpression() {
 
-        let n = this._tempNode(NonTerminalType.TypeExpression);
+        let n = tempNode(NonTerminalType.TypeExpression);
 
-        if (this._tokens.consume('?')) {
+        if (consume('?')) {
             n.value.flag = NonTerminalFlag.Nullable;
         }
 
-        switch (this._tokens.peek().tokenType) {
+        switch (peek().tokenType) {
             case TokenType.T_CALLABLE:
             case TokenType.T_ARRAY:
-                n.children.push(this._nodeFactory(this._tokens.next()));
+                n.children.push(nodeFactory(next()));
                 break;
             case TokenType.T_STRING:
             case TokenType.T_NAMESPACE:
             case TokenType.T_NS_SEPARATOR:
-                n.children.push(this._name());
+                n.children.push(name());
                 break;
             default:
                 //error
-                this._error(n,
+                error(n,
                     [TokenType.T_CALLABLE, TokenType.T_ARRAY, TokenType.T_STRING, TokenType.T_NAMESPACE, TokenType.T_NS_SEPARATOR]
                 );
                 break;
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _classConstantDeclarationStatement(n: TempNode<T>) {
+    function classConstantDeclarationStatement(n: TempNode) {
 
         n.value.astNodeType = NonTerminalType.ClassConstantDeclarationList;
-        this._tokens.next(); //const
+        next(); //const
         let followOn = [';', ','];
         let t: Token;
 
         while (true) {
-            this._followOnStack.push(followOn);
-            n.children.push(this._classConstantDeclaration());
-            this._followOnStack.pop();
-            t = this._tokens.next();
+            followOnStack.push(followOn);
+            n.children.push(classConstantDeclaration());
+            followOnStack.pop();
+            t = next();
 
             if (t.tokenType === ',') {
-                this._tokens.next();
+                next();
             } else if (t.tokenType === ';') {
-                this._tokens.next();
+                next();
                 break;
             } else {
                 //error
-                this._error(n, followOn, [';']);
-                this._tokens.consume(';');
+                error(n, followOn, [';']);
+                consume(';');
                 break;
             }
         }
 
-        return this._node(n);
+        return node(n);
     }
 
-    private _isExpressionStartToken(t: Token) {
+    function isExpressionStartToken(t: Token) {
 
         switch (t.tokenType) {
             case TokenType.T_VARIABLE:
@@ -2758,34 +2868,34 @@ export class Parser<T> {
 
     }
 
-    private _classConstantDeclaration() {
+    function classConstantDeclaration() {
 
-        let n = this._tempNode(NonTerminalType.ClassConstantDeclarationList);
-        let t = this._tokens.peek();
+        let n = tempNode(NonTerminalType.ClassConstantDeclarationList);
+        let t = peek();
 
-        if (t.tokenType !== TokenType.T_STRING && !this._isSemiReservedToken(t)) {
+        if (t.tokenType !== TokenType.T_STRING && !isSemiReservedToken(t)) {
             //error
-            this._error(n, [TokenType.T_STRING]);
-            n.children.push(this._nodeFactory(null), this._nodeFactory(null));
-            return this._node(n);
+            error(n, [TokenType.T_STRING]);
+            n.children.push(nodeFactory(null), nodeFactory(null));
+            return node(n);
         }
 
-        n.children.push(this._nodeFactory(this._tokens.next()));
-        n.value.doc = this._tokens.lastDocComment;
+        n.children.push(nodeFactory(next()));
+        n.value.doc = lastDocComment();
 
-        if (!this._tokens.consume('=')) {
+        if (!consume('=')) {
             //error
-            this._error(n, ['=']);
-            n.children.push(this._nodeFactory(null));
-            return this._node(n);
+            error(n, ['=']);
+            n.children.push(nodeFactory(null));
+            return node(n);
         }
 
-        n.children.push(this._expression());
-        return this._node(n);
+        n.children.push(expression());
+        return node(n);
 
     }
 
-    private _propertyDeclarationStatement(n: TempNode<T>) {
+    function propertyDeclarationStatement(n: TempNode) {
 
         let t: Token;
         n.value.astNodeType = NonTerminalType.PropertyDeclarationList;
@@ -2793,62 +2903,62 @@ export class Parser<T> {
 
         while (true) {
 
-            this._followOnStack.push(followOn);
-            n.children.push(this._propertyDeclaration());
-            this._followOnStack.pop();
+            followOnStack.push(followOn);
+            n.children.push(propertyDeclaration());
+            followOnStack.pop();
 
-            t = this._tokens.peek();
+            t = peek();
 
             if (t.tokenType === ',') {
-                this._tokens.next();
+                next();
             } else if (t.tokenType === ';') {
-                this._tokens.next();
+                next();
                 break;
             } else {
                 //error
-                this._error(n, [',', ';'], [';']);
-                this._tokens.consume(';');
+                error(n, [',', ';'], [';']);
+                consume(';');
                 break;
             }
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _propertyDeclaration() {
+    function propertyDeclaration() {
 
-        let n = this._tempNode(NonTerminalType.PropertyDeclaration);
+        let n = tempNode(NonTerminalType.PropertyDeclaration);
 
-        if (!this._tokens.consume(TokenType.T_VARIABLE)) {
+        if (!consume(TokenType.T_VARIABLE)) {
             //error
-            this._error(n, [TokenType.T_VARIABLE]);
-            n.children.push(this._nodeFactory(null), this._nodeFactory(null));
-            return this._node(n);
+            error(n, [TokenType.T_VARIABLE]);
+            n.children.push(nodeFactory(null), nodeFactory(null));
+            return node(n);
         }
 
-        n.value.doc = this._tokens.lastDocComment;
-        n.children.push(this._nodeFactory(this._tokens.current));
+        n.value.doc = lastDocComment();
+        n.children.push(nodeFactory(current()));
 
-        if (!this._tokens.consume('=')) {
-            n.children.push(this._nodeFactory(null));
-            return this._node(n);
+        if (!consume('=')) {
+            n.children.push(nodeFactory(null));
+            return node(n);
         }
 
-        n.children.push(this._expression());
-        return this._node(n);
+        n.children.push(expression());
+        return node(n);
 
     }
 
-    private _memberModifierList() {
+    function memberModifierList() {
 
         let flags = 0, flag = 0;
 
         while (true) {
-            flag = this._memberModifierToFlag(this._tokens.peek());
+            flag = memberModifierToFlag(peek());
             if (flag) {
-                this._tokens.next();
+                next();
                 flags |= flag;
             } else {
                 break;
@@ -2859,7 +2969,7 @@ export class Parser<T> {
 
     }
 
-    private _memberModifierToFlag(t: Token) {
+    function memberModifierToFlag(t: Token) {
         switch (t.tokenType) {
             case TokenType.T_PUBLIC:
                 return NonTerminalFlag.ModifierPublic;
@@ -2879,69 +2989,69 @@ export class Parser<T> {
     }
 
 
-    private _nameList() {
+    function nameList() {
 
-        let n = this._tempNode(NonTerminalType.NameList);
+        let n = tempNode(NonTerminalType.NameList);
 
         while (true) {
-            n.children.push(this._name());
+            n.children.push(name());
 
-            if (!this._tokens.consume(',')) {
+            if (!consume(',')) {
                 break;
             }
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _newExpression() {
+    function newExpression() {
 
-        let n = this._tempNode(NonTerminalType.New);
-        this._tokens.next(); //new
+        let n = tempNode(NonTerminalType.New);
+        next(); //new
 
-        if (this._tokens.peek().tokenType === TokenType.T_CLASS) {
-            n.children.push(this._anonymousClassDeclaration());
-            return this._node(n);
+        if (peek().tokenType === TokenType.T_CLASS) {
+            n.children.push(anonymousClassDeclaration());
+            return node(n);
         }
 
-        this._followOnStack.push(['(']);
-        n.children.push(this._newVariable());
-        this._followOnStack.pop();
+        followOnStack.push(['(']);
+        n.children.push(newVariable());
+        followOnStack.pop();
 
-        if (this._tokens.peek().tokenType === '(') {
-            n.children.push(this._argumentList());
+        if (peek().tokenType === '(') {
+            n.children.push(argumentList());
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _newVariable() {
+    function newVariable() {
 
-        let n: TempNode<T>;
-        let startPos = this._startPos();
-        let part = this._newVariablePart();
-        let propName: T | Token;
+        let n: TempNode;
+        let startToken = start();
+        let part = newVariablePart();
+        let propName: any;
 
         while (true) {
 
-            switch (this._tokens.peek().tokenType) {
+            switch (peek().tokenType) {
                 case '[':
                 case '{':
-                    part = this._dimension(part, startPos);
+                    part = dimension(part, startToken);
                     continue;
                 case TokenType.T_OBJECT_OPERATOR:
-                    n = this._tempNode(NonTerminalType.Property, startPos);
-                    this._tokens.next();
-                    n.children.push(part, this._propertyName());
-                    part = this._node(n, this._endPos());
+                    n = tempNode(NonTerminalType.Property, startToken);
+                    next();
+                    n.children.push(part, propertyName());
+                    part = node(n);
                     continue;
                 case TokenType.T_PAAMAYIM_NEKUDOTAYIM:
-                    n = this._tempNode(NonTerminalType.StaticProperty, startPos);
-                    this._tokens.next();
-                    n.children.push(part, this._simpleVariable());
-                    part = this._node(n, this._endPos());
+                    n = tempNode(NonTerminalType.StaticProperty, startToken);
+                    next();
+                    n.children.push(part, simpleVariable());
+                    part = node(n);
                     continue;
                 default:
                     break;
@@ -2955,241 +3065,241 @@ export class Parser<T> {
 
     }
 
-    private _newVariablePart() {
+    function newVariablePart() {
 
-        let t = this._tokens.peek();
-        let n = this._tempNode(NonTerminalType.ErrorVariable);
+        let t = peek();
+        let n = tempNode(NonTerminalType.ErrorVariable);
 
         switch (t.tokenType) {
             case TokenType.T_STATIC:
                 n.value.astNodeType = NonTerminalType.Name;
                 n.value.flag = NonTerminalFlag.NameNotFullyQualified;
-                n.children.push(this._nodeFactory(this._tokens.next()));
-                return this._node(n);
+                n.children.push(nodeFactory(next()));
+                return node(n);
             case TokenType.T_VARIABLE:
             case '$':
-                return this._simpleVariable();
+                return simpleVariable();
             case TokenType.T_STRING:
             case TokenType.T_NAMESPACE:
             case TokenType.T_NS_SEPARATOR:
-                return this._name();
+                return name();
             default:
                 //error
-                this._error(n,
+                error(n,
                     [TokenType.T_STATIC, TokenType.T_VARIABLE, '$', TokenType.T_STRING,
                     TokenType.T_NAMESPACE, TokenType.T_NS_SEPARATOR]
                 );
-                return this._node(n, this._endPos());
+                return node(n);
         }
 
     }
 
-    private _cloneExpression() {
+    function cloneExpression() {
 
-        let n = this._tempNode(NonTerminalType.Clone);
-        this._tokens.next();
-        n.children.push(this._expression());
-        return this._node(n);
+        let n = tempNode(NonTerminalType.Clone);
+        next();
+        n.children.push(expression());
+        return node(n);
 
     }
 
-    private _listExpression() {
+    function listExpression() {
 
-        let n = this._tempNode(NonTerminalType.ArrayPairList);
-        let t = this._tokens.next();
+        let n = tempNode(NonTerminalType.ArrayPairList);
+        let t = next();
 
-        if (!this._tokens.consume('(')) {
+        if (!consume('(')) {
             //error
-            this._error(n, ['('], [')']);
-            this._tokens.consume(')');
-            return this._node(n);
+            error(n, ['('], [')']);
+            consume(')');
+            return node(n);
         }
 
-        this._followOnStack.push([')']);
-        this._arrayPairList(n, ')');
-        this._followOnStack.pop();
+        followOnStack.push([')']);
+        arrayPairList(n, ')');
+        followOnStack.pop();
 
-        if (!this._tokens.consume(')')) {
+        if (!consume(')')) {
             //error
-            this._error(n, [')'], [')']);
-            this._tokens.consume(')');
+            error(n, [')'], [')']);
+            consume(')');
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _unaryExpression() {
+    function unaryExpression() {
 
-        let n = this._tempNode(NonTerminalType.UnaryExpression);
-        let t = this._tokens.next();
-        n.value.flag = this._unaryOpToNodeFlag(t);
+        let n = tempNode(NonTerminalType.UnaryExpression);
+        let t = next();
+        n.value.flag = unaryOpToNodeFlag(t);
 
         switch (n.value.flag) {
             case NonTerminalFlag.UnaryPreDec:
             case NonTerminalFlag.UnaryPreInc:
             case NonTerminalFlag.UnaryReference:
-                n.children.push(this._variable());
+                n.children.push(variable());
                 break;
             default:
-                n.children.push(this._expression(this._opPrecedenceMap[t.text][0]));
+                n.children.push(expression(opPrecedenceMap[t.text][0]));
                 break;
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _closure() {
+    function closure() {
 
-        let n = this._tempNode(NonTerminalType.Closure);
-        if (this._tokens.consume(TokenType.T_STATIC)) {
+        let n = tempNode(NonTerminalType.Closure);
+        if (consume(TokenType.T_STATIC)) {
             n.value.flag = NonTerminalFlag.ModifierStatic;
         }
 
-        this._tokens.next(); //T_FUNCTION
+        next(); //T_FUNCTION
 
-        if (this._tokens.consume('&')) {
+        if (consume('&')) {
             n.value.flag |= NonTerminalFlag.ReturnsRef;
         }
 
-        this._followOnStack.push([TokenType.T_USE, ':', '{']);
-        n.children.push(this._parameterList());
-        this._followOnStack.pop();
+        followOnStack.push([TokenType.T_USE, ':', '{']);
+        n.children.push(parameterList());
+        followOnStack.pop();
 
-        if (this._tokens.peek().tokenType === TokenType.T_USE) {
-            this._followOnStack.push([':', '{']);
-            n.children.push(this._closureUse());
-            this._followOnStack.pop();
+        if (peek().tokenType === TokenType.T_USE) {
+            followOnStack.push([':', '{']);
+            n.children.push(closureUse());
+            followOnStack.pop();
         } else {
-            n.children.push(this._nodeFactory(null));
+            n.children.push(nodeFactory(null));
         }
 
-        if (this._tokens.peek().tokenType === ':') {
-            this._followOnStack.push(['{']);
-            n.children.push(this._returnType());
-            this._followOnStack.pop();
+        if (peek().tokenType === ':') {
+            followOnStack.push(['{']);
+            n.children.push(returnType());
+            followOnStack.pop();
         } else {
-            n.children.push(this._nodeFactory(null));
+            n.children.push(nodeFactory(null));
         }
 
-        if (!this._tokens.consume('{')) {
-            this._error(n, ['{'], [...recoverInnerStatementStartTokenTypes, '}']);
+        if (!consume('{')) {
+            error(n, ['{'], [...recoverInnerStatementStartTokenTypes, '}']);
         }
 
-        this._followOnStack.push(['}']);
-        n.children.push(this._innerStatementList(['}']));
-        this._followOnStack.pop();
+        followOnStack.push(['}']);
+        n.children.push(innerStatementList(['}']));
+        followOnStack.pop();
 
-        if (!this._tokens.consume('}')) {
-            this._error(n, ['}'], ['}']);
-            this._tokens.consume('}');
+        if (!consume('}')) {
+            error(n, ['}'], ['}']);
+            consume('}');
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _closureUse() {
+    function closureUse() {
 
-        let n = this._tempNode(NonTerminalType.ClosureUseList);
-        let t = this._tokens.next();
+        let n = tempNode(NonTerminalType.ClosureUseList);
+        let t = next();
 
-        if (!this._tokens.consume('(')) {
-            this._error(n, ['('], [')']);
-            this._tokens.consume(')');
-            return this._node(n);
+        if (!consume('(')) {
+            error(n, ['('], [')']);
+            consume(')');
+            return node(n);
         }
 
         let followOn: (TokenType | string)[] = [',', ')'];
 
         while (true) {
 
-            this._followOnStack.push(followOn);
-            n.children.push(this._closureUseVariable());
-            this._followOnStack.pop();
-            t = this._tokens.next();
+            followOnStack.push(followOn);
+            n.children.push(closureUseVariable());
+            followOnStack.pop();
+            t = next();
 
             if (t.tokenType === ',') {
-                this._tokens.next();
+                next();
             } else if (t.tokenType === ')') {
-                this._tokens.next();
+                next();
                 break;
             } else {
                 //error
-                this._error(n, followOn, [')']);
-                this._tokens.consume(')');
+                error(n, followOn, [')']);
+                consume(')');
                 break;
             }
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _closureUseVariable() {
+    function closureUseVariable() {
 
-        let n = this._tempNode(NonTerminalType.ClosureUseVariable);
+        let n = tempNode(NonTerminalType.ClosureUseVariable);
 
-        if (this._tokens.consume('&')) {
+        if (consume('&')) {
             n.value.flag = NonTerminalFlag.PassByRef;
         }
 
-        if (this._tokens.consume(TokenType.T_VARIABLE)) {
-            n.children.push(this._nodeFactory(this._tokens.current));
+        if (consume(TokenType.T_VARIABLE)) {
+            n.children.push(nodeFactory(current()));
         } else {
             //error
-            this._error(n, [TokenType.T_VARIABLE]);
+            error(n, [TokenType.T_VARIABLE]);
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _parameterList() {
+    function parameterList() {
 
-        let n = this._tempNode(NonTerminalType.ParameterList);
+        let n = tempNode(NonTerminalType.ParameterList);
         let t: Token;
 
-        if (!this._tokens.consume('(')) {
+        if (!consume('(')) {
             //error
-            this._error(n, ['('], [')']);
-            this._tokens.consume(')');
-            return this._node(n);
+            error(n, ['('], [')']);
+            consume(')');
+            return node(n);
         }
 
-        if (this._tokens.consume(')')) {
-            return this._node(n);
+        if (consume(')')) {
+            return node(n);
         }
 
         let followOn: (TokenType | string)[] = [',', ')'];
 
         while (true) {
 
-            this._followOnStack.push(followOn);
-            n.children.push(this._parameter());
-            this._followOnStack.pop();
-            t = this._tokens.peek();
+            followOnStack.push(followOn);
+            n.children.push(parameter());
+            followOnStack.pop();
+            t = peek();
 
             if (t.tokenType === ',') {
-                this._tokens.next();
+                next();
             } else if (t.tokenType === ')') {
-                this._tokens.next();
+                next();
                 break;
             } else {
                 //error
-                this._error(n, followOn, [')']);
-                this._tokens.consume(')');
+                error(n, followOn, [')']);
+                consume(')');
                 break;
             }
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _isTypeExpressionStartToken(t: Token) {
+    function isTypeExpressionStartToken(t: Token) {
         switch (t.tokenType) {
             case TokenType.T_NS_SEPARATOR:
             case TokenType.T_STRING:
@@ -3203,75 +3313,75 @@ export class Parser<T> {
         }
     }
 
-    private _parameter() {
+    function parameter() {
 
-        let n = this._tempNode(NonTerminalType.Parameter);
+        let n = tempNode(NonTerminalType.Parameter);
 
-        if (this._isTypeExpressionStartToken(this._tokens.peek())) {
-            this._followOnStack.push(['&', TokenType.T_ELLIPSIS, TokenType.T_VARIABLE]);
-            n.children.push(this._typeExpression());
-            this._followOnStack.pop();
+        if (isTypeExpressionStartToken(peek())) {
+            followOnStack.push(['&', TokenType.T_ELLIPSIS, TokenType.T_VARIABLE]);
+            n.children.push(typeExpression());
+            followOnStack.pop();
         }
 
-        if (this._tokens.consume('&')) {
+        if (consume('&')) {
             n.value.flag = NonTerminalFlag.PassByRef;
         }
 
-        if (this._tokens.consume(TokenType.T_ELLIPSIS)) {
+        if (consume(TokenType.T_ELLIPSIS)) {
             n.value.flag = NonTerminalFlag.Variadic;
         }
 
-        if (this._tokens.consume(TokenType.T_VARIABLE)) {
-            n.children.push(this._nodeFactory(this._tokens.current));
+        if (consume(TokenType.T_VARIABLE)) {
+            n.children.push(nodeFactory(current()));
         } else {
-            n.children.push(this._nodeFactory(null), this._nodeFactory(null));
-            this._error(n, [TokenType.T_VARIABLE]);
-            return this._node(n);
+            n.children.push(nodeFactory(null), nodeFactory(null));
+            error(n, [TokenType.T_VARIABLE]);
+            return node(n);
         }
 
-        if (this._tokens.consume('=')) {
-            n.children.push(this._expression());
+        if (consume('=')) {
+            n.children.push(expression());
         } else {
-            n.children.push(this._nodeFactory(null));
+            n.children.push(nodeFactory(null));
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _variable() {
+    function variable() {
 
-        let startPos = this._startPos();
-        this._variableAtomType = 0;
-        let variableAtom = this._variableAtom();
+        let startToken = start();
+        variableAtomType = 0;
+        let variableAtomNode = variableAtom();
         let count = 0;
 
         while (true) {
             ++count;
-            switch (this._tokens.peek().tokenType) {
+            switch (peek().tokenType) {
                 case TokenType.T_PAAMAYIM_NEKUDOTAYIM:
-                    variableAtom = this._staticMember(variableAtom, startPos);
+                    variableAtomNode = staticMember(variableAtomNode, startToken);
                     continue;
                 case TokenType.T_OBJECT_OPERATOR:
-                    variableAtom = this._instanceMember(variableAtom, startPos);
+                    variableAtomNode = instanceMember(variableAtomNode, startToken);
                     continue;
                 case '[':
                 case '{':
-                    variableAtom = this._dimension(variableAtom, startPos);
+                    variableAtomNode = dimension(variableAtomNode, startToken);
                     continue;
                 case '(':
-                    let call = this._tempNode(NonTerminalType.Call, startPos);
-                    call.children.push(variableAtom, this._argumentList());
-                    variableAtom = this._node(call);
+                    let call = tempNode(NonTerminalType.Call, startToken);
+                    call.children.push(variableAtomNode, argumentList());
+                    variableAtomNode = node(call);
                     continue;
                 default:
-                    if (count === 1 && this._variableAtomType !== NonTerminalType.Variable) {
+                    if (count === 1 && variableAtomType !== NonTerminalType.Variable) {
                         //error
-                        let errNode = this._tempNode(NonTerminalType.ErrorVariable, startPos);
-                        errNode.children.push(variableAtom);
-                        this._error(errNode,
+                        let errNode = tempNode(NonTerminalType.ErrorVariable, startToken);
+                        errNode.children.push(variableAtomNode);
+                        error(errNode,
                             [TokenType.T_PAAMAYIM_NEKUDOTAYIM, TokenType.T_OBJECT_OPERATOR, '[', '{', '(']);
-                        return this._node(errNode);
+                        return node(errNode);
                     }
                     break;
             }
@@ -3282,285 +3392,285 @@ export class Parser<T> {
         return variableAtom;
     }
 
-    private _staticMember(lhs: T, startPos: number) {
+    function staticMember(lhs: any, startToken: Token) {
 
-        let n = this._tempNode(NonTerminalType.ErrorStaticMember, startPos)
+        let n = tempNode(NonTerminalType.ErrorStaticMember, startToken);
         n.children.push(lhs);
-        this._tokens.next() //::
-        let t = this._tokens.peek();
+        next() //::
+        let t = peek();
 
         switch (t.tokenType) {
             case '{':
                 n.value.astNodeType = NonTerminalType.StaticMethodCall;
-                n.children.push(this._encapsulatedExpression('{', '}'));
+                n.children.push(encapsulatedExpression('{', '}'));
                 break;
             case '$':
             case TokenType.T_VARIABLE:
-                n.children.push(this._simpleVariable());
+                n.children.push(simpleVariable());
                 n.value.astNodeType = NonTerminalType.StaticProperty;
                 break;
             case TokenType.T_STRING:
-                n.children.push(this._nodeFactory(this._tokens.next()));
+                n.children.push(nodeFactory(next()));
                 n.value.astNodeType = NonTerminalType.ClassConstant;
                 break;
             default:
-                if (this._isSemiReservedToken(t)) {
-                    n.children.push(this._nodeFactory(this._tokens.next()));
+                if (isSemiReservedToken(t)) {
+                    n.children.push(nodeFactory(next()));
                     n.value.astNodeType = NonTerminalType.ClassConstant;
                     break;
                 } else {
                     //error
-                    this._error(n,
+                    error(n,
                         ['{', '$', TokenType.T_VARIABLE, TokenType.T_STRING]
                     );
-                    return this._node(n);
+                    return node(n);
                 }
         }
 
-        t = this._tokens.peek();
+        t = peek();
 
         if (t.tokenType === '(') {
-            n.children.push(this._argumentList());
+            n.children.push(argumentList());
             n.value.astNodeType = NonTerminalType.StaticMethodCall;
-            return this._node(n);
+            return node(n);
         } else if (n.value.astNodeType === NonTerminalType.StaticMethodCall) {
             //error
-            this._error(n, ['(']);
-            n.children.push(this._nodeFactory(null));
+            error(n, ['(']);
+            n.children.push(nodeFactory(null));
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _instanceMember(lhs: T, startPos: number) {
+    function instanceMember(lhs: any, startToken: Token) {
 
-        let n = this._tempNode(NonTerminalType.Property, startPos);
+        let n = tempNode(NonTerminalType.Property, startToken);
         n.children.push(lhs);
-        this._tokens.next(); //->
-        n.children.push(this._propertyName());
+        next(); //->
+        n.children.push(propertyName());
 
-        if (this._tokens.consume('(')) {
-            n.children.push(this._argumentList());
+        if (consume('(')) {
+            n.children.push(argumentList());
             n.value.astNodeType = NonTerminalType.MethodCall;
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _propertyName() {
+    function propertyName() {
 
-        switch (this._tokens.peek().tokenType) {
+        switch (peek().tokenType) {
             case TokenType.T_STRING:
-                return this._nodeFactory(this._tokens.next());
+                return nodeFactory(next());
             case '{':
-                return this._encapsulatedExpression('{', '}');
+                return encapsulatedExpression('{', '}');
             case '$':
             case TokenType.T_VARIABLE:
-                return this._simpleVariable();
+                return simpleVariable();
             default:
                 //error
-                let e = this._tempNode(NonTerminalType.Error);
-                this._error(e, [TokenType.T_STRING, '{', '$']);
-                return this._node(e);
+                let e = tempNode(NonTerminalType.Error);
+                error(e, [TokenType.T_STRING, '{', '$']);
+                return node(e);
         }
 
     }
 
-    private _dimension(lhs: T, startPos: number) {
+    function dimension(lhs: any, startToken: Token) {
 
-        let n = this._tempNode(NonTerminalType.Dimension, startPos);
-        let close = this._tokens.peek().tokenType === '[' ? ']' : '}';
+        let n = tempNode(NonTerminalType.Dimension, startToken);
+        let close = peek().tokenType === '[' ? ']' : '}';
         n.children.push(lhs);
-        this._tokens.next();
+        next();
 
-        if (this._isExpressionStartToken(this._tokens.peek())) {
-            this._followOnStack.push([close]);
-            n.children.push(this._expression());
-            this._followOnStack.pop();
+        if (isExpressionStartToken(peek())) {
+            followOnStack.push([close]);
+            n.children.push(expression());
+            followOnStack.pop();
         }
 
-        if (!this._tokens.consume(close)) {
+        if (!consume(close)) {
             //error
-            this._error(n, [close], [close]);
-            this._tokens.consume(close);
+            error(n, [close], [close]);
+            consume(close);
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _argumentList() {
+    function argumentList() {
 
-        let n = this._tempNode(NonTerminalType.ArgumentList);
+        let n = tempNode(NonTerminalType.ArgumentList);
         let t: Token;
 
-        if (!this._tokens.consume('(')) {
+        if (!consume('(')) {
             //error
-            this._error(n, ['('], [')']);
-            this._tokens.consume(')');
-            return this._node(n);
+            error(n, ['('], [')']);
+            consume(')');
+            return node(n);
         }
 
-        if (this._tokens.consume(')')) {
-            return this._node(n);
+        if (consume(')')) {
+            return node(n);
         }
 
         let followOn = [',', ')'];
 
         while (true) {
 
-            this._followOnStack.push(followOn);
-            n.children.push(this._argument());
-            this._followOnStack.pop();
-            t = this._tokens.peek();
+            followOnStack.push(followOn);
+            n.children.push(argument());
+            followOnStack.pop();
+            t = peek();
 
             if (t.tokenType === ')') {
-                this._tokens.next();
+                next();
                 break;
             } else if (t.tokenType === ',') {
-                this._tokens.next();
+                next();
             } else {
                 //error
-                this._error(n, followOn, [')']);
-                this._tokens.consume(')');
+                error(n, followOn, [')']);
+                consume(')');
                 break;
             }
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _isArgumentStartToken(t: Token) {
-        return t.tokenType === TokenType.T_ELLIPSIS || this._isExpressionStartToken(t);
+    function isArgumentStartToken(t: Token) {
+        return t.tokenType === TokenType.T_ELLIPSIS || isExpressionStartToken(t);
     }
 
-    private _argument() {
+    function argument() {
 
-        let n = this._tempNode(NonTerminalType.ErrorArgument);
-        let t = this._tokens.peek();
+        let n = tempNode(NonTerminalType.ErrorArgument);
+        let t = peek();
 
         if (t.tokenType === TokenType.T_ELLIPSIS) {
-            this._tokens.next();
+            next();
             n.value.astNodeType = NonTerminalType.Unpack;
-            n.children.push(this._expression());
-            return this._node(n);
-        } else if (this._isExpressionStartToken(t)) {
-            return this._expression();
+            n.children.push(expression());
+            return node(n);
+        } else if (isExpressionStartToken(t)) {
+            return expression();
         } else {
             //error
-            this._error(n, []);
-            return this._node(n);
+            error(n, []);
+            return node(n);
         }
 
     }
 
-    private _name() {
+    function name() {
 
-        let n = this._tempNode(NonTerminalType.Name);
+        let n = tempNode(NonTerminalType.Name);
 
-        if (this._tokens.consume(TokenType.T_NS_SEPARATOR)) {
+        if (consume(TokenType.T_NS_SEPARATOR)) {
             n.value.flag = NonTerminalFlag.NameFullyQualified;
-        } else if (this._tokens.consume(TokenType.T_NAMESPACE)) {
+        } else if (consume(TokenType.T_NAMESPACE)) {
             n.value.flag = NonTerminalFlag.NameRelative;
-            if (!this._tokens.consume(TokenType.T_NS_SEPARATOR)) {
+            if (!consume(TokenType.T_NS_SEPARATOR)) {
                 //error
-                if (this._error(n, [TokenType.T_NS_SEPARATOR], [TokenType.T_STRING]).tokenType !== TokenType.T_STRING) {
-                    n.children.push(this._nodeFactory(null));
-                    return this._node(n);
+                if (error(n, [TokenType.T_NS_SEPARATOR], [TokenType.T_STRING]).tokenType !== TokenType.T_STRING) {
+                    n.children.push(nodeFactory(null));
+                    return node(n);
                 }
             }
         } else {
             n.value.flag = NonTerminalFlag.NameNotFullyQualified;
         }
 
-        n.children.push(this._namespaceName());
-        return this._node(n);
+        n.children.push(namespaceName());
+        return node(n);
 
     }
 
-    private _shortArray() {
+    function shortArray() {
 
-        let n = this._tempNode(NonTerminalType.ArrayPairList);
-        let t = this._tokens.next();
+        let n = tempNode(NonTerminalType.ArrayPairList);
+        let t = next();
 
-        if (this._tokens.consume(']')) {
-            return this._node(n);
+        if (consume(']')) {
+            return node(n);
         }
 
-        this._followOnStack.push([']']);
-        this._arrayPairList(n, ']');
-        this._followOnStack.pop();
+        followOnStack.push([']']);
+        arrayPairList(n, ']');
+        followOnStack.pop();
 
-        if (!this._tokens.consume(']')) {
-            this._error(n, [']'], [']']);
-            this._tokens.consume(']');
+        if (!consume(']')) {
+            error(n, [']'], [']']);
+            consume(']');
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _longArray() {
+    function longArray() {
 
-        let n = this._tempNode(NonTerminalType.ArrayPairList);
-        this._tokens.next();
+        let n = tempNode(NonTerminalType.ArrayPairList);
+        next();
 
-        if (!this._tokens.consume('(')) {
+        if (!consume('(')) {
             //error
-            this._error(n, ['('], [')']);
-            this._tokens.consume(')');
-            return this._node(n);
+            error(n, ['('], [')']);
+            consume(')');
+            return node(n);
         }
 
-        if (this._tokens.consume(')')) {
-            return this._node(n);
+        if (consume(')')) {
+            return node(n);
         }
 
-        this._followOnStack.push([')']);
-        this._arrayPairList(n, ')');
-        this._followOnStack.pop();
+        followOnStack.push([')']);
+        arrayPairList(n, ')');
+        followOnStack.pop();
 
-        if (!this._tokens.consume(')')) {
-            this._error(n, [')'], [')']);
-            this._tokens.consume(')');
+        if (!consume(')')) {
+            error(n, [')'], [')']);
+            consume(')');
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _isArrayPairStartToken(t: Token) {
-        return t.tokenType === '&' || this._isExpressionStartToken(t);
+    function isArrayPairStartToken(t: Token) {
+        return t.tokenType === '&' || isExpressionStartToken(t);
     }
 
-    private _arrayPairList(n: TempNode<T>, breakOn: TokenType | string) {
+    function arrayPairList(n: TempNode, breakOn: TokenType | string) {
 
         let t: Token;
         let followOn: (TokenType | string)[] = [','];
 
         while (true) {
 
-            this._followOnStack.push(followOn);
-            n.children.push(this._arrayPair());
-            this._followOnStack.pop();
-            t = this._tokens.peek();
+            followOnStack.push(followOn);
+            n.children.push(arrayPair());
+            followOnStack.pop();
+            t = peek();
 
             if (t.tokenType === ',') {
-                this._tokens.next();
-                if (this._tokens.peek().tokenType === breakOn) {
+                next();
+                if (peek().tokenType === breakOn) {
                     break;
                 }
             } else if (t.tokenType === breakOn) {
                 break;
             } else {
                 //error
-                if (this._error(n, followOn, [',']).tokenType === ',' &&
-                    this._tokens.peek(1).tokenType !== breakOn) {
-                    this._tokens.next();
+                if (error(n, followOn, [',']).tokenType === ',' &&
+                    peek(1).tokenType !== breakOn) {
+                    next();
                     continue;
                 }
                 break;
@@ -3573,265 +3683,265 @@ export class Parser<T> {
     }
 
 
-    private _arrayPair() {
+    function arrayPair() {
 
-        let n = this._tempNode(NonTerminalType.ArrayPair);
+        let n = tempNode(NonTerminalType.ArrayPair);
 
-        if (this._tokens.peek().tokenType === '&') {
-            n.children.push(this._unaryExpression(), this._nodeFactory(null));
-            return this._node(n);
+        if (peek().tokenType === '&') {
+            n.children.push(unaryExpression(), nodeFactory(null));
+            return node(n);
         }
 
-        this._followOnStack.push([TokenType.T_DOUBLE_ARROW]);
-        n.children.push(this._expression());
-        this._followOnStack.pop();
+        followOnStack.push([TokenType.T_DOUBLE_ARROW]);
+        n.children.push(expression());
+        followOnStack.pop();
 
-        if (!this._tokens.consume(TokenType.T_DOUBLE_ARROW)) {
-            n.children.push(this._nodeFactory(null));
-            return this._node(n);
+        if (!consume(TokenType.T_DOUBLE_ARROW)) {
+            n.children.push(nodeFactory(null));
+            return node(n);
         }
 
-        if (this._tokens.peek().tokenType === '&') {
-            n.children.push(this._unaryExpression());
-            return this._node(n);
+        if (peek().tokenType === '&') {
+            n.children.push(unaryExpression());
+            return node(n);
         }
 
-        n.children.push(this._expression());
-        return this._node(n);
+        n.children.push(expression());
+        return node(n);
 
     }
 
-    private _encapsulatedExpression(open:string|TokenType,close:string|TokenType){
+    function encapsulatedExpression(open: string | TokenType, close: string | TokenType) {
 
-        let n = this._tempNode(NonTerminalType.EncapsulatedExpression);
+        let n = tempNode(NonTerminalType.EncapsulatedExpression);
 
-        if(!this._tokens.consume(open)){
-            let err = new ParseError(this._tokens.peek(), [open]);
-            if(this._isExpressionStartToken(this._tokens.peek())){
+        if (!consume(open)) {
+            let err = new ParseError(peek(), [open]);
+            if (isExpressionStartToken(peek())) {
                 n.value.errors = [err];
-            } else if(this._tokens.peek(1).tokenType === open){
-                this._tokens.next();
-                this._tokens.next();
+            } else if (peek(1).tokenType === open) {
+                next();
+                next();
                 n.value.errors = [err];
             } else {
-                this._error(n, [open], [close]);
-                this._tokens.consume(close);
-                n.children.push(this._nodeFactory(null));
-                return this._node(n);
+                error(n, [open], [close]);
+                consume(close);
+                n.children.push(nodeFactory(null));
+                return node(n);
             }
         }
 
-        this._followOnStack.push([close]);
-        n.children.push(this._expression());
-        this._followOnStack.pop();
+        followOnStack.push([close]);
+        n.children.push(expression());
+        followOnStack.pop();
 
-        if(!this._tokens.consume(close)){
-            this._error(n, [close], [close]);
-            this._tokens.consume(close);
+        if (!consume(close)) {
+            error(n, [close], [close]);
+            consume(close);
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _variableAtom() {
+    function variableAtom() {
 
-        let n: TempNode<T>;
-        switch (this._tokens.peek().tokenType) {
+        let n: TempNode;
+        switch (peek().tokenType) {
             case TokenType.T_VARIABLE:
             case '$':
-                this._variableAtomType = NonTerminalType.Variable;
-                return this._simpleVariable();
+                variableAtomType = NonTerminalType.Variable;
+                return simpleVariable();
             case '(':
-                return this._encapsulatedExpression('(', ')');
+                return encapsulatedExpression('(', ')');
             case TokenType.T_ARRAY:
-                this._variableAtomType = NonTerminalType.ArrayPairList;
-                return this._longArray();
+                variableAtomType = NonTerminalType.ArrayPairList;
+                return longArray();
             case '[':
-                this._variableAtomType = NonTerminalType.ArrayPairList;
-                return this._shortArray();
+                variableAtomType = NonTerminalType.ArrayPairList;
+                return shortArray();
             case TokenType.T_CONSTANT_ENCAPSED_STRING:
-                return this._nodeFactory(this._tokens.next());
+                return nodeFactory(next());
             case TokenType.T_STATIC:
-                this._variableAtomType = NonTerminalType.Name;
-                n = this._tempNode(NonTerminalType.Name);
+                variableAtomType = NonTerminalType.Name;
+                n = tempNode(NonTerminalType.Name);
                 n.value.flag = NonTerminalFlag.NameNotFullyQualified;
-                n.children.push(this._nodeFactory(this._tokens.next()));
-                return this._node(n);
+                n.children.push(nodeFactory(next()));
+                return node(n);
             case TokenType.T_STRING:
             case TokenType.T_NAMESPACE:
             case TokenType.T_NS_SEPARATOR:
-                this._variableAtomType = NonTerminalType.Name;
-                return this._name();
+                variableAtomType = NonTerminalType.Name;
+                return name();
             default:
                 //error
-                this._variableAtomType = NonTerminalType.ErrorVariable;
-                n = this._tempNode(NonTerminalType.ErrorVariable);
-                this._error(n,
+                variableAtomType = NonTerminalType.ErrorVariable;
+                n = tempNode(NonTerminalType.ErrorVariable);
+                error(n,
                     [TokenType.T_VARIABLE, '$', '(', '[', TokenType.T_ARRAY, TokenType.T_CONSTANT_ENCAPSED_STRING,
                     TokenType.T_STATIC, TokenType.T_STRING, TokenType.T_NAMESPACE, TokenType.T_NS_SEPARATOR]);
-                return this._node(n);
+                return node(n);
         }
 
     }
 
-    private _simpleVariable() {
+    function simpleVariable() {
 
-        let n = this._tempNode(NonTerminalType.Variable);
-        let t = this._tokens.peek();
+        let n = tempNode(NonTerminalType.Variable);
+        let t = peek();
 
         if (t.tokenType === TokenType.T_VARIABLE) {
-            n.children.push(this._nodeFactory(this._tokens.next()));
+            n.children.push(nodeFactory(next()));
         } else if (t.tokenType === '$') {
-            this._tokens.next();
-            t = this._tokens.peek();
+            next();
+            t = peek();
             if (t.tokenType === '{') {
-                n.children.push(this._encapsulatedExpression('{', '}'));
+                n.children.push(encapsulatedExpression('{', '}'));
             } else if (t.tokenType === '$' || t.tokenType === TokenType.T_VARIABLE) {
-                n.children.push(this._simpleVariable());
+                n.children.push(simpleVariable());
             } else {
                 //error
-                this._error(n, ['{', '$', TokenType.T_VARIABLE]);
+                error(n, ['{', '$', TokenType.T_VARIABLE]);
             }
         } else {
             //shouldnt get here
             throw new Error(`Unexpected token ${t.tokenType}`);
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _isBinaryOpToken(t: Token) {
-        return this._opPrecedenceMap.hasOwnProperty(t.text) && (this._opPrecedenceMap[t.text][2] & OpType.Binary) === OpType.Binary;
+    function isBinaryOpToken(t: Token) {
+        return opPrecedenceMap.hasOwnProperty(t.text) && (opPrecedenceMap[t.text][2] & OpType.Binary) === OpType.Binary;
     }
 
-    private _haltCompilerStatement() {
+    function haltCompilerStatement() {
 
-        let n = this._tempNode(NonTerminalType.HaltCompiler);
-        this._tokens.next();
+        let n = tempNode(NonTerminalType.HaltCompiler);
+        next();
 
         let expected: (TokenType | string)[] = ['(', ')', ';'];
         let t: Token;
 
-        if (!this._tokens.consume('(')) {
-            this._error(n, ['('], [';']);
-            this._tokens.consume(';');
-            return this._node(n);
+        if (!consume('(')) {
+            error(n, ['('], [';']);
+            consume(';');
+            return node(n);
         }
 
-        if (!this._tokens.consume(')')) {
-            this._error(n, [')'], [';']);
-            this._tokens.consume(';');
-            return this._node(n);
+        if (!consume(')')) {
+            error(n, [')'], [';']);
+            consume(';');
+            return node(n);
         }
 
-        if (!this._tokens.consume(';')) {
-            this._error(n, [';'], [';']);
-            this._tokens.consume(';');
+        if (!consume(';')) {
+            error(n, [';'], [';']);
+            consume(';');
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _useStatement() {
+    function useStatement() {
 
-        let n = this._tempNode(NonTerminalType.UseStatement);
-        this._tokens.next();
+        let n = tempNode(NonTerminalType.UseStatement);
+        next();
 
-        if (this._tokens.consume(TokenType.T_FUNCTION)) {
+        if (consume(TokenType.T_FUNCTION)) {
             n.value.flag = NonTerminalFlag.UseFunction;
-        } else if (this._tokens.consume(TokenType.T_CONST)) {
+        } else if (consume(TokenType.T_CONST)) {
             n.value.flag = NonTerminalFlag.UseConstant;
         }
 
-        let useList = this._tempNode(NonTerminalType.UseStatement);
-        let useElement = this._tempNode(NonTerminalType.UseElement);
-        this._tokens.consume(TokenType.T_NS_SEPARATOR);
+        let useListNode = tempNode(NonTerminalType.UseStatement);
+        let useElementNode = tempNode(NonTerminalType.UseElement);
+        consume(TokenType.T_NS_SEPARATOR);
 
-        this._followOnStack.push([TokenType.T_NS_SEPARATOR, ',', ';']);
-        let namespaceName = this._namespaceName();
-        this._followOnStack.pop();
+        followOnStack.push([TokenType.T_NS_SEPARATOR, ',', ';']);
+        let nsName = namespaceName();
+        followOnStack.pop();
 
-        let t = this._tokens.peek();
-        if (this._tokens.consume(TokenType.T_NS_SEPARATOR) || t.tokenType === '{') {
+        let t = peek();
+        if (consume(TokenType.T_NS_SEPARATOR) || t.tokenType === '{') {
             if (t.tokenType === '{') {
                 n.value.errors.push(new ParseError(t, [TokenType.T_NS_SEPARATOR]));
             }
             n.value.astNodeType = NonTerminalType.UseGroup;
-            n.children.push(namespaceName);
-            return this._useGroup(n);
+            n.children.push(nsName);
+            return useGroup(n);
         }
 
         if (!n.value.flag) {
             n.value.flag = NonTerminalFlag.UseClass;
         }
 
-        useElement.children.push(namespaceName);
-        this._followOnStack.push([',', ';']);
-        useList.children.push(this._useElement(useElement, false, true));
-        this._followOnStack.pop();
+        useElementNode.children.push(nsName);
+        followOnStack.push([',', ';']);
+        useListNode.children.push(useElement(useElementNode, false, true));
+        followOnStack.pop();
 
-        if (this._tokens.consume(',')) {
-            this._followOnStack.push([';']);
-            n.children.push(this._useList(useList, false, true, ';'));
-            this._followOnStack.pop();
+        if (consume(',')) {
+            followOnStack.push([';']);
+            n.children.push(useList(useListNode, false, true, ';'));
+            followOnStack.pop();
         }
 
-        if (!this._tokens.consume(';')) {
-            this._error(n, [';'], [';']);
-            this._tokens.consume(';');
+        if (!consume(';')) {
+            error(n, [';'], [';']);
+            consume(';');
         }
 
-        return this._node(n);
+        return node(n);
     }
 
-    private _useGroup(n: TempNode<T>) {
+    function useGroup(n: TempNode) {
 
-        if (!this._tokens.consume('{')) {
+        if (!consume('{')) {
             //error
-            this._error(n, ['{'], [';']);
-            this._tokens.consume(';');
-            n.children.push(this._nodeFactory(null));
-            return this._node(n);
+            error(n, ['{'], [';']);
+            consume(';');
+            n.children.push(nodeFactory(null));
+            return node(n);
         }
 
-        this._followOnStack.push(['}', ';']);
-        n.children.push(this._useList(this._tempNode(NonTerminalType.UseList), !n.value.flag, false, '}'));
-        this._followOnStack.pop();
+        followOnStack.push(['}', ';']);
+        n.children.push(useList(tempNode(NonTerminalType.UseList), !n.value.flag, false, '}'));
+        followOnStack.pop();
 
-        if (!this._tokens.consume('}')) {
-            this._error(n, ['}'], [';']);
+        if (!consume('}')) {
+            error(n, ['}'], [';']);
         }
 
-        if (!this._tokens.consume(';')) {
-            this._error(n, [';'], [';']);
-            this._tokens.consume(';');
+        if (!consume(';')) {
+            error(n, [';'], [';']);
+            consume(';');
         }
 
-        return this._node(n);
+        return node(n);
     }
 
-    private _useList(n: TempNode<T>, isMixed: boolean, lookForPrefix: boolean, breakOn: TokenType | string) {
+    function useList(n: TempNode, isMixed: boolean, lookForPrefix: boolean, breakOn: TokenType | string) {
 
         let t: Token;
         let followOn: (TokenType | string)[] = [','];
 
         while (true) {
 
-            this._followOnStack.push(followOn);
-            n.children.push(this._useElement(this._tempNode(NonTerminalType.UseElement), isMixed, lookForPrefix));
-            this._followOnStack.pop();
-            t = this._tokens.peek();
+            followOnStack.push(followOn);
+            n.children.push(useElement(tempNode(NonTerminalType.UseElement), isMixed, lookForPrefix));
+            followOnStack.pop();
+            t = peek();
             if (t.tokenType === ',') {
-                this._tokens.next();
+                next();
             } else if (t.tokenType === breakOn) {
                 break;
             } else {
                 //error
-                if (this._error(n, [',', breakOn], [',']).tokenType === ',') {
-                    this._tokens.next();
+                if (error(n, [',', breakOn], [',']).tokenType === ',') {
+                    next();
                     continue;
                 }
                 break;
@@ -3839,134 +3949,134 @@ export class Parser<T> {
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _useElement(n: TempNode<T>, isMixed: boolean, lookForPrefix: boolean) {
+    function useElement(n: TempNode, isMixed: boolean, lookForPrefix: boolean) {
 
         //if children not empty then it contains tokens to left of T_AS
         if (!n.children.length) {
 
             if (isMixed) {
-                if (this._tokens.consume(TokenType.T_FUNCTION)) {
+                if (consume(TokenType.T_FUNCTION)) {
                     n.value.flag = NonTerminalFlag.UseFunction;
-                } else if (this._tokens.consume(TokenType.T_CONST)) {
+                } else if (consume(TokenType.T_CONST)) {
                     n.value.flag = NonTerminalFlag.UseConstant;
                 } else {
                     n.value.flag = NonTerminalFlag.UseClass;
                 }
             } else if (lookForPrefix) {
-                this._tokens.consume(TokenType.T_NS_SEPARATOR);
+                consume(TokenType.T_NS_SEPARATOR);
             }
 
-            this._followOnStack.push([TokenType.T_AS]);
-            n.children.push(this._namespaceName());
-            this._followOnStack.pop();
+            followOnStack.push([TokenType.T_AS]);
+            n.children.push(namespaceName());
+            followOnStack.pop();
         }
 
-        if (!this._tokens.consume(TokenType.T_AS)) {
-            n.children.push(this._nodeFactory(null));
-            return this._node(n);
+        if (!consume(TokenType.T_AS)) {
+            n.children.push(nodeFactory(null));
+            return node(n);
         }
 
-        if (this._tokens.consume(TokenType.T_STRING)) {
-            n.children.push(this._nodeFactory(this._tokens.current));
+        if (consume(TokenType.T_STRING)) {
+            n.children.push(nodeFactory(current()));
         } else {
             //error
-            n.children.push(this._nodeFactory(null));
-            this._error(n, [TokenType.T_STRING]);
+            n.children.push(nodeFactory(null));
+            error(n, [TokenType.T_STRING]);
         }
 
-        return this._node(n);
+        return node(n);
     }
 
-    private _namespaceStatement() {
+    function namespaceStatement() {
 
-        let n = this._tempNode(NonTerminalType.Namespace);
-        this._tokens.next();
-        this._tokens.lastDocComment;
+        let n = tempNode(NonTerminalType.Namespace);
+        next();
+        lastDocComment;
 
-        if (this._tokens.peek().tokenType === TokenType.T_STRING) {
+        if (peek().tokenType === TokenType.T_STRING) {
 
-            this._followOnStack.push([';', '{']);
-            n.children.push(this._namespaceName());
-            this._followOnStack.pop();
+            followOnStack.push([';', '{']);
+            n.children.push(namespaceName());
+            followOnStack.pop();
 
-            if (this._tokens.consume(';')) {
-                n.children.push(this._nodeFactory(null));
-                return this._node(n);
+            if (consume(';')) {
+                n.children.push(nodeFactory(null));
+                return node(n);
             }
 
         }
 
-        if (!this._tokens.consume('{')) {
+        if (!consume('{')) {
             //error
-            n.children.push(this._nodeFactory(null));
-            this._error(n, ['{']);
-            return this._node(n);
+            n.children.push(nodeFactory(null));
+            error(n, ['{']);
+            return node(n);
         }
 
-        n.children.push(this._topStatementList(true));
+        n.children.push(topStatementList(true));
 
-        if (!this._tokens.consume('}')) {
-            this._error(n, ['}'], ['}']);
-            this._tokens.consume('}');
+        if (!consume('}')) {
+            error(n, ['}'], ['}']);
+            consume('}');
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _namespaceName() {
+    function namespaceName() {
 
-        let n = this._tempNode(NonTerminalType.NamespaceName);
+        let n = tempNode(NonTerminalType.NamespaceName);
 
-        if (this._tokens.peek().tokenType === TokenType.T_STRING) {
-            n.children.push(this._nodeFactory(this._tokens.next()));
+        if (peek().tokenType === TokenType.T_STRING) {
+            n.children.push(nodeFactory(next()));
         } else {
             //error
-            this._error(n, [TokenType.T_STRING]);
-            return this._node(n);
+            error(n, [TokenType.T_STRING]);
+            return node(n);
         }
 
         while (true) {
 
-            if (this._tokens.peek().tokenType === TokenType.T_NS_SEPARATOR &&
-                this._tokens.peek(1).tokenType === TokenType.T_STRING) {
-                this._tokens.next();
-                n.children.push(this._nodeFactory(this._tokens.next()));
+            if (peek().tokenType === TokenType.T_NS_SEPARATOR &&
+                peek(1).tokenType === TokenType.T_STRING) {
+                next();
+                n.children.push(nodeFactory(next()));
             } else {
                 break;
             }
 
         }
 
-        return this._node(n);
+        return node(n);
 
     }
 
-    private _error(tempNode: TempNode<T>, expected: (TokenType | string)[], followOn?: (TokenType | string)[]) {
+    function error(tempNode: TempNode, expected: (TokenType | string)[], followOn?: (TokenType | string)[]) {
 
-        let unexpected = this._tokens.peek();
-        let n = this._followOnStack.length;
+        let unexpected = peek();
+        let n = followOnStack.length;
         let syncTokens = followOn ? followOn.slice(0) : [];
 
         while (n--) {
-            Array.prototype.push.apply(syncTokens, this._followOnStack[n]);
+            Array.prototype.push.apply(syncTokens, followOnStack[n]);
         }
 
-        this._tokens.skip(syncTokens);
+        skip(syncTokens);
         if (!tempNode.value.errors) {
             tempNode.value.errors = [];
         }
         tempNode.value.errors.push(new ParseError(unexpected, expected));
-        return this._tokens.peek();
+        return peek();
     }
 
 
-    private _isReservedToken(t: Token) {
+    function isReservedToken(t: Token) {
         switch (t.tokenType) {
             case TokenType.T_INCLUDE:
             case TokenType.T_INCLUDE_ONCE:
@@ -4041,7 +4151,7 @@ export class Parser<T> {
         }
     }
 
-    private _isSemiReservedToken(t: Token) {
+    function isSemiReservedToken(t: Token) {
         switch (t.tokenType) {
             case TokenType.T_STATIC:
             case TokenType.T_ABSTRACT:
@@ -4051,11 +4161,11 @@ export class Parser<T> {
             case TokenType.T_PUBLIC:
                 return true;
             default:
-                return this._isReservedToken(t);
+                return isReservedToken(t);
         }
     }
 
-    private _isTopStatementStartToken(t: Token) {
+    function isTopStatementStartToken(t: Token) {
 
         switch (t.tokenType) {
             case TokenType.T_NAMESPACE:
@@ -4070,12 +4180,12 @@ export class Parser<T> {
             case TokenType.T_INTERFACE:
                 return true;
             default:
-                return this._isStatementStartToken(t);
+                return isStatementStartToken(t);
         }
 
     }
 
-    private _isInnerStatementStartToken(t: Token) {
+    function isInnerStatementStartToken(t: Token) {
         switch (t.tokenType) {
             case TokenType.T_FUNCTION:
             case TokenType.T_ABSTRACT:
@@ -4085,11 +4195,11 @@ export class Parser<T> {
             case TokenType.T_INTERFACE:
                 return true;
             default:
-                return this._isStatementStartToken(t);
+                return isStatementStartToken(t);
         }
     }
 
-    private _isStatementStartToken(t: Token) {
+    function isStatementStartToken(t: Token) {
 
         switch (t.tokenType) {
             case '{':
@@ -4115,12 +4225,8 @@ export class Parser<T> {
             case ';':
                 return true;
             default:
-                return this._isExpressionStartToken(t);
+                return isExpressionStartToken(t);
         }
     }
 
-
-
-
 }
-
