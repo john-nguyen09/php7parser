@@ -58,7 +58,7 @@ export interface AstNodeFactory<T> {
 }
 
 export interface NonTerminal {
-    astNodeType: NonTerminalType;
+    nonTerminalType: NonTerminalType;
     startToken: Token;
     endToken: Token;
     flag?: NonTerminalFlag;
@@ -401,7 +401,7 @@ export namespace Parser {
 
         return {
             value: {
-                astNodeType: type,
+                nonTerminalType: type,
                 startToken: startToken,
                 endToken: null,
             },
@@ -1455,7 +1455,7 @@ export namespace Parser {
 
     function traitPrecedence(n: TempNode) {
 
-        n.value.astNodeType = NonTerminalType.TraitPrecendence;
+        n.value.nonTerminalType = NonTerminalType.TraitPrecendence;
         followOnStack.push([';']);
         n.children.push(nameList());
         followOnStack.pop();
@@ -1499,7 +1499,7 @@ export namespace Parser {
 
     function methodDeclaration(n: TempNode) {
 
-        n.value.astNodeType = NonTerminalType.MethodDeclaration;
+        n.value.nonTerminalType = NonTerminalType.MethodDeclaration;
         next(); //T_FUNCTION
         n.value.doc = lastDocComment();
 
@@ -2780,7 +2780,7 @@ export namespace Parser {
 
     function classConstantDeclarationStatement(n: TempNode) {
 
-        n.value.astNodeType = NonTerminalType.ClassConstantDeclarationList;
+        n.value.nonTerminalType = NonTerminalType.ClassConstantDeclarationList;
         next(); //const
         let followOn = [';', ','];
         let t: Token;
@@ -2898,7 +2898,7 @@ export namespace Parser {
     function propertyDeclarationStatement(n: TempNode) {
 
         let t: Token;
-        n.value.astNodeType = NonTerminalType.PropertyDeclarationList;
+        n.value.nonTerminalType = NonTerminalType.PropertyDeclarationList;
         let followOn = [';', ','];
 
         while (true) {
@@ -3072,7 +3072,7 @@ export namespace Parser {
 
         switch (t.tokenType) {
             case TokenType.T_STATIC:
-                n.value.astNodeType = NonTerminalType.Name;
+                n.value.nonTerminalType = NonTerminalType.Name;
                 n.value.flag = NonTerminalFlag.NameNotFullyQualified;
                 n.children.push(nodeFactory(next()));
                 return node(n);
@@ -3401,22 +3401,22 @@ export namespace Parser {
 
         switch (t.tokenType) {
             case '{':
-                n.value.astNodeType = NonTerminalType.StaticMethodCall;
+                n.value.nonTerminalType = NonTerminalType.StaticMethodCall;
                 n.children.push(encapsulatedExpression('{', '}'));
                 break;
             case '$':
             case TokenType.T_VARIABLE:
                 n.children.push(simpleVariable());
-                n.value.astNodeType = NonTerminalType.StaticProperty;
+                n.value.nonTerminalType = NonTerminalType.StaticProperty;
                 break;
             case TokenType.T_STRING:
                 n.children.push(nodeFactory(next()));
-                n.value.astNodeType = NonTerminalType.ClassConstant;
+                n.value.nonTerminalType = NonTerminalType.ClassConstant;
                 break;
             default:
                 if (isSemiReservedToken(t)) {
                     n.children.push(nodeFactory(next()));
-                    n.value.astNodeType = NonTerminalType.ClassConstant;
+                    n.value.nonTerminalType = NonTerminalType.ClassConstant;
                     break;
                 } else {
                     //error
@@ -3431,9 +3431,9 @@ export namespace Parser {
 
         if (t.tokenType === '(') {
             n.children.push(argumentList());
-            n.value.astNodeType = NonTerminalType.StaticMethodCall;
+            n.value.nonTerminalType = NonTerminalType.StaticMethodCall;
             return node(n);
-        } else if (n.value.astNodeType === NonTerminalType.StaticMethodCall) {
+        } else if (n.value.nonTerminalType === NonTerminalType.StaticMethodCall) {
             //error
             error(n, ['(']);
             n.children.push(nodeFactory(null));
@@ -3452,7 +3452,7 @@ export namespace Parser {
 
         if (consume('(')) {
             n.children.push(argumentList());
-            n.value.astNodeType = NonTerminalType.MethodCall;
+            n.value.nonTerminalType = NonTerminalType.MethodCall;
         }
 
         return node(n);
@@ -3555,7 +3555,7 @@ export namespace Parser {
 
         if (t.tokenType === TokenType.T_ELLIPSIS) {
             next();
-            n.value.astNodeType = NonTerminalType.Unpack;
+            n.value.nonTerminalType = NonTerminalType.Unpack;
             n.children.push(expression());
             return node(n);
         } else if (isExpressionStartToken(t)) {
@@ -3869,7 +3869,7 @@ export namespace Parser {
             if (t.tokenType === '{') {
                 n.value.errors.push(new ParseError(t, [TokenType.T_NS_SEPARATOR]));
             }
-            n.value.astNodeType = NonTerminalType.UseGroup;
+            n.value.nonTerminalType = NonTerminalType.UseGroup;
             n.children.push(nsName);
             return useGroup(n);
         }
