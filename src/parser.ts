@@ -28,7 +28,7 @@ export enum NonTerminalType {
     ErrorVariable, ErrorExpression, ErrorClassStatement, ErrorPropertyName, ErrorTraitAdaptation
 }
 
-export enum AstNodeFlag {
+export enum NonTerminalFlag {
     None = 0,
     ModifierPublic = 1 << 0,
     ModifierProtected = 1 << 1,
@@ -211,7 +211,7 @@ export interface AstNode {
     astNodeType: NonTerminalType;
     startTokenIndex: number;
     endTokenIndex: number;
-    flag?: AstNodeFlag;
+    flag?: NonTerminalFlag;
     doc?: Token;
     errors?: ParseError[];
 }
@@ -444,7 +444,7 @@ export class Parser<T> {
         let associativity: Associativity;
         let op: Token;
         let startPos = this._startPos();
-        let opFlag: AstNodeFlag;
+        let opFlag: NonTerminalFlag;
         this._isBinaryOpPredicate = isVariableAndExpressionBinaryOp;
         let lhs = this._atom();
 
@@ -486,7 +486,7 @@ export class Parser<T> {
 
     }
 
-    private _binaryNode(lhs: T, rhs: T, flag: AstNodeFlag, startPos: number) {
+    private _binaryNode(lhs: T, rhs: T, flag: NonTerminalFlag, startPos: number) {
         let tempNode = this._tempNode(NonTerminalType.BinaryExpression, startPos);
         tempNode.value.flag = flag;
         tempNode.children.push(lhs);
@@ -497,21 +497,21 @@ export class Parser<T> {
     private _unaryOpToNodeFlag(op: Token, isPost = false) {
         switch (op.tokenType) {
             case '&':
-                return AstNodeFlag.UnaryReference;
+                return NonTerminalFlag.UnaryReference;
             case '!':
-                return AstNodeFlag.UnaryBoolNot;
+                return NonTerminalFlag.UnaryBoolNot;
             case '~':
-                return AstNodeFlag.UnaryBitwiseNot;
+                return NonTerminalFlag.UnaryBitwiseNot;
             case '-':
-                return AstNodeFlag.UnaryMinus;
+                return NonTerminalFlag.UnaryMinus;
             case '+':
-                return AstNodeFlag.UnaryPlus;
+                return NonTerminalFlag.UnaryPlus;
             case '@':
-                return AstNodeFlag.UnarySilence;
+                return NonTerminalFlag.UnarySilence;
             case TokenType.T_INC:
-                return isPost ? AstNodeFlag.UnaryPreInc : AstNodeFlag.UnaryPostInc;
+                return isPost ? NonTerminalFlag.UnaryPreInc : NonTerminalFlag.UnaryPostInc;
             case TokenType.T_DEC:
-                return isPost ? AstNodeFlag.UnaryPreDec : AstNodeFlag.UnaryPostDec;
+                return isPost ? NonTerminalFlag.UnaryPreDec : NonTerminalFlag.UnaryPostDec;
             default:
                 throw new Error(`Unknow operator ${op.text}`);
         }
@@ -521,87 +521,87 @@ export class Parser<T> {
 
         switch (op.tokenType) {
             case '|':
-                return AstNodeFlag.BinaryBitwiseOr;
+                return NonTerminalFlag.BinaryBitwiseOr;
             case '&':
-                return AstNodeFlag.BinaryBitwiseAnd;
+                return NonTerminalFlag.BinaryBitwiseAnd;
             case '^':
-                return AstNodeFlag.BinaryBitwiseXor;
+                return NonTerminalFlag.BinaryBitwiseXor;
             case '.':
-                return AstNodeFlag.BinaryConcat;
+                return NonTerminalFlag.BinaryConcat;
             case '+':
-                return AstNodeFlag.BinaryAdd;
+                return NonTerminalFlag.BinaryAdd;
             case '-':
-                return AstNodeFlag.BinarySubtract;
+                return NonTerminalFlag.BinarySubtract;
             case '*':
-                return AstNodeFlag.BinaryMultiply;
+                return NonTerminalFlag.BinaryMultiply;
             case '/':
-                return AstNodeFlag.BinaryDivide;
+                return NonTerminalFlag.BinaryDivide;
             case '%':
-                return AstNodeFlag.BinaryModulus;
+                return NonTerminalFlag.BinaryModulus;
             case TokenType.T_POW:
-                return AstNodeFlag.BinaryPower;
+                return NonTerminalFlag.BinaryPower;
             case TokenType.T_SL:
-                return AstNodeFlag.BinaryShiftLeft;
+                return NonTerminalFlag.BinaryShiftLeft;
             case TokenType.T_SR:
-                return AstNodeFlag.BinaryShiftRight;
+                return NonTerminalFlag.BinaryShiftRight;
             case TokenType.T_BOOLEAN_AND:
-                return AstNodeFlag.BinaryBoolAnd;
+                return NonTerminalFlag.BinaryBoolAnd;
             case TokenType.T_BOOLEAN_OR:
-                return AstNodeFlag.BinaryBoolOr;
+                return NonTerminalFlag.BinaryBoolOr;
             case TokenType.T_LOGICAL_AND:
-                return AstNodeFlag.BinaryLogicalAnd;
+                return NonTerminalFlag.BinaryLogicalAnd;
             case TokenType.T_LOGICAL_OR:
-                return AstNodeFlag.BinaryLogicalOr;
+                return NonTerminalFlag.BinaryLogicalOr;
             case TokenType.T_LOGICAL_XOR:
-                return AstNodeFlag.BinaryLogicalXor;
+                return NonTerminalFlag.BinaryLogicalXor;
             case TokenType.T_IS_IDENTICAL:
-                return AstNodeFlag.BinaryIsIdentical;
+                return NonTerminalFlag.BinaryIsIdentical;
             case TokenType.T_IS_NOT_IDENTICAL:
-                return AstNodeFlag.BinaryIsNotIdentical;
+                return NonTerminalFlag.BinaryIsNotIdentical;
             case TokenType.T_IS_EQUAL:
-                return AstNodeFlag.BinaryIsEqual;
+                return NonTerminalFlag.BinaryIsEqual;
             case TokenType.T_IS_NOT_EQUAL:
-                return AstNodeFlag.BinaryIsNotEqual;
+                return NonTerminalFlag.BinaryIsNotEqual;
             case '<':
-                return AstNodeFlag.BinaryIsSmaller;
+                return NonTerminalFlag.BinaryIsSmaller;
             case TokenType.T_IS_SMALLER_OR_EQUAL:
-                return AstNodeFlag.BinaryIsSmallerOrEqual;
+                return NonTerminalFlag.BinaryIsSmallerOrEqual;
             case '>':
-                return AstNodeFlag.BinaryIsGreater;
+                return NonTerminalFlag.BinaryIsGreater;
             case TokenType.T_IS_GREATER_OR_EQUAL:
-                return AstNodeFlag.BinaryIsGreaterOrEqual;
+                return NonTerminalFlag.BinaryIsGreaterOrEqual;
             case TokenType.T_SPACESHIP:
-                return AstNodeFlag.BinarySpaceship;
+                return NonTerminalFlag.BinarySpaceship;
             case TokenType.T_COALESCE:
-                return AstNodeFlag.BinaryCoalesce;
+                return NonTerminalFlag.BinaryCoalesce;
             case '=':
-                return AstNodeFlag.BinaryAssign;
+                return NonTerminalFlag.BinaryAssign;
             case TokenType.T_CONCAT_EQUAL:
-                return AstNodeFlag.BinaryConcatAssign;
+                return NonTerminalFlag.BinaryConcatAssign;
             case TokenType.T_PLUS_EQUAL:
-                return AstNodeFlag.BinaryAddAssign;
+                return NonTerminalFlag.BinaryAddAssign;
             case TokenType.T_MINUS_EQUAL:
-                return AstNodeFlag.BinarySubtractAssign;
+                return NonTerminalFlag.BinarySubtractAssign;
             case TokenType.T_MUL_EQUAL:
-                return AstNodeFlag.BinaryMultiplyAssign;
+                return NonTerminalFlag.BinaryMultiplyAssign;
             case TokenType.T_DIV_EQUAL:
-                return AstNodeFlag.BinaryDivideAssign;
+                return NonTerminalFlag.BinaryDivideAssign;
             case TokenType.T_MOD_EQUAL:
-                return AstNodeFlag.BinaryModulusAssign;
+                return NonTerminalFlag.BinaryModulusAssign;
             case TokenType.T_POW_EQUAL:
-                return AstNodeFlag.BinaryPowerAssign;
+                return NonTerminalFlag.BinaryPowerAssign;
             case TokenType.T_SL_EQUAL:
-                return AstNodeFlag.BinaryShiftLeftAssign;
+                return NonTerminalFlag.BinaryShiftLeftAssign;
             case TokenType.T_SR_EQUAL:
-                return AstNodeFlag.BinaryShiftRightAssign;
+                return NonTerminalFlag.BinaryShiftRightAssign;
             case TokenType.T_OR_EQUAL:
-                return AstNodeFlag.BinaryBitwiseOrAssign;
+                return NonTerminalFlag.BinaryBitwiseOrAssign;
             case TokenType.T_AND_EQUAL:
-                return AstNodeFlag.BinaryBitwiseAndAssign;
+                return NonTerminalFlag.BinaryBitwiseAndAssign;
             case TokenType.T_XOR_EQUAL:
-                return AstNodeFlag.BinaryBitwiseXorAssign;
+                return NonTerminalFlag.BinaryBitwiseXorAssign;
             case TokenType.T_INSTEADOF:
-                return AstNodeFlag.BinaryInstanceOf;
+                return NonTerminalFlag.BinaryInstanceOf;
             default:
                 throw new Error(`Unknown operator ${op.text}`);
 
@@ -662,7 +662,7 @@ export class Parser<T> {
                     this._tokens.next();
                     let unary = this._tempNode(NonTerminalType.UnaryExpression, possibleUnaryStart);
                     unary.value.flag = t.tokenType === TokenType.T_INC ?
-                        AstNodeFlag.UnaryPostInc : AstNodeFlag.UnaryPostDec
+                        NonTerminalFlag.UnaryPostInc : NonTerminalFlag.UnaryPostDec
                     unary.children.push(variable);
                     return this._node(unary);
                 } else {
@@ -741,21 +741,21 @@ export class Parser<T> {
     private _magicConstantTokenToFlag(t: Token) {
         switch (t.tokenType) {
             case TokenType.T_LINE:
-                return AstNodeFlag.MagicLine;
+                return NonTerminalFlag.MagicLine;
             case TokenType.T_FILE:
-                return AstNodeFlag.MagicFile;
+                return NonTerminalFlag.MagicFile;
             case TokenType.T_DIR:
-                return AstNodeFlag.MagicDir;
+                return NonTerminalFlag.MagicDir;
             case TokenType.T_TRAIT_C:
-                return AstNodeFlag.MagicTrait;
+                return NonTerminalFlag.MagicTrait;
             case TokenType.T_METHOD_C:
-                return AstNodeFlag.MagicMethod;
+                return NonTerminalFlag.MagicMethod;
             case TokenType.T_FUNC_C:
-                return AstNodeFlag.MagicFunction;
+                return NonTerminalFlag.MagicFunction;
             case TokenType.T_NS_C:
-                return AstNodeFlag.MagicNamespace;
+                return NonTerminalFlag.MagicNamespace;
             case TokenType.T_CLASS_C:
-                return AstNodeFlag.MagicClass;
+                return NonTerminalFlag.MagicClass;
             default:
                 return 0;
         }
@@ -1005,7 +1005,7 @@ export class Parser<T> {
                 break;
             case '-':
                 let unary = this._tempNode(NonTerminalType.UnaryExpression);
-                unary.value.flag = AstNodeFlag.UnaryMinus;
+                unary.value.flag = NonTerminalFlag.UnaryMinus;
                 this._tokens.next();
                 if (this._tokens.consume(TokenType.T_NUM_STRING)) {
                     unary.children.push(this._nodeFactory(this._tokens.current));
@@ -1196,10 +1196,10 @@ export class Parser<T> {
                 return this._methodDeclaration(n);
             case TokenType.T_VAR:
                 this._tokens.next();
-                n.value.flag = AstNodeFlag.ModifierPublic;
+                n.value.flag = NonTerminalFlag.ModifierPublic;
                 return this._propertyDeclarationStatement(n);
             case TokenType.T_CONST:
-                n.value.flag = AstNodeFlag.ModifierPublic;
+                n.value.flag = NonTerminalFlag.ModifierPublic;
                 return this._classConstantDeclarationStatement(n);
             case TokenType.T_USE:
                 return this._useTraitStatement();
@@ -1394,7 +1394,7 @@ export class Parser<T> {
         n.value.doc = this._tokens.lastDocComment;
 
         if (this._tokens.consume('&')) {
-            n.value.flag |= AstNodeFlag.ReturnsRef;
+            n.value.flag |= NonTerminalFlag.ReturnsRef;
         }
 
         let t = this._tokens.peek();
@@ -1417,7 +1417,7 @@ export class Parser<T> {
         }
 
         t = this._tokens.peek();
-        if (t.tokenType === ';' && (n.value.flag & AstNodeFlag.ModifierAbstract)) {
+        if (t.tokenType === ';' && (n.value.flag & NonTerminalFlag.ModifierAbstract)) {
             this._tokens.next();
             n.children.push(this._nodeFactory(null));
         } else {
@@ -1531,7 +1531,7 @@ export class Parser<T> {
         this._tokens.next(); //T_FUNCTION
 
         if (this._tokens.consume('&')) {
-            n.value.flag = AstNodeFlag.ReturnsRef;
+            n.value.flag = NonTerminalFlag.ReturnsRef;
         }
 
         if (this._tokens.consume(TokenType.T_STRING)) {
@@ -2141,7 +2141,7 @@ export class Parser<T> {
 
             case '&':
                 let unary = this._tempNode(NonTerminalType.UnaryExpression);
-                unary.value.flag = AstNodeFlag.UnaryReference;
+                unary.value.flag = NonTerminalFlag.UnaryReference;
                 this._tokens.next();
                 unary.children.push(this._variable());
                 return this._node(unary);
@@ -2643,7 +2643,7 @@ export class Parser<T> {
         let n = this._tempNode(NonTerminalType.TypeExpression);
 
         if (this._tokens.consume('?')) {
-            n.value.flag = AstNodeFlag.Nullable;
+            n.value.flag = NonTerminalFlag.Nullable;
         }
 
         switch (this._tokens.peek().tokenType) {
@@ -2862,17 +2862,17 @@ export class Parser<T> {
     private _memberModifierToFlag(t: Token) {
         switch (t.tokenType) {
             case TokenType.T_PUBLIC:
-                return AstNodeFlag.ModifierPublic;
+                return NonTerminalFlag.ModifierPublic;
             case TokenType.T_PROTECTED:
-                return AstNodeFlag.ModifierProtected;
+                return NonTerminalFlag.ModifierProtected;
             case TokenType.T_PRIVATE:
-                return AstNodeFlag.ModifierPrivate;
+                return NonTerminalFlag.ModifierPrivate;
             case TokenType.T_STATIC:
-                return AstNodeFlag.ModifierStatic;
+                return NonTerminalFlag.ModifierStatic;
             case TokenType.T_ABSTRACT:
-                return AstNodeFlag.ModifierAbstract;
+                return NonTerminalFlag.ModifierAbstract;
             case TokenType.T_FINAL:
-                return AstNodeFlag.ModifierFinal;
+                return NonTerminalFlag.ModifierFinal;
             default:
                 return 0;
         }
@@ -2963,7 +2963,7 @@ export class Parser<T> {
         switch (t.tokenType) {
             case TokenType.T_STATIC:
                 n.value.astNodeType = NonTerminalType.Name;
-                n.value.flag = AstNodeFlag.NameNotFullyQualified;
+                n.value.flag = NonTerminalFlag.NameNotFullyQualified;
                 n.children.push(this._nodeFactory(this._tokens.next()));
                 return this._node(n);
             case TokenType.T_VARIABLE:
@@ -3026,9 +3026,9 @@ export class Parser<T> {
         n.value.flag = this._unaryOpToNodeFlag(t);
 
         switch (n.value.flag) {
-            case AstNodeFlag.UnaryPreDec:
-            case AstNodeFlag.UnaryPreInc:
-            case AstNodeFlag.UnaryReference:
+            case NonTerminalFlag.UnaryPreDec:
+            case NonTerminalFlag.UnaryPreInc:
+            case NonTerminalFlag.UnaryReference:
                 n.children.push(this._variable());
                 break;
             default:
@@ -3044,13 +3044,13 @@ export class Parser<T> {
 
         let n = this._tempNode(NonTerminalType.Closure);
         if (this._tokens.consume(TokenType.T_STATIC)) {
-            n.value.flag = AstNodeFlag.ModifierStatic;
+            n.value.flag = NonTerminalFlag.ModifierStatic;
         }
 
         this._tokens.next(); //T_FUNCTION
 
         if (this._tokens.consume('&')) {
-            n.value.flag |= AstNodeFlag.ReturnsRef;
+            n.value.flag |= NonTerminalFlag.ReturnsRef;
         }
 
         this._followOnStack.push([TokenType.T_USE, ':', '{']);
@@ -3133,7 +3133,7 @@ export class Parser<T> {
         let n = this._tempNode(NonTerminalType.ClosureUseVariable);
 
         if (this._tokens.consume('&')) {
-            n.value.flag = AstNodeFlag.PassByRef;
+            n.value.flag = NonTerminalFlag.PassByRef;
         }
 
         if (this._tokens.consume(TokenType.T_VARIABLE)) {
@@ -3214,11 +3214,11 @@ export class Parser<T> {
         }
 
         if (this._tokens.consume('&')) {
-            n.value.flag = AstNodeFlag.PassByRef;
+            n.value.flag = NonTerminalFlag.PassByRef;
         }
 
         if (this._tokens.consume(TokenType.T_ELLIPSIS)) {
-            n.value.flag = AstNodeFlag.Variadic;
+            n.value.flag = NonTerminalFlag.Variadic;
         }
 
         if (this._tokens.consume(TokenType.T_VARIABLE)) {
@@ -3463,9 +3463,9 @@ export class Parser<T> {
         let n = this._tempNode(NonTerminalType.Name);
 
         if (this._tokens.consume(TokenType.T_NS_SEPARATOR)) {
-            n.value.flag = AstNodeFlag.NameFullyQualified;
+            n.value.flag = NonTerminalFlag.NameFullyQualified;
         } else if (this._tokens.consume(TokenType.T_NAMESPACE)) {
-            n.value.flag = AstNodeFlag.NameRelative;
+            n.value.flag = NonTerminalFlag.NameRelative;
             if (!this._tokens.consume(TokenType.T_NS_SEPARATOR)) {
                 //error
                 if (this._error(n, [TokenType.T_NS_SEPARATOR], [TokenType.T_STRING]).tokenType !== TokenType.T_STRING) {
@@ -3474,7 +3474,7 @@ export class Parser<T> {
                 }
             }
         } else {
-            n.value.flag = AstNodeFlag.NameNotFullyQualified;
+            n.value.flag = NonTerminalFlag.NameNotFullyQualified;
         }
 
         n.children.push(this._namespaceName());
@@ -3655,7 +3655,7 @@ export class Parser<T> {
             case TokenType.T_STATIC:
                 this._variableAtomType = NonTerminalType.Name;
                 n = this._tempNode(NonTerminalType.Name);
-                n.value.flag = AstNodeFlag.NameNotFullyQualified;
+                n.value.flag = NonTerminalFlag.NameNotFullyQualified;
                 n.children.push(this._nodeFactory(this._tokens.next()));
                 return this._node(n);
             case TokenType.T_STRING:
@@ -3741,9 +3741,9 @@ export class Parser<T> {
         this._tokens.next();
 
         if (this._tokens.consume(TokenType.T_FUNCTION)) {
-            n.value.flag = AstNodeFlag.UseFunction;
+            n.value.flag = NonTerminalFlag.UseFunction;
         } else if (this._tokens.consume(TokenType.T_CONST)) {
-            n.value.flag = AstNodeFlag.UseConstant;
+            n.value.flag = NonTerminalFlag.UseConstant;
         }
 
         let useList = this._tempNode(NonTerminalType.UseStatement);
@@ -3765,7 +3765,7 @@ export class Parser<T> {
         }
 
         if (!n.value.flag) {
-            n.value.flag = AstNodeFlag.UseClass;
+            n.value.flag = NonTerminalFlag.UseClass;
         }
 
         useElement.children.push(namespaceName);
@@ -3850,11 +3850,11 @@ export class Parser<T> {
 
             if (isMixed) {
                 if (this._tokens.consume(TokenType.T_FUNCTION)) {
-                    n.value.flag = AstNodeFlag.UseFunction;
+                    n.value.flag = NonTerminalFlag.UseFunction;
                 } else if (this._tokens.consume(TokenType.T_CONST)) {
-                    n.value.flag = AstNodeFlag.UseConstant;
+                    n.value.flag = NonTerminalFlag.UseConstant;
                 } else {
-                    n.value.flag = AstNodeFlag.UseClass;
+                    n.value.flag = NonTerminalFlag.UseClass;
                 }
             } else if (lookForPrefix) {
                 this._tokens.consume(TokenType.T_NS_SEPARATOR);
