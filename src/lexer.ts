@@ -415,7 +415,7 @@ export namespace Lexer {
         let tokens: Token[] = [];
         let t: Token;
 
-        while (t = this.lex()) {
+        while (t = lex()) {
             tokens.push(t);
         }
         return tokens;
