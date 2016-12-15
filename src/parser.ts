@@ -289,7 +289,7 @@ export namespace Parser {
     var pos: number;
     var docComment: Token;
 
-    export function parse<T>(tokenArray: Token[], astNodeFactory: AstNodeFactory<T>) {
+    export function parse<T>(tokenArray: Token[], astNodeFactory: AstNodeFactory<T>) : T {
 
         nodeFactory = astNodeFactory;
         tokens = tokenArray;
