@@ -56,7 +56,7 @@ export enum NonTerminalFlag {
 }
 
 export interface AstNodeFactory<T> {
-    (value: AstNode | Token, children?: T[]): T;
+    (value: NonTerminal | Token, children?: T[]): T;
 }
 
 interface Predicate {
@@ -203,11 +203,11 @@ function isVariableOnlyBinaryOp(t: Token) {
 
 
 interface TempNode<T> {
-    value: AstNode;
+    value: NonTerminal;
     children: T[];
 }
 
-export interface AstNode {
+export interface NonTerminal {
     astNodeType: NonTerminalType;
     startTokenIndex: number;
     endTokenIndex: number;
