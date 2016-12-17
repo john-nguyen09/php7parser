@@ -22,8 +22,9 @@ export enum NonTerminalType {
     ForExpressionList, For, Break, Continue, Return, GlobalVariableList, StaticVariableList,
     StaticVariable, Echo, Unset, Throw, Goto, Label, Foreach, CaseList, Switch,
     Case, Declare, Try, Catch, CatchNameList, Finally, TernaryExpression, BinaryExpression,
-    UnaryExpression, MagicConstant, CatchList, ErrorStaticMember, ErrorArgument,
-    ErrorVariable, ErrorExpression, ErrorClassStatement, ErrorPropertyName, ErrorTraitAdaptation
+    UnaryExpression, MagicConstant, CatchList, FunctionBody, MethodBody,
+    ErrorStaticMember, ErrorArgument, ErrorVariable, ErrorExpression, ErrorClassStatement, 
+    ErrorPropertyName, ErrorTraitAdaptation
 }
 
 export enum NonTerminalFlag {
@@ -1531,7 +1532,7 @@ export namespace Parser {
             next();
             n.children.push(nodeFactory(null));
         } else {
-            n.children.push(block());
+            n.children.push(block(NonTerminalType.MethodBody));
         }
 
         return node(n);
@@ -1661,7 +1662,7 @@ export namespace Parser {
             n.children.push(nodeFactory(null));
         }
 
-        n.children.push(block());
+        n.children.push(block(NonTerminalType.FunctionDeclaration));
 
         return node(n);
 
@@ -1731,9 +1732,9 @@ export namespace Parser {
 
     }
 
-    function block() {
+    function block(type:NonTerminalType = NonTerminalType.Block) {
 
-        let n = tempNode(NonTerminalType.Block);
+        let n = tempNode(type);
 
         if (!consume('{')) {
             let err = new ParseError(current(), ['{']);
@@ -3321,6 +3322,8 @@ export namespace Parser {
             followOnStack.push(['&', TokenType.T_ELLIPSIS, TokenType.T_VARIABLE]);
             n.children.push(typeExpression());
             followOnStack.pop();
+        } else {
+            n.children.push(nodeFactory(null));
         }
 
         if (consume('&')) {
@@ -3334,7 +3337,7 @@ export namespace Parser {
         if (consume(TokenType.T_VARIABLE)) {
             n.children.push(nodeFactory(current()));
         } else {
-            n.children.push(nodeFactory(null), nodeFactory(null));
+            n.children.push(nodeFactory(null));
             error(n, [TokenType.T_VARIABLE]);
             return node(n);
         }
