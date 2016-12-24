@@ -6,7 +6,7 @@
   "types": "./lib/php7parser.d.ts",
   "scripts": {
     "test": "mocha",
-    "build": "rm ./lib/* && tsc"
+    "build": "rm -f ./lib/* && tsc"
   },
   "author": "Ben Mewburn",
   "license": "MIT",
