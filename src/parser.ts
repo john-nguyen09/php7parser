@@ -3354,6 +3354,8 @@ export namespace Parser {
 
     function variable() {
 
+        //TODO - expressions can be a name node (const) or dereferencable scalar
+
         let startToken = start();
         variableAtomType = 0;
         let variableAtomNode = variableAtom();
