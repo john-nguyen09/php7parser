@@ -6,7 +6,7 @@
 
 import { Token, Lexer, TokenType, Position, Range } from './lexer';
 
-export enum NonTerminalType {
+export enum PhraseType {
     None, Error, TopStatementList, Namespace, NamespaceName, UseElement, UseStatement,
     UseGroup, UseList, HaltCompiler, ConstantDeclarationList, ConstantDeclaration,
     ArrayPair, Name, Call, Unpack, ArgumentList, Dimension, ClassConstant,
@@ -23,11 +23,11 @@ export enum NonTerminalType {
     StaticVariable, Echo, Unset, Throw, Goto, Label, Foreach, CaseList, Switch,
     Case, Declare, Try, Catch, CatchNameList, Finally, TernaryExpression, BinaryExpression,
     UnaryExpression, MagicConstant, CatchList, FunctionBody, MethodBody,
-    ErrorStaticMember, ErrorArgument, ErrorVariable, ErrorExpression, ErrorClassStatement, 
+    ErrorStaticMember, ErrorArgument, ErrorVariable, ErrorExpression, ErrorClassStatement,
     ErrorPropertyName, ErrorTraitAdaptation
 }
 
-export enum NonTerminalFlag {
+export enum PhraseFlag {
     None = 0,
     ModifierPublic = 1 << 0,
     ModifierProtected = 1 << 1,
@@ -55,14 +55,14 @@ export enum NonTerminalFlag {
 }
 
 export interface AstNodeFactory<T> {
-    (value: NonTerminal | Token, children?: T[]): T;
+    (value: Phrase | Token, children?: T[]): T;
 }
 
-export interface NonTerminal {
-    nonTerminalType: NonTerminalType;
+export interface Phrase {
+    phraseType: PhraseType;
     startToken: Token;
     endToken: Token;
-    flag?: NonTerminalFlag;
+    flag?: PhraseFlag;
     doc?: Token;
     errors?: ParseError[];
 }
@@ -77,11 +77,11 @@ export class ParseError {
         this._expected = expected;
     }
 
-    get unexpected(){
+    get unexpected() {
         return this._unexpected;
     }
 
-    get expected(){
+    get expected() {
         return this._expected;
     }
 
@@ -232,7 +232,7 @@ export namespace Parser {
     }
 
     interface TempNode {
-        value: NonTerminal;
+        value: Phrase;
         children: any[];
     }
 
@@ -286,11 +286,11 @@ export namespace Parser {
     var tokens: Token[];
     var followOnStack: (TokenType | string)[][];
     var isBinaryOpPredicate: Predicate;
-    var variableAtomType: NonTerminalType;
+    var variableAtomType: PhraseType;
     var pos: number;
     var docComment: Token;
 
-    export function parse<T>(tokenArray: Token[], astNodeFactory: AstNodeFactory<T>) : T {
+    export function parse<T>(tokenArray: Token[], astNodeFactory: AstNodeFactory<T>): T {
 
         nodeFactory = astNodeFactory;
         tokens = tokenArray;
@@ -394,7 +394,7 @@ export namespace Parser {
     }
 
 
-    function tempNode(type: NonTerminalType = 0, startToken?: Token): TempNode {
+    function tempNode(type: PhraseType = 0, startToken?: Token): TempNode {
 
         if (startToken === undefined) {
             startToken = start();
@@ -402,7 +402,7 @@ export namespace Parser {
 
         return {
             value: {
-                nonTerminalType: type,
+                phraseType: type,
                 startToken: startToken,
                 endToken: null,
             },
@@ -437,7 +437,7 @@ export namespace Parser {
 
     function topStatementList(isCurly: boolean) {
 
-        let n = tempNode(NonTerminalType.TopStatementList);
+        let n = tempNode(PhraseType.TopStatementList);
         let t: Token;
         let breakOn = isCurly ? '}' : TokenType.T_EOF;
         let followOn = recoverTopStatementStartTokenTypes.slice(0);
@@ -499,7 +499,7 @@ export namespace Parser {
 
     function constantDeclarationStatement() {
 
-        let n = tempNode(NonTerminalType.ConstantDeclarationList);
+        let n = tempNode(PhraseType.ConstantDeclarationList);
         next();
         let followOn: (TokenType | string)[] = [',', ';'];
         let t: Token;
@@ -528,7 +528,7 @@ export namespace Parser {
 
     function constantDeclaration() {
 
-        let n = tempNode(NonTerminalType.ConstantDeclaration);
+        let n = tempNode(PhraseType.ConstantDeclaration);
         let t: Token;
 
         if (consume(TokenType.T_STRING)) {
@@ -557,7 +557,7 @@ export namespace Parser {
         let associativity: Associativity;
         let op: Token;
         let startToken = start();
-        let opFlag: NonTerminalFlag;
+        let opFlag: PhraseFlag;
         isBinaryOpPredicate = isVariableAndExpressionBinaryOp;
         let lhs = atom();
 
@@ -599,8 +599,8 @@ export namespace Parser {
 
     }
 
-    function binaryNode(lhs: any, rhs: any, flag: NonTerminalFlag, startToken: Token) {
-        let n = tempNode(NonTerminalType.BinaryExpression, startToken);
+    function binaryNode(lhs: any, rhs: any, flag: PhraseFlag, startToken: Token) {
+        let n = tempNode(PhraseType.BinaryExpression, startToken);
         n.value.flag = flag;
         n.children.push(lhs);
         n.children.push(rhs);
@@ -610,21 +610,21 @@ export namespace Parser {
     function unaryOpToNodeFlag(op: Token, isPost = false) {
         switch (op.tokenType) {
             case '&':
-                return NonTerminalFlag.UnaryReference;
+                return PhraseFlag.UnaryReference;
             case '!':
-                return NonTerminalFlag.UnaryBoolNot;
+                return PhraseFlag.UnaryBoolNot;
             case '~':
-                return NonTerminalFlag.UnaryBitwiseNot;
+                return PhraseFlag.UnaryBitwiseNot;
             case '-':
-                return NonTerminalFlag.UnaryMinus;
+                return PhraseFlag.UnaryMinus;
             case '+':
-                return NonTerminalFlag.UnaryPlus;
+                return PhraseFlag.UnaryPlus;
             case '@':
-                return NonTerminalFlag.UnarySilence;
+                return PhraseFlag.UnarySilence;
             case TokenType.T_INC:
-                return isPost ? NonTerminalFlag.UnaryPreInc : NonTerminalFlag.UnaryPostInc;
+                return isPost ? PhraseFlag.UnaryPreInc : PhraseFlag.UnaryPostInc;
             case TokenType.T_DEC:
-                return isPost ? NonTerminalFlag.UnaryPreDec : NonTerminalFlag.UnaryPostDec;
+                return isPost ? PhraseFlag.UnaryPreDec : PhraseFlag.UnaryPostDec;
             default:
                 throw new Error(`Unknow operator ${op.text}`);
         }
@@ -634,87 +634,87 @@ export namespace Parser {
 
         switch (op.tokenType) {
             case '|':
-                return NonTerminalFlag.BinaryBitwiseOr;
+                return PhraseFlag.BinaryBitwiseOr;
             case '&':
-                return NonTerminalFlag.BinaryBitwiseAnd;
+                return PhraseFlag.BinaryBitwiseAnd;
             case '^':
-                return NonTerminalFlag.BinaryBitwiseXor;
+                return PhraseFlag.BinaryBitwiseXor;
             case '.':
-                return NonTerminalFlag.BinaryConcat;
+                return PhraseFlag.BinaryConcat;
             case '+':
-                return NonTerminalFlag.BinaryAdd;
+                return PhraseFlag.BinaryAdd;
             case '-':
-                return NonTerminalFlag.BinarySubtract;
+                return PhraseFlag.BinarySubtract;
             case '*':
-                return NonTerminalFlag.BinaryMultiply;
+                return PhraseFlag.BinaryMultiply;
             case '/':
-                return NonTerminalFlag.BinaryDivide;
+                return PhraseFlag.BinaryDivide;
             case '%':
-                return NonTerminalFlag.BinaryModulus;
+                return PhraseFlag.BinaryModulus;
             case TokenType.T_POW:
-                return NonTerminalFlag.BinaryPower;
+                return PhraseFlag.BinaryPower;
             case TokenType.T_SL:
-                return NonTerminalFlag.BinaryShiftLeft;
+                return PhraseFlag.BinaryShiftLeft;
             case TokenType.T_SR:
-                return NonTerminalFlag.BinaryShiftRight;
+                return PhraseFlag.BinaryShiftRight;
             case TokenType.T_BOOLEAN_AND:
-                return NonTerminalFlag.BinaryBoolAnd;
+                return PhraseFlag.BinaryBoolAnd;
             case TokenType.T_BOOLEAN_OR:
-                return NonTerminalFlag.BinaryBoolOr;
+                return PhraseFlag.BinaryBoolOr;
             case TokenType.T_LOGICAL_AND:
-                return NonTerminalFlag.BinaryLogicalAnd;
+                return PhraseFlag.BinaryLogicalAnd;
             case TokenType.T_LOGICAL_OR:
-                return NonTerminalFlag.BinaryLogicalOr;
+                return PhraseFlag.BinaryLogicalOr;
             case TokenType.T_LOGICAL_XOR:
-                return NonTerminalFlag.BinaryLogicalXor;
+                return PhraseFlag.BinaryLogicalXor;
             case TokenType.T_IS_IDENTICAL:
-                return NonTerminalFlag.BinaryIsIdentical;
+                return PhraseFlag.BinaryIsIdentical;
             case TokenType.T_IS_NOT_IDENTICAL:
-                return NonTerminalFlag.BinaryIsNotIdentical;
+                return PhraseFlag.BinaryIsNotIdentical;
             case TokenType.T_IS_EQUAL:
-                return NonTerminalFlag.BinaryIsEqual;
+                return PhraseFlag.BinaryIsEqual;
             case TokenType.T_IS_NOT_EQUAL:
-                return NonTerminalFlag.BinaryIsNotEqual;
+                return PhraseFlag.BinaryIsNotEqual;
             case '<':
-                return NonTerminalFlag.BinaryIsSmaller;
+                return PhraseFlag.BinaryIsSmaller;
             case TokenType.T_IS_SMALLER_OR_EQUAL:
-                return NonTerminalFlag.BinaryIsSmallerOrEqual;
+                return PhraseFlag.BinaryIsSmallerOrEqual;
             case '>':
-                return NonTerminalFlag.BinaryIsGreater;
+                return PhraseFlag.BinaryIsGreater;
             case TokenType.T_IS_GREATER_OR_EQUAL:
-                return NonTerminalFlag.BinaryIsGreaterOrEqual;
+                return PhraseFlag.BinaryIsGreaterOrEqual;
             case TokenType.T_SPACESHIP:
-                return NonTerminalFlag.BinarySpaceship;
+                return PhraseFlag.BinarySpaceship;
             case TokenType.T_COALESCE:
-                return NonTerminalFlag.BinaryCoalesce;
+                return PhraseFlag.BinaryCoalesce;
             case '=':
-                return NonTerminalFlag.BinaryAssign;
+                return PhraseFlag.BinaryAssign;
             case TokenType.T_CONCAT_EQUAL:
-                return NonTerminalFlag.BinaryConcatAssign;
+                return PhraseFlag.BinaryConcatAssign;
             case TokenType.T_PLUS_EQUAL:
-                return NonTerminalFlag.BinaryAddAssign;
+                return PhraseFlag.BinaryAddAssign;
             case TokenType.T_MINUS_EQUAL:
-                return NonTerminalFlag.BinarySubtractAssign;
+                return PhraseFlag.BinarySubtractAssign;
             case TokenType.T_MUL_EQUAL:
-                return NonTerminalFlag.BinaryMultiplyAssign;
+                return PhraseFlag.BinaryMultiplyAssign;
             case TokenType.T_DIV_EQUAL:
-                return NonTerminalFlag.BinaryDivideAssign;
+                return PhraseFlag.BinaryDivideAssign;
             case TokenType.T_MOD_EQUAL:
-                return NonTerminalFlag.BinaryModulusAssign;
+                return PhraseFlag.BinaryModulusAssign;
             case TokenType.T_POW_EQUAL:
-                return NonTerminalFlag.BinaryPowerAssign;
+                return PhraseFlag.BinaryPowerAssign;
             case TokenType.T_SL_EQUAL:
-                return NonTerminalFlag.BinaryShiftLeftAssign;
+                return PhraseFlag.BinaryShiftLeftAssign;
             case TokenType.T_SR_EQUAL:
-                return NonTerminalFlag.BinaryShiftRightAssign;
+                return PhraseFlag.BinaryShiftRightAssign;
             case TokenType.T_OR_EQUAL:
-                return NonTerminalFlag.BinaryBitwiseOrAssign;
+                return PhraseFlag.BinaryBitwiseOrAssign;
             case TokenType.T_AND_EQUAL:
-                return NonTerminalFlag.BinaryBitwiseAndAssign;
+                return PhraseFlag.BinaryBitwiseAndAssign;
             case TokenType.T_XOR_EQUAL:
-                return NonTerminalFlag.BinaryBitwiseXorAssign;
+                return PhraseFlag.BinaryBitwiseXorAssign;
             case TokenType.T_INSTEADOF:
-                return NonTerminalFlag.BinaryInstanceOf;
+                return PhraseFlag.BinaryInstanceOf;
             default:
                 throw new Error(`Unknown operator ${op.text}`);
 
@@ -724,7 +724,7 @@ export namespace Parser {
 
     function ternaryExpression(lhs: any, precedence: number, startToken: Token) {
 
-        let n = tempNode(NonTerminalType.TernaryExpression, startToken);
+        let n = tempNode(PhraseType.TernaryExpression, startToken);
         n.children.push(lhs);
 
         if (consume(':')) {
@@ -773,9 +773,9 @@ export namespace Parser {
                 t = peek();
                 if (t.tokenType === TokenType.T_INC || t.tokenType === TokenType.T_DEC) {
                     next();
-                    let unary = tempNode(NonTerminalType.UnaryExpression, possibleUnaryStart);
+                    let unary = tempNode(PhraseType.UnaryExpression, possibleUnaryStart);
                     unary.value.flag = t.tokenType === TokenType.T_INC ?
-                        NonTerminalFlag.UnaryPostInc : NonTerminalFlag.UnaryPostDec
+                        PhraseFlag.UnaryPostInc : PhraseFlag.UnaryPostDec
                     unary.children.push(variableNode);
                     return node(unary);
                 } else {
@@ -814,37 +814,37 @@ export namespace Parser {
             case TokenType.T_FUNC_C:
             case TokenType.T_NS_C:
             case TokenType.T_CLASS_C:
-                let magic = tempNode(NonTerminalType.MagicConstant);
+                let magic = tempNode(PhraseType.MagicConstant);
                 magic.value.flag = magicConstantTokenToFlag(next());
                 return node(magic);
             case TokenType.T_START_HEREDOC:
                 return heredoc();
             case '"':
-                return quotedEncapsulatedVariableList(NonTerminalType.DoubleQuotes, '"');
+                return quotedEncapsulatedVariableList(PhraseType.DoubleQuotes, '"');
             case '`':
-                return quotedEncapsulatedVariableList(NonTerminalType.Backticks, '`');
+                return quotedEncapsulatedVariableList(PhraseType.Backticks, '`');
             case TokenType.T_PRINT:
-                return keywordExpression(NonTerminalType.Print);
+                return keywordExpression(PhraseType.Print);
             case TokenType.T_YIELD:
                 return yieldExpression();
             case TokenType.T_YIELD_FROM:
-                return keywordExpression(NonTerminalType.YieldFrom);
+                return keywordExpression(PhraseType.YieldFrom);
             case TokenType.T_FUNCTION:
                 return closure();
             case TokenType.T_INCLUDE:
             case TokenType.T_INCLUDE_ONCE:
             case TokenType.T_REQUIRE:
             case TokenType.T_REQUIRE_ONCE:
-                return keywordExpression(NonTerminalType.Include);
+                return keywordExpression(PhraseType.Include);
             case TokenType.T_EVAL:
-                return keywordParenthesisedExpression(NonTerminalType.Eval);
+                return keywordParenthesisedExpression(PhraseType.Eval);
             case TokenType.T_EMPTY:
-                return keywordParenthesisedExpression(NonTerminalType.Empty);
+                return keywordParenthesisedExpression(PhraseType.Empty);
             case TokenType.T_ISSET:
                 return isset();
             default:
                 //error
-                let err = tempNode(NonTerminalType.ErrorExpression);
+                let err = tempNode(PhraseType.ErrorExpression);
                 error(err, []);
                 return node(err);
         }
@@ -854,21 +854,21 @@ export namespace Parser {
     function magicConstantTokenToFlag(t: Token) {
         switch (t.tokenType) {
             case TokenType.T_LINE:
-                return NonTerminalFlag.MagicLine;
+                return PhraseFlag.MagicLine;
             case TokenType.T_FILE:
-                return NonTerminalFlag.MagicFile;
+                return PhraseFlag.MagicFile;
             case TokenType.T_DIR:
-                return NonTerminalFlag.MagicDir;
+                return PhraseFlag.MagicDir;
             case TokenType.T_TRAIT_C:
-                return NonTerminalFlag.MagicTrait;
+                return PhraseFlag.MagicTrait;
             case TokenType.T_METHOD_C:
-                return NonTerminalFlag.MagicMethod;
+                return PhraseFlag.MagicMethod;
             case TokenType.T_FUNC_C:
-                return NonTerminalFlag.MagicFunction;
+                return PhraseFlag.MagicFunction;
             case TokenType.T_NS_C:
-                return NonTerminalFlag.MagicNamespace;
+                return PhraseFlag.MagicNamespace;
             case TokenType.T_CLASS_C:
-                return NonTerminalFlag.MagicClass;
+                return PhraseFlag.MagicClass;
             default:
                 return 0;
         }
@@ -876,7 +876,7 @@ export namespace Parser {
 
     function isset() {
 
-        let n = tempNode(NonTerminalType.Isset);
+        let n = tempNode(PhraseType.Isset);
         let t = next();
 
         if (!consume('(')) {
@@ -913,7 +913,7 @@ export namespace Parser {
 
     }
 
-    function keywordParenthesisedExpression(type: NonTerminalType) {
+    function keywordParenthesisedExpression(type: PhraseType) {
 
         let n = tempNode(type);
         let t = next();
@@ -922,7 +922,7 @@ export namespace Parser {
 
     }
 
-    function keywordExpression(nodeType: NonTerminalType) {
+    function keywordExpression(nodeType: PhraseType) {
 
         let n = tempNode(nodeType);
         next();
@@ -932,7 +932,7 @@ export namespace Parser {
 
     function yieldExpression() {
 
-        let n = tempNode(NonTerminalType.Yield);
+        let n = tempNode(PhraseType.Yield);
         next();
 
         if (!isExpressionStartToken(peek())) {
@@ -954,7 +954,7 @@ export namespace Parser {
 
     }
 
-    function quotedEncapsulatedVariableList(type: NonTerminalType, closeTokenType: TokenType | string) {
+    function quotedEncapsulatedVariableList(type: PhraseType, closeTokenType: TokenType | string) {
 
         let n = tempNode(type);
         next();
@@ -975,7 +975,7 @@ export namespace Parser {
 
     function encapsulatedVariableList(breakOn: TokenType | string) {
 
-        let n = tempNode(NonTerminalType.EncapsulatedVariableList);
+        let n = tempNode(PhraseType.EncapsulatedVariableList);
         let followOn: (TokenType | string)[] = [
             TokenType.T_ENCAPSED_AND_WHITESPACE, TokenType.T_VARIABLE,
             TokenType.T_DOLLAR_OPEN_CURLY_BRACES, TokenType.T_CURLY_OPEN, breakOn
@@ -1025,7 +1025,7 @@ export namespace Parser {
     function curlyOpenEncapsulatedVariable() {
 
         //errNode placeholder for unclosed braces
-        let errNode = tempNode(NonTerminalType.ErrorVariable);
+        let errNode = tempNode(PhraseType.ErrorVariable);
         next();
         followOnStack.push(['}']);
         errNode.children.push(variable());
@@ -1046,7 +1046,7 @@ export namespace Parser {
     function dollarCurlyOpenEncapsulatedVariable() {
 
         //err node is just a placeholder should closing brace not found
-        let errNode = tempNode(NonTerminalType.ErrorVariable);
+        let errNode = tempNode(PhraseType.ErrorVariable);
         let n: TempNode;
         next(); //${
         let t = peek();
@@ -1054,7 +1054,7 @@ export namespace Parser {
         if (t.tokenType === TokenType.T_STRING_VARNAME) {
 
             if (peek(1).tokenType === '[') {
-                n = tempNode(NonTerminalType.Dimension);
+                n = tempNode(PhraseType.Dimension);
                 n.children.push(simpleVariable());
                 next();
                 followOnStack.push([']', '}']);
@@ -1068,7 +1068,7 @@ export namespace Parser {
                 }
 
             } else {
-                n = tempNode(NonTerminalType.Variable);
+                n = tempNode(PhraseType.Variable);
                 n.children.push(nodeFactory(next()));
             }
 
@@ -1098,7 +1098,7 @@ export namespace Parser {
 
     function encapsulatedDimension() {
 
-        let n = tempNode(NonTerminalType.Dimension);
+        let n = tempNode(PhraseType.Dimension);
         n.children.push(simpleVariable());
 
         //will always be [
@@ -1115,8 +1115,8 @@ export namespace Parser {
                 n.children.push(simpleVariable());
                 break;
             case '-':
-                let unary = tempNode(NonTerminalType.UnaryExpression);
-                unary.value.flag = NonTerminalFlag.UnaryMinus;
+                let unary = tempNode(PhraseType.UnaryExpression);
+                unary.value.flag = PhraseFlag.UnaryMinus;
                 next();
                 if (consume(TokenType.T_NUM_STRING)) {
                     unary.children.push(nodeFactory(current()));
@@ -1148,7 +1148,7 @@ export namespace Parser {
     }
 
     function encapsulatedProperty() {
-        let n = tempNode(NonTerminalType.Property);
+        let n = tempNode(PhraseType.Property);
         n.children.push(simpleVariable());
 
         // will always be TokenType.T_OBJECT_OPERATOR
@@ -1166,7 +1166,7 @@ export namespace Parser {
 
     function heredoc() {
 
-        let n = tempNode(NonTerminalType.Heredoc);
+        let n = tempNode(PhraseType.Heredoc);
         let t = next();
 
         followOnStack.push([TokenType.T_END_HEREDOC]);
@@ -1187,7 +1187,7 @@ export namespace Parser {
 
     function anonymousClassDeclaration() {
 
-        let n = tempNode(NonTerminalType.AnonymousClassDeclaration);
+        let n = tempNode(PhraseType.AnonymousClassDeclaration);
         next();
         n.value.doc = lastDocComment();
 
@@ -1222,7 +1222,7 @@ export namespace Parser {
 
     function classStatementList() {
 
-        let n = tempNode(NonTerminalType.ClassStatementList);
+        let n = tempNode(PhraseType.ClassStatementList);
         let t: Token;
 
         if (!consume('{')) {
@@ -1278,7 +1278,7 @@ export namespace Parser {
 
     function classStatement() {
 
-        let n = tempNode(NonTerminalType.ErrorClassStatement);
+        let n = tempNode(PhraseType.ErrorClassStatement);
         let t = peek();
 
         switch (t.tokenType) {
@@ -1307,10 +1307,10 @@ export namespace Parser {
                 return methodDeclaration(n);
             case TokenType.T_VAR:
                 next();
-                n.value.flag = NonTerminalFlag.ModifierPublic;
+                n.value.flag = PhraseFlag.ModifierPublic;
                 return propertyDeclarationStatement(n);
             case TokenType.T_CONST:
-                n.value.flag = NonTerminalFlag.ModifierPublic;
+                n.value.flag = PhraseFlag.ModifierPublic;
                 return classConstantDeclarationStatement(n);
             case TokenType.T_USE:
                 return useTraitStatement();
@@ -1325,7 +1325,7 @@ export namespace Parser {
 
     function useTraitStatement() {
 
-        let n = tempNode(NonTerminalType.UseTrait);
+        let n = tempNode(PhraseType.UseTrait);
         let t = next();
         followOnStack.push([';', '{']);
         n.children.push(nameList());
@@ -1337,7 +1337,7 @@ export namespace Parser {
 
     function traitAdaptationList() {
 
-        let n = tempNode(NonTerminalType.TraitAdaptationList);
+        let n = tempNode(PhraseType.TraitAdaptationList);
         let t: Token;
 
         if (consume(';')) {
@@ -1382,7 +1382,7 @@ export namespace Parser {
 
     function traitAdaptation() {
 
-        let n = tempNode(NonTerminalType.ErrorTraitAdaptation);
+        let n = tempNode(PhraseType.ErrorTraitAdaptation);
         let t = peek();
         let t2 = peek(1);
 
@@ -1401,7 +1401,7 @@ export namespace Parser {
 
         } else if (t.tokenType === TokenType.T_STRING || isSemiReservedToken(t)) {
 
-            let methodRef = tempNode(NonTerminalType.MethodReference, n.value.startToken);
+            let methodRef = tempNode(PhraseType.MethodReference, n.value.startToken);
             methodRef.children.push(nodeFactory(null), nodeFactory(next()));
             n.children.push(node(methodRef));
         } else {
@@ -1456,7 +1456,7 @@ export namespace Parser {
 
     function traitPrecedence(n: TempNode) {
 
-        n.value.nonTerminalType = NonTerminalType.TraitPrecendence;
+        n.value.phraseType = PhraseType.TraitPrecendence;
         followOnStack.push([';']);
         n.children.push(nameList());
         followOnStack.pop();
@@ -1474,7 +1474,7 @@ export namespace Parser {
 
     function methodReference() {
 
-        let n = tempNode(NonTerminalType.MethodReference);
+        let n = tempNode(PhraseType.MethodReference);
 
         followOnStack.push([TokenType.T_PAAMAYIM_NEKUDOTAYIM]);
         n.children.push(name());
@@ -1500,12 +1500,12 @@ export namespace Parser {
 
     function methodDeclaration(n: TempNode) {
 
-        n.value.nonTerminalType = NonTerminalType.MethodDeclaration;
+        n.value.phraseType = PhraseType.MethodDeclaration;
         next(); //T_FUNCTION
         n.value.doc = lastDocComment();
 
         if (consume('&')) {
-            n.value.flag |= NonTerminalFlag.ReturnsRef;
+            n.value.flag |= PhraseFlag.ReturnsRef;
         }
 
         let t = peek();
@@ -1528,11 +1528,11 @@ export namespace Parser {
         }
 
         t = peek();
-        if (t.tokenType === ';' && (n.value.flag & NonTerminalFlag.ModifierAbstract)) {
+        if (t.tokenType === ';' && (n.value.flag & PhraseFlag.ModifierAbstract)) {
             next();
             n.children.push(nodeFactory(null));
         } else {
-            n.children.push(block(NonTerminalType.MethodBody));
+            n.children.push(block(PhraseType.MethodBody));
         }
 
         return node(n);
@@ -1541,7 +1541,7 @@ export namespace Parser {
 
     function innerStatementList(breakOn: (TokenType | string)[]) {
 
-        let n = tempNode(NonTerminalType.InnerStatementList);
+        let n = tempNode(PhraseType.InnerStatementList);
         let t: Token;
         let followOn = recoverInnerStatementStartTokenTypes;
 
@@ -1594,7 +1594,7 @@ export namespace Parser {
 
     function interfaceDeclarationStatement() {
 
-        let n = tempNode(NonTerminalType.InterfaceDeclaration);
+        let n = tempNode(PhraseType.InterfaceDeclaration);
         let t = next();
         n.value.doc = lastDocComment();
 
@@ -1620,7 +1620,7 @@ export namespace Parser {
 
     function traitDeclarationStatement() {
 
-        let n = tempNode(NonTerminalType.TraitDeclaration);
+        let n = tempNode(PhraseType.TraitDeclaration);
         let t = next();
         n.value.doc = lastDocComment();
 
@@ -1637,12 +1637,12 @@ export namespace Parser {
 
     function functionDeclaration() {
 
-        let n = tempNode(NonTerminalType.FunctionDeclaration);
+        let n = tempNode(PhraseType.FunctionDeclaration);
 
         next(); //T_FUNCTION
 
         if (consume('&')) {
-            n.value.flag = NonTerminalFlag.ReturnsRef;
+            n.value.flag = PhraseFlag.ReturnsRef;
         }
 
         if (consume(TokenType.T_STRING)) {
@@ -1662,7 +1662,7 @@ export namespace Parser {
             n.children.push(nodeFactory(null));
         }
 
-        n.children.push(block(NonTerminalType.FunctionDeclaration));
+        n.children.push(block(PhraseType.FunctionDeclaration));
 
         return node(n);
 
@@ -1670,7 +1670,7 @@ export namespace Parser {
 
     function classDeclarationStatement() {
 
-        let n = tempNode(NonTerminalType.ClassDeclaration);
+        let n = tempNode(PhraseType.ClassDeclaration);
         let t = peek();
 
         if (t.tokenType === TokenType.T_ABSTRACT || t.tokenType === TokenType.T_FINAL) {
@@ -1732,7 +1732,7 @@ export namespace Parser {
 
     }
 
-    function block(type:NonTerminalType = NonTerminalType.Block) {
+    function block(type: PhraseType = PhraseType.Block) {
 
         let n = tempNode(type);
 
@@ -1782,11 +1782,11 @@ export namespace Parser {
             case TokenType.T_SWITCH:
                 return switchStatement();
             case TokenType.T_BREAK:
-                return keywordOptionalExpressionStatement(NonTerminalType.Break);
+                return keywordOptionalExpressionStatement(PhraseType.Break);
             case TokenType.T_CONTINUE:
-                return keywordOptionalExpressionStatement(NonTerminalType.Continue);
+                return keywordOptionalExpressionStatement(PhraseType.Continue);
             case TokenType.T_RETURN:
-                return keywordOptionalExpressionStatement(NonTerminalType.Return);
+                return keywordOptionalExpressionStatement(PhraseType.Return);
             case TokenType.T_GLOBAL:
                 return globalVariableDeclarationStatement();
             case TokenType.T_STATIC:
@@ -1794,7 +1794,7 @@ export namespace Parser {
             case TokenType.T_ECHO:
                 return echoStatement();
             case TokenType.T_INLINE_HTML:
-                let echo = tempNode(NonTerminalType.Echo, start());
+                let echo = tempNode(PhraseType.Echo, start());
                 echo.children.push(nodeFactory(next()));
                 return node(echo, end());
             case TokenType.T_UNSET:
@@ -1810,7 +1810,7 @@ export namespace Parser {
             case TokenType.T_GOTO:
                 return gotoStatement();
             case ';':
-                let empty = tempNode(NonTerminalType.EmptyStatement);
+                let empty = tempNode(PhraseType.EmptyStatement);
                 next();
                 return node(empty);
             case TokenType.T_STRING:
@@ -1827,7 +1827,7 @@ export namespace Parser {
 
     function tryStatement() {
 
-        let n = tempNode(NonTerminalType.Try);
+        let n = tempNode(PhraseType.Try);
         let t = next(); //try
 
         followOnStack.push([TokenType.T_CATCH, TokenType.T_FINALLY]);
@@ -1849,7 +1849,7 @@ export namespace Parser {
 
     function catchList() {
 
-        let n = tempNode(NonTerminalType.CatchList);
+        let n = tempNode(PhraseType.CatchList);
         followOnStack.push([TokenType.T_CATCH]);
 
         while (true) {
@@ -1869,7 +1869,7 @@ export namespace Parser {
 
     function finallyStatement() {
 
-        let n = tempNode(NonTerminalType.Finally);
+        let n = tempNode(PhraseType.Finally);
         next(); //T_FINALLY
         n.children.push(block());
         return node(n);
@@ -1878,7 +1878,7 @@ export namespace Parser {
 
     function catchStatement() {
 
-        let n = tempNode(NonTerminalType.Catch);
+        let n = tempNode(PhraseType.Catch);
         next();
 
         if (!consume('(')) {
@@ -1924,7 +1924,7 @@ export namespace Parser {
 
     function catchNameList() {
 
-        let n = tempNode(NonTerminalType.NameList);
+        let n = tempNode(PhraseType.NameList);
         let followOn = ['|'];
         let t: Token;
 
@@ -1953,7 +1953,7 @@ export namespace Parser {
 
     function declareStatement() {
 
-        let n = tempNode(NonTerminalType.Declare);
+        let n = tempNode(PhraseType.Declare);
         next();
 
         if (consume('(')) {
@@ -2004,7 +2004,7 @@ export namespace Parser {
 
     function declareConstantDeclarationList() {
 
-        let n = tempNode(NonTerminalType.ConstantDeclarationList);
+        let n = tempNode(PhraseType.ConstantDeclarationList);
         let followOn = [','];
         let t: Token;
 
@@ -2034,7 +2034,7 @@ export namespace Parser {
 
     function switchStatement() {
 
-        let n = tempNode(NonTerminalType.Switch);
+        let n = tempNode(PhraseType.Switch);
         next();
 
         followOnStack.push([':', '{', TokenType.T_CASE, TokenType.T_DEFAULT]);
@@ -2073,7 +2073,7 @@ export namespace Parser {
 
     function caseStatementList() {
 
-        let n = tempNode(NonTerminalType.CaseList);
+        let n = tempNode(PhraseType.CaseList);
         let followOn: (TokenType | string)[] = [TokenType.T_CASE, TokenType.T_DEFAULT];
         let t: Token;
         let breakOn = ['}', TokenType.T_ENDSWITCH];
@@ -2104,7 +2104,7 @@ export namespace Parser {
 
     function caseStatement() {
 
-        let n = tempNode(NonTerminalType.Case);
+        let n = tempNode(PhraseType.Case);
         let t = peek();
 
         if (t.tokenType === TokenType.T_CASE) {
@@ -2138,7 +2138,7 @@ export namespace Parser {
 
     function labelStatement() {
 
-        let n = tempNode(NonTerminalType.Label);
+        let n = tempNode(PhraseType.Label);
         n.children.push(nodeFactory(next()));
         next();
         return node(n);
@@ -2146,7 +2146,7 @@ export namespace Parser {
 
     function gotoStatement() {
 
-        let n = tempNode(NonTerminalType.Goto);
+        let n = tempNode(PhraseType.Goto);
         let t = next();
 
         if (consume(TokenType.T_STRING)) {
@@ -2167,7 +2167,7 @@ export namespace Parser {
 
     function throwStatement() {
 
-        let n = tempNode(NonTerminalType.Throw);
+        let n = tempNode(PhraseType.Throw);
         next();
 
         followOnStack.push([';']);
@@ -2184,7 +2184,7 @@ export namespace Parser {
 
     function foreachStatement() {
 
-        let n = tempNode(NonTerminalType.Foreach);
+        let n = tempNode(PhraseType.Foreach);
         let t = next();
 
         if (consume('(')) {
@@ -2251,8 +2251,8 @@ export namespace Parser {
         switch (peek().tokenType) {
 
             case '&':
-                let unary = tempNode(NonTerminalType.UnaryExpression);
-                unary.value.flag = NonTerminalFlag.UnaryReference;
+                let unary = tempNode(PhraseType.UnaryExpression);
+                unary.value.flag = PhraseFlag.UnaryReference;
                 next();
                 unary.children.push(variable());
                 return node(unary);
@@ -2265,7 +2265,7 @@ export namespace Parser {
                     return variable();
                 } else {
                     //error
-                    let err = tempNode(NonTerminalType.Error);
+                    let err = tempNode(PhraseType.Error);
                     error(err, ['&', TokenType.T_LIST, '[', TokenType.T_VARIABLE]);
                     return node(err);
                 }
@@ -2296,7 +2296,7 @@ export namespace Parser {
 
     function unsetStatement() {
 
-        let n = tempNode(NonTerminalType.Unset);
+        let n = tempNode(PhraseType.Unset);
         let t = next();
 
         if (!consume('(')) {
@@ -2339,7 +2339,7 @@ export namespace Parser {
 
     function echoStatement() {
 
-        let n = tempNode(NonTerminalType.Echo);
+        let n = tempNode(PhraseType.Echo);
         let t: Token;
         next();
         let followOn: (TokenType | string)[] = [',', ';'];
@@ -2371,7 +2371,7 @@ export namespace Parser {
 
     function staticVariableDeclarationStatement() {
 
-        let n = tempNode(NonTerminalType.StaticVariableList);
+        let n = tempNode(PhraseType.StaticVariableList);
         let t: Token;
         next();
         let followOn: (TokenType | string)[] = [',', ';'];
@@ -2405,7 +2405,7 @@ export namespace Parser {
 
     function globalVariableDeclarationStatement() {
 
-        let n = tempNode(NonTerminalType.GlobalVariableList);
+        let n = tempNode(PhraseType.GlobalVariableList);
         let t = next();
         let followOn: (TokenType | string)[] = [',', ';'];
 
@@ -2436,7 +2436,7 @@ export namespace Parser {
 
     function staticVariableDeclaration() {
 
-        let n = tempNode(NonTerminalType.StaticVariable);
+        let n = tempNode(PhraseType.StaticVariable);
 
         if (peek().tokenType === TokenType.T_VARIABLE) {
             n.children.push(nodeFactory(next()));
@@ -2456,7 +2456,7 @@ export namespace Parser {
 
     }
 
-    function keywordOptionalExpressionStatement(nodeType: NonTerminalType) {
+    function keywordOptionalExpressionStatement(nodeType: PhraseType) {
         let n = tempNode(nodeType);
         next();
 
@@ -2479,7 +2479,7 @@ export namespace Parser {
 
     function forStatement() {
 
-        let n = tempNode(NonTerminalType.For);
+        let n = tempNode(PhraseType.For);
         next(); //for
 
         if (!consume('(')) {
@@ -2552,7 +2552,7 @@ export namespace Parser {
 
     function forExpressionList(breakOn: TokenType | string) {
 
-        let n = tempNode(NonTerminalType.ForExpressionList);
+        let n = tempNode(PhraseType.ForExpressionList);
         let followOn = [',', breakOn];
         let t: Token;
 
@@ -2582,7 +2582,7 @@ export namespace Parser {
 
     function doWhileStatement() {
 
-        let n = tempNode(NonTerminalType.DoWhile);
+        let n = tempNode(PhraseType.DoWhile);
         next();
 
         followOnStack.push([TokenType.T_WHILE, ';']);
@@ -2612,7 +2612,7 @@ export namespace Parser {
 
     function whileStatement() {
 
-        let n = tempNode(NonTerminalType.While);
+        let n = tempNode(PhraseType.While);
         next();
 
         let recover = recoverStatementStartTokenTypes.slice(0);
@@ -2648,7 +2648,7 @@ export namespace Parser {
 
     function ifStatementList() {
 
-        let n = tempNode(NonTerminalType.IfList);
+        let n = tempNode(PhraseType.IfList);
         let discoverAlt = { isAlt: false };
         let followOn = [TokenType.T_ELSEIF, TokenType.T_ELSE, TokenType.T_ENDIF];
         followOnStack.push(followOn);
@@ -2691,7 +2691,7 @@ export namespace Parser {
 
     function ifStatement(isAlt: boolean, discoverAlt: { isAlt: boolean } = null) {
 
-        let n = tempNode(NonTerminalType.If);
+        let n = tempNode(PhraseType.If);
         let t = peek();
 
         if (t.tokenType === TokenType.T_IF || t.tokenType === TokenType.T_ELSEIF) {
@@ -2729,7 +2729,7 @@ export namespace Parser {
 
     function expressionStatement() {
 
-        let n = tempNode(NonTerminalType.ErrorExpression);
+        let n = tempNode(PhraseType.ErrorExpression);
         followOnStack.push([';']);
         n.children.push(expression());
         followOnStack.pop();
@@ -2751,10 +2751,10 @@ export namespace Parser {
 
     function typeExpression() {
 
-        let n = tempNode(NonTerminalType.TypeExpression);
+        let n = tempNode(PhraseType.TypeExpression);
 
         if (consume('?')) {
-            n.value.flag = NonTerminalFlag.Nullable;
+            n.value.flag = PhraseFlag.Nullable;
         }
 
         switch (peek().tokenType) {
@@ -2781,7 +2781,7 @@ export namespace Parser {
 
     function classConstantDeclarationStatement(n: TempNode) {
 
-        n.value.nonTerminalType = NonTerminalType.ClassConstantDeclarationList;
+        n.value.phraseType = PhraseType.ClassConstantDeclarationList;
         next(); //const
         let followOn = [';', ','];
         let t: Token;
@@ -2871,7 +2871,7 @@ export namespace Parser {
 
     function classConstantDeclaration() {
 
-        let n = tempNode(NonTerminalType.ClassConstantDeclarationList);
+        let n = tempNode(PhraseType.ClassConstantDeclarationList);
         let t = peek();
 
         if (t.tokenType !== TokenType.T_STRING && !isSemiReservedToken(t)) {
@@ -2899,7 +2899,7 @@ export namespace Parser {
     function propertyDeclarationStatement(n: TempNode) {
 
         let t: Token;
-        n.value.nonTerminalType = NonTerminalType.PropertyDeclarationList;
+        n.value.phraseType = PhraseType.PropertyDeclarationList;
         let followOn = [';', ','];
 
         while (true) {
@@ -2930,7 +2930,7 @@ export namespace Parser {
 
     function propertyDeclaration() {
 
-        let n = tempNode(NonTerminalType.PropertyDeclaration);
+        let n = tempNode(PhraseType.PropertyDeclaration);
 
         if (!consume(TokenType.T_VARIABLE)) {
             //error
@@ -2973,17 +2973,17 @@ export namespace Parser {
     function memberModifierToFlag(t: Token) {
         switch (t.tokenType) {
             case TokenType.T_PUBLIC:
-                return NonTerminalFlag.ModifierPublic;
+                return PhraseFlag.ModifierPublic;
             case TokenType.T_PROTECTED:
-                return NonTerminalFlag.ModifierProtected;
+                return PhraseFlag.ModifierProtected;
             case TokenType.T_PRIVATE:
-                return NonTerminalFlag.ModifierPrivate;
+                return PhraseFlag.ModifierPrivate;
             case TokenType.T_STATIC:
-                return NonTerminalFlag.ModifierStatic;
+                return PhraseFlag.ModifierStatic;
             case TokenType.T_ABSTRACT:
-                return NonTerminalFlag.ModifierAbstract;
+                return PhraseFlag.ModifierAbstract;
             case TokenType.T_FINAL:
-                return NonTerminalFlag.ModifierFinal;
+                return PhraseFlag.ModifierFinal;
             default:
                 return 0;
         }
@@ -2992,7 +2992,7 @@ export namespace Parser {
 
     function nameList() {
 
-        let n = tempNode(NonTerminalType.NameList);
+        let n = tempNode(PhraseType.NameList);
 
         while (true) {
             n.children.push(name());
@@ -3008,7 +3008,7 @@ export namespace Parser {
 
     function newExpression() {
 
-        let n = tempNode(NonTerminalType.New);
+        let n = tempNode(PhraseType.New);
         next(); //new
 
         if (peek().tokenType === TokenType.T_CLASS) {
@@ -3043,13 +3043,13 @@ export namespace Parser {
                     part = dimension(part, startToken);
                     continue;
                 case TokenType.T_OBJECT_OPERATOR:
-                    n = tempNode(NonTerminalType.Property, startToken);
+                    n = tempNode(PhraseType.Property, startToken);
                     next();
                     n.children.push(part, propertyName());
                     part = node(n);
                     continue;
                 case TokenType.T_PAAMAYIM_NEKUDOTAYIM:
-                    n = tempNode(NonTerminalType.StaticProperty, startToken);
+                    n = tempNode(PhraseType.StaticProperty, startToken);
                     next();
                     n.children.push(part, simpleVariable());
                     part = node(n);
@@ -3069,12 +3069,12 @@ export namespace Parser {
     function newVariablePart() {
 
         let t = peek();
-        let n = tempNode(NonTerminalType.ErrorVariable);
+        let n = tempNode(PhraseType.ErrorVariable);
 
         switch (t.tokenType) {
             case TokenType.T_STATIC:
-                n.value.nonTerminalType = NonTerminalType.Name;
-                n.value.flag = NonTerminalFlag.NameNotFullyQualified;
+                n.value.phraseType = PhraseType.Name;
+                n.value.flag = PhraseFlag.NameNotFullyQualified;
                 n.children.push(nodeFactory(next()));
                 return node(n);
             case TokenType.T_VARIABLE:
@@ -3097,7 +3097,7 @@ export namespace Parser {
 
     function cloneExpression() {
 
-        let n = tempNode(NonTerminalType.Clone);
+        let n = tempNode(PhraseType.Clone);
         next();
         n.children.push(expression());
         return node(n);
@@ -3106,7 +3106,7 @@ export namespace Parser {
 
     function listExpression() {
 
-        let n = tempNode(NonTerminalType.ArrayPairList);
+        let n = tempNode(PhraseType.ArrayPairList);
         let t = next();
 
         if (!consume('(')) {
@@ -3132,14 +3132,14 @@ export namespace Parser {
 
     function unaryExpression() {
 
-        let n = tempNode(NonTerminalType.UnaryExpression);
+        let n = tempNode(PhraseType.UnaryExpression);
         let t = next();
         n.value.flag = unaryOpToNodeFlag(t);
 
         switch (n.value.flag) {
-            case NonTerminalFlag.UnaryPreDec:
-            case NonTerminalFlag.UnaryPreInc:
-            case NonTerminalFlag.UnaryReference:
+            case PhraseFlag.UnaryPreDec:
+            case PhraseFlag.UnaryPreInc:
+            case PhraseFlag.UnaryReference:
                 n.children.push(variable());
                 break;
             default:
@@ -3153,15 +3153,15 @@ export namespace Parser {
 
     function closure() {
 
-        let n = tempNode(NonTerminalType.Closure);
+        let n = tempNode(PhraseType.Closure);
         if (consume(TokenType.T_STATIC)) {
-            n.value.flag = NonTerminalFlag.ModifierStatic;
+            n.value.flag = PhraseFlag.ModifierStatic;
         }
 
         next(); //T_FUNCTION
 
         if (consume('&')) {
-            n.value.flag |= NonTerminalFlag.ReturnsRef;
+            n.value.flag |= PhraseFlag.ReturnsRef;
         }
 
         followOnStack.push([TokenType.T_USE, ':', '{']);
@@ -3203,7 +3203,7 @@ export namespace Parser {
 
     function closureUse() {
 
-        let n = tempNode(NonTerminalType.ClosureUseList);
+        let n = tempNode(PhraseType.ClosureUseList);
         let t = next();
 
         if (!consume('(')) {
@@ -3241,10 +3241,10 @@ export namespace Parser {
 
     function closureUseVariable() {
 
-        let n = tempNode(NonTerminalType.ClosureUseVariable);
+        let n = tempNode(PhraseType.ClosureUseVariable);
 
         if (consume('&')) {
-            n.value.flag = NonTerminalFlag.PassByRef;
+            n.value.flag = PhraseFlag.PassByRef;
         }
 
         if (consume(TokenType.T_VARIABLE)) {
@@ -3260,7 +3260,7 @@ export namespace Parser {
 
     function parameterList() {
 
-        let n = tempNode(NonTerminalType.ParameterList);
+        let n = tempNode(PhraseType.ParameterList);
         let t: Token;
 
         if (!consume('(')) {
@@ -3316,7 +3316,7 @@ export namespace Parser {
 
     function parameter() {
 
-        let n = tempNode(NonTerminalType.Parameter);
+        let n = tempNode(PhraseType.Parameter);
 
         if (isTypeExpressionStartToken(peek())) {
             followOnStack.push(['&', TokenType.T_ELLIPSIS, TokenType.T_VARIABLE]);
@@ -3327,11 +3327,11 @@ export namespace Parser {
         }
 
         if (consume('&')) {
-            n.value.flag = NonTerminalFlag.PassByRef;
+            n.value.flag = PhraseFlag.PassByRef;
         }
 
         if (consume(TokenType.T_ELLIPSIS)) {
-            n.value.flag = NonTerminalFlag.Variadic;
+            n.value.flag = PhraseFlag.Variadic;
         }
 
         if (consume(TokenType.T_VARIABLE)) {
@@ -3375,14 +3375,14 @@ export namespace Parser {
                     variableAtomNode = dimension(variableAtomNode, startToken);
                     continue;
                 case '(':
-                    let call = tempNode(NonTerminalType.Call, startToken);
+                    let call = tempNode(PhraseType.Call, startToken);
                     call.children.push(variableAtomNode, argumentList());
                     variableAtomNode = node(call);
                     continue;
                 default:
-                    if (count === 1 && variableAtomType !== NonTerminalType.Variable) {
+                    if (count === 1 && variableAtomType !== PhraseType.Variable) {
                         //error
-                        let errNode = tempNode(NonTerminalType.ErrorVariable, startToken);
+                        let errNode = tempNode(PhraseType.ErrorVariable, startToken);
                         errNode.children.push(variableAtomNode);
                         error(errNode,
                             [TokenType.T_PAAMAYIM_NEKUDOTAYIM, TokenType.T_OBJECT_OPERATOR, '[', '{', '(']);
@@ -3399,29 +3399,29 @@ export namespace Parser {
 
     function staticMember(lhs: any, startToken: Token) {
 
-        let n = tempNode(NonTerminalType.ErrorStaticMember, startToken);
+        let n = tempNode(PhraseType.ErrorStaticMember, startToken);
         n.children.push(lhs);
         next() //::
         let t = peek();
 
         switch (t.tokenType) {
             case '{':
-                n.value.nonTerminalType = NonTerminalType.StaticMethodCall;
+                n.value.phraseType = PhraseType.StaticMethodCall;
                 n.children.push(encapsulatedExpression('{', '}'));
                 break;
             case '$':
             case TokenType.T_VARIABLE:
                 n.children.push(simpleVariable());
-                n.value.nonTerminalType = NonTerminalType.StaticProperty;
+                n.value.phraseType = PhraseType.StaticProperty;
                 break;
             case TokenType.T_STRING:
                 n.children.push(nodeFactory(next()));
-                n.value.nonTerminalType = NonTerminalType.ClassConstant;
+                n.value.phraseType = PhraseType.ClassConstant;
                 break;
             default:
                 if (isSemiReservedToken(t)) {
                     n.children.push(nodeFactory(next()));
-                    n.value.nonTerminalType = NonTerminalType.ClassConstant;
+                    n.value.phraseType = PhraseType.ClassConstant;
                     break;
                 } else {
                     //error
@@ -3436,9 +3436,9 @@ export namespace Parser {
 
         if (t.tokenType === '(') {
             n.children.push(argumentList());
-            n.value.nonTerminalType = NonTerminalType.StaticMethodCall;
+            n.value.phraseType = PhraseType.StaticMethodCall;
             return node(n);
-        } else if (n.value.nonTerminalType === NonTerminalType.StaticMethodCall) {
+        } else if (n.value.phraseType === PhraseType.StaticMethodCall) {
             //error
             error(n, ['(']);
             n.children.push(nodeFactory(null));
@@ -3450,14 +3450,14 @@ export namespace Parser {
 
     function instanceMember(lhs: any, startToken: Token) {
 
-        let n = tempNode(NonTerminalType.Property, startToken);
+        let n = tempNode(PhraseType.Property, startToken);
         n.children.push(lhs);
         next(); //->
         n.children.push(propertyName());
 
         if (consume('(')) {
             n.children.push(argumentList());
-            n.value.nonTerminalType = NonTerminalType.MethodCall;
+            n.value.phraseType = PhraseType.MethodCall;
         }
 
         return node(n);
@@ -3476,7 +3476,7 @@ export namespace Parser {
                 return simpleVariable();
             default:
                 //error
-                let e = tempNode(NonTerminalType.Error);
+                let e = tempNode(PhraseType.Error);
                 error(e, [TokenType.T_STRING, '{', '$']);
                 return node(e);
         }
@@ -3485,7 +3485,7 @@ export namespace Parser {
 
     function dimension(lhs: any, startToken: Token) {
 
-        let n = tempNode(NonTerminalType.Dimension, startToken);
+        let n = tempNode(PhraseType.Dimension, startToken);
         let close = peek().tokenType === '[' ? ']' : '}';
         n.children.push(lhs);
         next();
@@ -3508,7 +3508,7 @@ export namespace Parser {
 
     function argumentList() {
 
-        let n = tempNode(NonTerminalType.ArgumentList);
+        let n = tempNode(PhraseType.ArgumentList);
         let t: Token;
 
         if (!consume('(')) {
@@ -3555,12 +3555,12 @@ export namespace Parser {
 
     function argument() {
 
-        let n = tempNode(NonTerminalType.ErrorArgument);
+        let n = tempNode(PhraseType.ErrorArgument);
         let t = peek();
 
         if (t.tokenType === TokenType.T_ELLIPSIS) {
             next();
-            n.value.nonTerminalType = NonTerminalType.Unpack;
+            n.value.phraseType = PhraseType.Unpack;
             n.children.push(expression());
             return node(n);
         } else if (isExpressionStartToken(t)) {
@@ -3575,12 +3575,12 @@ export namespace Parser {
 
     function name() {
 
-        let n = tempNode(NonTerminalType.Name);
+        let n = tempNode(PhraseType.Name);
 
         if (consume(TokenType.T_NS_SEPARATOR)) {
-            n.value.flag = NonTerminalFlag.NameFullyQualified;
+            n.value.flag = PhraseFlag.NameFullyQualified;
         } else if (consume(TokenType.T_NAMESPACE)) {
-            n.value.flag = NonTerminalFlag.NameRelative;
+            n.value.flag = PhraseFlag.NameRelative;
             if (!consume(TokenType.T_NS_SEPARATOR)) {
                 //error
                 if (error(n, [TokenType.T_NS_SEPARATOR], [TokenType.T_STRING]).tokenType !== TokenType.T_STRING) {
@@ -3589,7 +3589,7 @@ export namespace Parser {
                 }
             }
         } else {
-            n.value.flag = NonTerminalFlag.NameNotFullyQualified;
+            n.value.flag = PhraseFlag.NameNotFullyQualified;
         }
 
         n.children.push(namespaceName());
@@ -3599,7 +3599,7 @@ export namespace Parser {
 
     function shortArray() {
 
-        let n = tempNode(NonTerminalType.ArrayPairList);
+        let n = tempNode(PhraseType.ArrayPairList);
         let t = next();
 
         if (consume(']')) {
@@ -3621,7 +3621,7 @@ export namespace Parser {
 
     function longArray() {
 
-        let n = tempNode(NonTerminalType.ArrayPairList);
+        let n = tempNode(PhraseType.ArrayPairList);
         next();
 
         if (!consume('(')) {
@@ -3690,7 +3690,7 @@ export namespace Parser {
 
     function arrayPair() {
 
-        let n = tempNode(NonTerminalType.ArrayPair);
+        let n = tempNode(PhraseType.ArrayPair);
 
         if (peek().tokenType === '&') {
             n.children.push(unaryExpression(), nodeFactory(null));
@@ -3718,7 +3718,7 @@ export namespace Parser {
 
     function encapsulatedExpression(open: string | TokenType, close: string | TokenType) {
 
-        let n = tempNode(NonTerminalType.EncapsulatedExpression);
+        let n = tempNode(PhraseType.EncapsulatedExpression);
 
         if (!consume(open)) {
             let err = new ParseError(peek(), [open]);
@@ -3755,33 +3755,33 @@ export namespace Parser {
         switch (peek().tokenType) {
             case TokenType.T_VARIABLE:
             case '$':
-                variableAtomType = NonTerminalType.Variable;
+                variableAtomType = PhraseType.Variable;
                 return simpleVariable();
             case '(':
                 return encapsulatedExpression('(', ')');
             case TokenType.T_ARRAY:
-                variableAtomType = NonTerminalType.ArrayPairList;
+                variableAtomType = PhraseType.ArrayPairList;
                 return longArray();
             case '[':
-                variableAtomType = NonTerminalType.ArrayPairList;
+                variableAtomType = PhraseType.ArrayPairList;
                 return shortArray();
             case TokenType.T_CONSTANT_ENCAPSED_STRING:
                 return nodeFactory(next());
             case TokenType.T_STATIC:
-                variableAtomType = NonTerminalType.Name;
-                n = tempNode(NonTerminalType.Name);
-                n.value.flag = NonTerminalFlag.NameNotFullyQualified;
+                variableAtomType = PhraseType.Name;
+                n = tempNode(PhraseType.Name);
+                n.value.flag = PhraseFlag.NameNotFullyQualified;
                 n.children.push(nodeFactory(next()));
                 return node(n);
             case TokenType.T_STRING:
             case TokenType.T_NAMESPACE:
             case TokenType.T_NS_SEPARATOR:
-                variableAtomType = NonTerminalType.Name;
+                variableAtomType = PhraseType.Name;
                 return name();
             default:
                 //error
-                variableAtomType = NonTerminalType.ErrorVariable;
-                n = tempNode(NonTerminalType.ErrorVariable);
+                variableAtomType = PhraseType.ErrorVariable;
+                n = tempNode(PhraseType.ErrorVariable);
                 error(n,
                     [TokenType.T_VARIABLE, '$', '(', '[', TokenType.T_ARRAY, TokenType.T_CONSTANT_ENCAPSED_STRING,
                     TokenType.T_STATIC, TokenType.T_STRING, TokenType.T_NAMESPACE, TokenType.T_NS_SEPARATOR]);
@@ -3792,7 +3792,7 @@ export namespace Parser {
 
     function simpleVariable() {
 
-        let n = tempNode(NonTerminalType.Variable);
+        let n = tempNode(PhraseType.Variable);
         let t = peek();
 
         if (t.tokenType === TokenType.T_VARIABLE) {
@@ -3823,7 +3823,7 @@ export namespace Parser {
 
     function haltCompilerStatement() {
 
-        let n = tempNode(NonTerminalType.HaltCompiler);
+        let n = tempNode(PhraseType.HaltCompiler);
         next();
 
         let expected: (TokenType | string)[] = ['(', ')', ';'];
@@ -3852,17 +3852,17 @@ export namespace Parser {
 
     function useStatement() {
 
-        let n = tempNode(NonTerminalType.UseStatement);
+        let n = tempNode(PhraseType.UseStatement);
         next();
 
         if (consume(TokenType.T_FUNCTION)) {
-            n.value.flag = NonTerminalFlag.UseFunction;
+            n.value.flag = PhraseFlag.UseFunction;
         } else if (consume(TokenType.T_CONST)) {
-            n.value.flag = NonTerminalFlag.UseConstant;
+            n.value.flag = PhraseFlag.UseConstant;
         }
 
-        let useListNode = tempNode(NonTerminalType.UseStatement);
-        let useElementNode = tempNode(NonTerminalType.UseElement);
+        let useListNode = tempNode(PhraseType.UseStatement);
+        let useElementNode = tempNode(PhraseType.UseElement);
         consume(TokenType.T_NS_SEPARATOR);
 
         followOnStack.push([TokenType.T_NS_SEPARATOR, ',', ';']);
@@ -3874,13 +3874,13 @@ export namespace Parser {
             if (t.tokenType === '{') {
                 n.value.errors.push(new ParseError(t, [TokenType.T_NS_SEPARATOR]));
             }
-            n.value.nonTerminalType = NonTerminalType.UseGroup;
+            n.value.phraseType = PhraseType.UseGroup;
             n.children.push(nsName);
             return useGroup(n);
         }
 
         if (!n.value.flag) {
-            n.value.flag = NonTerminalFlag.UseClass;
+            n.value.flag = PhraseFlag.UseClass;
         }
 
         useElementNode.children.push(nsName);
@@ -3913,7 +3913,7 @@ export namespace Parser {
         }
 
         followOnStack.push(['}', ';']);
-        n.children.push(useList(tempNode(NonTerminalType.UseList), !n.value.flag, false, '}'));
+        n.children.push(useList(tempNode(PhraseType.UseList), !n.value.flag, false, '}'));
         followOnStack.pop();
 
         if (!consume('}')) {
@@ -3936,7 +3936,7 @@ export namespace Parser {
         while (true) {
 
             followOnStack.push(followOn);
-            n.children.push(useElement(tempNode(NonTerminalType.UseElement), isMixed, lookForPrefix));
+            n.children.push(useElement(tempNode(PhraseType.UseElement), isMixed, lookForPrefix));
             followOnStack.pop();
             t = peek();
             if (t.tokenType === ',') {
@@ -3965,11 +3965,11 @@ export namespace Parser {
 
             if (isMixed) {
                 if (consume(TokenType.T_FUNCTION)) {
-                    n.value.flag = NonTerminalFlag.UseFunction;
+                    n.value.flag = PhraseFlag.UseFunction;
                 } else if (consume(TokenType.T_CONST)) {
-                    n.value.flag = NonTerminalFlag.UseConstant;
+                    n.value.flag = PhraseFlag.UseConstant;
                 } else {
-                    n.value.flag = NonTerminalFlag.UseClass;
+                    n.value.flag = PhraseFlag.UseClass;
                 }
             } else if (lookForPrefix) {
                 consume(TokenType.T_NS_SEPARATOR);
@@ -3998,7 +3998,7 @@ export namespace Parser {
 
     function namespaceStatement() {
 
-        let n = tempNode(NonTerminalType.Namespace);
+        let n = tempNode(PhraseType.Namespace);
         next();
         lastDocComment;
 
@@ -4036,7 +4036,7 @@ export namespace Parser {
 
     function namespaceName() {
 
-        let n = tempNode(NonTerminalType.NamespaceName);
+        let n = tempNode(PhraseType.NamespaceName);
 
         if (peek().tokenType === TokenType.T_STRING) {
             n.children.push(nodeFactory(next()));
