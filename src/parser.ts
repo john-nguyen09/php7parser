@@ -22,7 +22,7 @@ export enum PhraseType {
     ForExpressionList, For, Break, Continue, Return, GlobalVariableList, StaticVariableList,
     StaticVariable, Echo, Unset, Throw, Goto, Label, Foreach, CaseList, Switch,
     Case, Declare, Try, Catch, CatchNameList, Finally, TernaryExpression, BinaryExpression,
-    UnaryExpression, MagicConstant, CatchList, FunctionBody, MethodBody,
+    UnaryExpression, MagicConstant, CatchList, FunctionBody, MethodBody, ExtendsClass, ExtendsInterfaces,
     ErrorStaticMember, ErrorArgument, ErrorVariable, ErrorExpression, ErrorClassStatement,
     ErrorPropertyName, ErrorTraitAdaptation
 }
@@ -1199,13 +1199,9 @@ export namespace Parser {
             n.children.push(nodeFactory(null));
         }
 
-        if (consume(TokenType.T_EXTENDS)) {
-            followOnStack.push([TokenType.T_IMPLEMENTS, '{']);
-            n.children.push(name());
-            followOnStack.pop();
-        } else {
-            n.children.push(nodeFactory(null));
-        }
+        followOnStack.push([TokenType.T_IMPLEMENTS, '{']);
+        n.children.push(extendsClass());
+        followOnStack.pop();
 
         if (consume(TokenType.T_IMPLEMENTS)) {
             followOnStack.push(['{']);
@@ -1534,7 +1530,7 @@ export namespace Parser {
 
     }
 
-    function identifier(){
+    function identifier() {
         let n = tempNode(PhraseType.identifier);
         let t = peek();
         if (t.tokenType !== TokenType.T_STRING && !isSemiReservedToken(t)) {
@@ -1626,6 +1622,20 @@ export namespace Parser {
 
     }
 
+    function extendsInterfaces(){
+
+        let t = peek();
+
+        if (t.tokenType === TokenType.T_EXTENDS) {
+            let n = tempNode(PhraseType.ExtendsInterfaces);
+            next();
+            n.children.push(nameList());
+            return node(n);
+        } else {
+            return nodeFactory(null);
+        }
+    }
+
     function traitDeclarationStatement() {
 
         let n = tempNode(PhraseType.TraitDeclaration);
@@ -1700,13 +1710,9 @@ export namespace Parser {
             n.children.push(nodeFactory(null));
         }
 
-        if (consume(TokenType.T_EXTENDS)) {
-            followOnStack.push([TokenType.T_IMPLEMENTS, '{']);
-            n.children.push(nameList());
-            followOnStack.pop();
-        } else {
-            n.children.push(nodeFactory(null));
-        }
+        followOnStack.push([TokenType.T_IMPLEMENTS, '{']);
+        n.children.push(extendsClass());
+        followOnStack.pop();
 
         if (consume(TokenType.T_IMPLEMENTS)) {
             followOnStack.push(['{']);
@@ -1718,6 +1724,22 @@ export namespace Parser {
 
         n.children.push(classStatementList());
         return node(n);
+
+    }
+
+    function extendsClass() {
+
+        let t = peek();
+
+        if (t.tokenType === TokenType.T_EXTENDS) {
+            let n = tempNode(PhraseType.ExtendsClass);
+            next();
+            n.children.push(nameList());
+            return node(n);
+        } else {
+            return nodeFactory(null);
+        }
+
 
     }
 
@@ -2880,7 +2902,7 @@ export namespace Parser {
     function classConstantDeclaration() {
 
         let n = tempNode(PhraseType.ClassConstantDeclarationList);
-        
+
         followOnStack.push(['=']);
         n.children.push(identifier());
         followOnStack.pop();
