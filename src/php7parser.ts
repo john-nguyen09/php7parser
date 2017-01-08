@@ -5,4 +5,4 @@
 'use strict';
 
 export {Lexer, LexerMode, Token, TokenType, Position, Range} from './lexer';
-export {Parser, PhraseType, PhraseFlag, AstNodeFactory, Phrase} from './parser';
+export {Parser, PhraseType, PhraseFlag, NodeFactory, Phrase} from './parser';

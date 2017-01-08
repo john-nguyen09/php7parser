@@ -7,8 +7,8 @@
 import { Token, Lexer, TokenType, Position, Range } from './lexer';
 
 export enum PhraseType {
-    None, Error, TopStatementList, Namespace, NamespaceName, UseDeclaration, UseStatement,
-    UseGroup, UseList, HaltCompiler, ConstantDeclarationList, ConstantDeclaration,
+    None, Error, TopStatements, Namespace, NamespaceName, UseDeclaration, UseStatement,
+    UseGroup, UseList, HaltCompiler, ConstantDeclarationStatement, ConstantDeclaration,
     ArrayPair, Name, Call, Unpack, ArgumentList, Dimension, ClassConstant,
     StaticProperty, StaticMethodCall, MethodCall, Property, Closure, EncapsulatedExpression,
     ParameterList, Parameter, Isset, Empty, Eval, Include, YieldFrom, Yield, Print,
@@ -54,37 +54,19 @@ export enum PhraseFlag {
     BinaryBitwiseOrAssign, BinaryBitwiseAndAssign, BinaryBitwiseXorAssign, BinaryInstanceOf
 }
 
-export interface AstNodeFactory<T> {
+export interface NodeFactory<T> {
     (value: Phrase | Token, children?: T[]): T;
 }
 
 export interface Phrase {
     phraseType: PhraseType;
-    startToken: Token;
-    endToken: Token;
-    flag?: PhraseFlag;
-    doc?: Token;
     errors?: ParseError[];
 }
 
-export class ParseError {
-
-    private _unexpected: Token;
-    private _expected: (TokenType | string)[];
-
-    constructor(unexpected: Token, expected: (TokenType | string)[] = []) {
-        this._unexpected = unexpected;
-        this._expected = expected;
-    }
-
-    get unexpected() {
-        return this._unexpected;
-    }
-
-    get expected() {
-        return this._expected;
-    }
-
+export interface ParseError {
+    unexpected: Token;
+    expected: (TokenType | string)[];
+    skipped:Token[];
 }
 
 export namespace Parser {
@@ -232,7 +214,7 @@ export namespace Parser {
     }
 
     interface TempNode {
-        value: Phrase;
+        phrase: Phrase;
         children: any[];
     }
 
@@ -282,15 +264,14 @@ export namespace Parser {
         range: null
     };
 
-    var nodeFactory: AstNodeFactory<any>;
+    var nodeFactory: NodeFactory<any>;
     var tokens: Token[];
     var followOnStack: (TokenType | string)[][];
     var isBinaryOpPredicate: Predicate;
     var variableAtomType: PhraseType;
     var pos: number;
-    var docComment: Token;
 
-    export function parse<T>(tokenArray: Token[], astNodeFactory: AstNodeFactory<T>): T {
+    export function parse<T>(tokenArray: Token[], astNodeFactory: NodeFactory<T>): T {
 
         nodeFactory = astNodeFactory;
         tokens = tokenArray;
@@ -300,7 +281,7 @@ export namespace Parser {
             return null;
         }
 
-        return topStatementList(false);
+        return topStatements(TokenType.T_EOF);
 
     }
 
@@ -308,39 +289,21 @@ export namespace Parser {
         return pos >= 0 ? tokens[pos] : null;
     }
 
-    function lastDocComment() {
-        let t = docComment;
-        docComment = null;
-        return t;
+    function consume(tokenType: TokenType | string, pushTo:any[]) {
+        return peek().tokenType === tokenType ? next(pushTo) : null;
     }
 
-    function consume(tokenType: TokenType | string) {
-        return peek().tokenType === tokenType ? next() : null;
-    }
-
-    function next(): Token {
+    function next(pushTo:any[]): Token {
 
         if (pos === tokens.length - 1) {
             return endToken;
         }
 
         ++pos;
+        pushTo.push(nodeFactory(tokens[pos]));
 
-        switch (tokens[pos].tokenType) {
-            case TokenType.T_DOC_COMMENT:
-                docComment = tokens[pos];
-                return this.next();
-            case '}':
-                docComment = null;
-                break;
-            case TokenType.T_WHITESPACE:
-            case TokenType.T_COMMENT:
-            case TokenType.T_OPEN_TAG:
-            case TokenType.T_OPEN_TAG_WITH_ECHO:
-            case TokenType.T_CLOSE_TAG:
-                return this.next();
-            default:
-                break;
+        if(isHidden(tokens[pos])){
+            return this.next(pushTo);
         }
 
         return tokens[pos];
@@ -354,7 +317,7 @@ export namespace Parser {
 
         while (k) {
             if (++peekPos < tokens.length) {
-                if (!shouldSkip(tokens[peekPos])) {
+                if (!isHidden(tokens[peekPos])) {
                     --k;
                 }
             } else {
@@ -365,21 +328,23 @@ export namespace Parser {
         return tokens[peekPos];
     }
 
-    function skip(until: (TokenType | string)[]) {
+    function skip(until: (TokenType | string)[], pushTo:Token[]) {
 
         let t: Token;
 
         while (true) {
             t = peek();
-            if (until.indexOf(t.tokenType) !== -1 || t.tokenType === TokenType.T_EOF) {
+            if (until.indexOf(t.tokenType) >= 0 || t.tokenType === TokenType.T_EOF) {
                 break;
+            } else {
+                next(pushTo);
             }
         }
 
         return t;
     }
 
-    function shouldSkip(t: Token) {
+    function isHidden(t: Token) {
         switch (t.tokenType) {
             case TokenType.T_DOC_COMMENT:
             case TokenType.T_WHITESPACE:
@@ -393,53 +358,29 @@ export namespace Parser {
         }
     }
 
+    function top<T>(array:T[]){
+        return array.length ? array[array.length - 1] : null;
+    }
 
-    function tempNode(type: PhraseType = 0, startToken?: Token): TempNode {
-
-        if (startToken === undefined) {
-            startToken = start();
-        }
+    function tempNode(type: PhraseType = 0): TempNode {
 
         return {
-            value: {
-                phraseType: type,
-                startToken: startToken,
-                endToken: null,
+            phrase: {
+                phraseType: type
             },
             children: []
         };
     }
 
 
-    function node(temp: TempNode, endToken?: Token) {
-
-        if (!endToken) {
-            endToken = end();
-        }
-        temp.value.endToken = endToken;
-        return nodeFactory(temp.value, temp.children);
-
+    function node(temp: TempNode) {
+        return nodeFactory(temp.phrase, temp.children);
     }
 
-    function start() {
-        let t = peek();
+    function topStatements(breakOn:TokenType|string) {
 
-        if (t.tokenType === TokenType.T_EOF) {
-            return current();
-        }
-
-        return t;
-    }
-
-    function end() {
-        return current();
-    }
-
-    function topStatementList(isCurly: boolean) {
-
-        let n = tempNode(PhraseType.TopStatementList);
+        let n = tempNode(PhraseType.TopStatements);
         let t: Token;
-        let breakOn = isCurly ? '}' : TokenType.T_EOF;
         let followOn = recoverTopStatementStartTokenTypes.slice(0);
         followOn.push(breakOn);
 
@@ -456,7 +397,7 @@ export namespace Parser {
                 //error
                 t = error(n, followOn, followOn);
                 if (t.tokenType === ';') {
-                    next();
+                    next(top<ParseError>(n.phrase.errors).skipped);
                 } else if (t.tokenType === TokenType.T_EOF) {
                     break;
                 }
@@ -464,7 +405,7 @@ export namespace Parser {
 
         }
 
-        return node(n);
+        return nodeFactory(n.phrase, n.children);
 
     }
 
@@ -499,30 +440,43 @@ export namespace Parser {
 
     function constantDeclarationStatement() {
 
-        let n = tempNode(PhraseType.ConstantDeclarationList);
-        next();
-        let followOn: (TokenType | string)[] = [',', ';'];
+        let n = tempNode(PhraseType.ConstantDeclarationStatement);
+        next(n.children); //const
+        followOnStack.push([';']);
+        n.children.push(constantDeclarations(PhraseType.ConstantDeclarations));
+        followOnStack.pop();
+        
+        if(!consume(';', n.children)){
+            error(n, [',', ';'], [';']);
+            consume(';', top<ParseError>(n.phrase.errors).skipped);
+        }
+        
+        return nodeFactory(n.phrase, n.children);
+
+    }
+
+    function constantDeclarations(type:PhraseType){
+
+        let followOn: (TokenType | string)[] = [','];
         let t: Token;
+        let n = tempNode(type);
 
         while (true) {
 
             followOnStack.push(followOn);
-            n.children.push(constantDeclaration());
+            n.children.push(type === PhraseType.ConstantDeclarations ? 
+                constantDeclaration() : classConstantDeclaration());
             followOnStack.pop();
             t = peek();
             if (t.tokenType === ',') {
-                next();
+                next(n.children);
             } else if (t.tokenType === ';') {
-                next();
                 break;
             } else {
-                error(n, [',', ';'], [';']);
-                consume(';');
+                error(n, [',', ';']);
                 break;
             }
         }
-
-        return node(n);
 
     }
 
@@ -2034,7 +1988,7 @@ export namespace Parser {
 
     function declareConstantDeclarationList() {
 
-        let n = tempNode(PhraseType.ConstantDeclarationList);
+        let n = tempNode(PhraseType.ConstantDeclarationStatement);
         let followOn = [','];
         let t: Token;
 
@@ -4047,7 +4001,7 @@ export namespace Parser {
             return node(n);
         }
 
-        n.children.push(topStatementList(true));
+        n.children.push(topStatements(true));
 
         if (!consume('}')) {
             error(n, ['}'], ['}']);
