@@ -9,11 +9,11 @@ import { Token, Lexer, TokenType, Position, Range } from './lexer';
 export enum PhraseType {
     None, Error, TopStatements, Namespace, NamespaceName, UseDeclaration, UseStatement,
     UseGroup, UseList, HaltCompiler, ConstantDeclarationStatement, ConstantDeclaration,
-    ArrayPair, Name, Call, Unpack, ArgumentList, Dimension, ClassConstant,
+    ConstantDeclarations, ArrayPair, Name, Call, Unpack, ArgumentList, Dimension, ClassConstant,
     StaticProperty, StaticMethodCall, MethodCall, Property, Closure, EncapsulatedExpression,
     ParameterList, Parameter, Isset, Empty, Eval, Include, YieldFrom, Yield, Print,
     Backticks, EncapsulatedVariableList, AnonymousClassDeclaration, New, identifier,
-    NameList, ClassStatementList, PropertyDeclaration, PropertyDeclarationList,
+    NameList, ClassStatementList, PropertyDeclaration, PropertyDeclarationList, Scalar,
     ClassConstantDeclaration, ClassConstantDeclarationList, TypeExpression, Block,
     InnerStatementList, FunctionDeclaration, MethodDeclaration, UseTrait, TraitAdaptationList,
     MethodReference, TraitPrecendence, TraitAlias, ClassDeclaration, TraitDeclaration,
@@ -25,33 +25,6 @@ export enum PhraseType {
     UnaryExpression, MagicConstant, CatchList, FunctionBody, MethodBody, ExtendsClass, ExtendsInterfaces,
     ErrorStaticMember, ErrorArgument, ErrorVariable, ErrorExpression, ErrorClassStatement,
     ErrorPropertyName, ErrorTraitAdaptation
-}
-
-export enum PhraseFlag {
-    None = 0,
-    ModifierPublic = 1 << 0,
-    ModifierProtected = 1 << 1,
-    ModifierPrivate = 1 << 2,
-    ModifierStatic = 1 << 3,
-    ModifierAbstract = 1 << 4,
-    ModifierFinal = 1 << 5,
-    ReturnsRef = 1 << 6,
-    PassByRef = 1 << 7,
-    Variadic = 1 << 8,
-    Nullable = 1 << 16, NameFullyQualified, NameNotFullyQualified, NameRelative,
-    MagicLine, MagicFile, MagicDir, MagicNamespace, MagicFunction, MagicMethod,
-    MagicClass, MagicTrait, UseClass, UseFunction, UseConstant,
-    UnaryBoolNot, UnaryBitwiseNot, UnaryMinus, UnaryPlus, UnarySilence, UnaryPreInc,
-    UnaryPostInc, UnaryPreDec, UnaryPostDec, UnaryReference, BinaryBitwiseOr,
-    BinaryBitwiseAnd, BinaryBitwiseXor, BinaryConcat, BinaryAdd, BinarySubtract,
-    BinaryMultiply, BinaryDivide, BinaryModulus, BinaryPower, BinaryShiftLeft,
-    BinaryShiftRight, BinaryBoolAnd, BinaryBoolOr, BinaryLogicalAnd, BinaryLogicalOr,
-    BinaryLogicalXor, BinaryIsIdentical, BinaryIsNotIdentical, BinaryIsEqual,
-    BinaryIsNotEqual, BinaryIsSmaller, BinaryIsSmallerOrEqual, BinaryIsGreater,
-    BinaryIsGreaterOrEqual, BinarySpaceship, BinaryCoalesce, BinaryAssign, BinaryConcatAssign,
-    BinaryAddAssign, BinarySubtractAssign, BinaryMultiplyAssign, BinaryDivideAssign,
-    BinaryModulusAssign, BinaryPowerAssign, BinaryShiftLeftAssign, BinaryShiftRightAssign,
-    BinaryBitwiseOrAssign, BinaryBitwiseAndAssign, BinaryBitwiseXorAssign, BinaryInstanceOf
 }
 
 export interface NodeFactory<T> {
@@ -66,7 +39,7 @@ export interface Phrase {
 export interface ParseError {
     unexpected: Token;
     expected: (TokenType | string)[];
-    skipped:Token[];
+    skipped: Token[];
 }
 
 export namespace Parser {
@@ -289,11 +262,11 @@ export namespace Parser {
         return pos >= 0 ? tokens[pos] : null;
     }
 
-    function consume(tokenType: TokenType | string, pushTo:any[]) {
+    function consume(tokenType: TokenType | string, pushTo: any[]) {
         return peek().tokenType === tokenType ? next(pushTo) : null;
     }
 
-    function next(pushTo:any[]): Token {
+    function next(pushTo: any[]): Token {
 
         if (pos === tokens.length - 1) {
             return endToken;
@@ -302,7 +275,7 @@ export namespace Parser {
         ++pos;
         pushTo.push(nodeFactory(tokens[pos]));
 
-        if(isHidden(tokens[pos])){
+        if (isHidden(tokens[pos])) {
             return this.next(pushTo);
         }
 
@@ -328,7 +301,7 @@ export namespace Parser {
         return tokens[peekPos];
     }
 
-    function skip(until: (TokenType | string)[], pushTo:Token[]) {
+    function skip(until: (TokenType | string)[], pushTo: Token[]) {
 
         let t: Token;
 
@@ -358,7 +331,7 @@ export namespace Parser {
         }
     }
 
-    function top<T>(array:T[]){
+    function top<T>(array: T[]) {
         return array.length ? array[array.length - 1] : null;
     }
 
@@ -377,7 +350,7 @@ export namespace Parser {
         return nodeFactory(temp.phrase, temp.children);
     }
 
-    function topStatements(breakOn:TokenType|string) {
+    function topStatements(breakOn: TokenType | string) {
 
         let n = tempNode(PhraseType.TopStatements);
         let t: Token;
@@ -445,17 +418,17 @@ export namespace Parser {
         followOnStack.push([';']);
         n.children.push(constantDeclarations(PhraseType.ConstantDeclarations));
         followOnStack.pop();
-        
-        if(!consume(';', n.children)){
+
+        if (!consume(';', n.children)) {
             error(n, [',', ';'], [';']);
             consume(';', top<ParseError>(n.phrase.errors).skipped);
         }
-        
+
         return nodeFactory(n.phrase, n.children);
 
     }
 
-    function constantDeclarations(type:PhraseType){
+    function constantDeclarations(type: PhraseType) {
 
         let followOn: (TokenType | string)[] = [','];
         let t: Token;
@@ -464,7 +437,7 @@ export namespace Parser {
         while (true) {
 
             followOnStack.push(followOn);
-            n.children.push(type === PhraseType.ConstantDeclarations ? 
+            n.children.push(type === PhraseType.ConstantDeclarations ?
                 constantDeclaration() : classConstantDeclaration());
             followOnStack.pop();
             t = peek();
@@ -485,18 +458,14 @@ export namespace Parser {
         let n = tempNode(PhraseType.ConstantDeclaration);
         let t: Token;
 
-        if (consume(TokenType.T_STRING)) {
-            n.children.push(nodeFactory(current()));
-            n.value.doc = lastDocComment();
+        if (consume(TokenType.T_STRING, n.children)) {
         } else {
             error(n, [TokenType.T_STRING]);
-            n.children.push(nodeFactory(null), nodeFactory(null));
             return node(n);
         }
 
-        if (!consume('=')) {
+        if (!consume('=', n.children)) {
             error(n, ['=']);
-            n.children.push(nodeFactory(null));
             return node(n);
         }
 
@@ -510,12 +479,14 @@ export namespace Parser {
         let precedence: number;
         let associativity: Associativity;
         let op: Token;
-        let startToken = start();
-        let opFlag: PhraseFlag;
         isBinaryOpPredicate = isVariableAndExpressionBinaryOp;
-        let lhs = atom();
+        let lhs = expressionAtom();
+        let n: TempNode;
 
         while (true) {
+
+            n = tempNode(PhraseType.BinaryExpression);
+            n.children.push(lhs);
 
             op = peek();
 
@@ -533,18 +504,17 @@ export namespace Parser {
                 ++precedence;
             }
 
-            next();
+            next(n.children);
             if (op.tokenType === '?') {
-                lhs = ternaryExpression(lhs, precedence, startToken);
+                lhs = ternaryExpression(n, precedence);
             } else {
                 let rhs: any;
                 if (op.tokenType === '=' && peek().tokenType === '&') {
-                    rhs = unaryExpression();
+                    n.children.push(unaryExpression());
                 } else {
-                    rhs = op.tokenType === TokenType.T_INSTANCEOF ? newVariable() : expression(precedence);
+                    n.children.push(op.tokenType === TokenType.T_INSTANCEOF ? newVariable() : expression(precedence));
                 }
-
-                lhs = binaryNode(lhs, rhs, binaryOpToNodeFlag(op), startToken);
+                lhs = nodeFactory(n.phrase, n.children);
             }
 
         }
@@ -553,156 +523,51 @@ export namespace Parser {
 
     }
 
-    function binaryNode(lhs: any, rhs: any, flag: PhraseFlag, startToken: Token) {
-        let n = tempNode(PhraseType.BinaryExpression, startToken);
-        n.value.flag = flag;
-        n.children.push(lhs);
-        n.children.push(rhs);
-        return node(n);
-    }
+    function ternaryExpression(n: TempNode, precedence: number) {
 
-    function unaryOpToNodeFlag(op: Token, isPost = false) {
-        switch (op.tokenType) {
-            case '&':
-                return PhraseFlag.UnaryReference;
-            case '!':
-                return PhraseFlag.UnaryBoolNot;
-            case '~':
-                return PhraseFlag.UnaryBitwiseNot;
-            case '-':
-                return PhraseFlag.UnaryMinus;
-            case '+':
-                return PhraseFlag.UnaryPlus;
-            case '@':
-                return PhraseFlag.UnarySilence;
-            case TokenType.T_INC:
-                return isPost ? PhraseFlag.UnaryPreInc : PhraseFlag.UnaryPostInc;
-            case TokenType.T_DEC:
-                return isPost ? PhraseFlag.UnaryPreDec : PhraseFlag.UnaryPostDec;
-            default:
-                throw new Error(`Unknow operator ${op.text}`);
-        }
-    }
+        n.phrase.phraseType = PhraseType.TernaryExpression;
 
-    function binaryOpToNodeFlag(op: Token) {
-
-        switch (op.tokenType) {
-            case '|':
-                return PhraseFlag.BinaryBitwiseOr;
-            case '&':
-                return PhraseFlag.BinaryBitwiseAnd;
-            case '^':
-                return PhraseFlag.BinaryBitwiseXor;
-            case '.':
-                return PhraseFlag.BinaryConcat;
-            case '+':
-                return PhraseFlag.BinaryAdd;
-            case '-':
-                return PhraseFlag.BinarySubtract;
-            case '*':
-                return PhraseFlag.BinaryMultiply;
-            case '/':
-                return PhraseFlag.BinaryDivide;
-            case '%':
-                return PhraseFlag.BinaryModulus;
-            case TokenType.T_POW:
-                return PhraseFlag.BinaryPower;
-            case TokenType.T_SL:
-                return PhraseFlag.BinaryShiftLeft;
-            case TokenType.T_SR:
-                return PhraseFlag.BinaryShiftRight;
-            case TokenType.T_BOOLEAN_AND:
-                return PhraseFlag.BinaryBoolAnd;
-            case TokenType.T_BOOLEAN_OR:
-                return PhraseFlag.BinaryBoolOr;
-            case TokenType.T_LOGICAL_AND:
-                return PhraseFlag.BinaryLogicalAnd;
-            case TokenType.T_LOGICAL_OR:
-                return PhraseFlag.BinaryLogicalOr;
-            case TokenType.T_LOGICAL_XOR:
-                return PhraseFlag.BinaryLogicalXor;
-            case TokenType.T_IS_IDENTICAL:
-                return PhraseFlag.BinaryIsIdentical;
-            case TokenType.T_IS_NOT_IDENTICAL:
-                return PhraseFlag.BinaryIsNotIdentical;
-            case TokenType.T_IS_EQUAL:
-                return PhraseFlag.BinaryIsEqual;
-            case TokenType.T_IS_NOT_EQUAL:
-                return PhraseFlag.BinaryIsNotEqual;
-            case '<':
-                return PhraseFlag.BinaryIsSmaller;
-            case TokenType.T_IS_SMALLER_OR_EQUAL:
-                return PhraseFlag.BinaryIsSmallerOrEqual;
-            case '>':
-                return PhraseFlag.BinaryIsGreater;
-            case TokenType.T_IS_GREATER_OR_EQUAL:
-                return PhraseFlag.BinaryIsGreaterOrEqual;
-            case TokenType.T_SPACESHIP:
-                return PhraseFlag.BinarySpaceship;
-            case TokenType.T_COALESCE:
-                return PhraseFlag.BinaryCoalesce;
-            case '=':
-                return PhraseFlag.BinaryAssign;
-            case TokenType.T_CONCAT_EQUAL:
-                return PhraseFlag.BinaryConcatAssign;
-            case TokenType.T_PLUS_EQUAL:
-                return PhraseFlag.BinaryAddAssign;
-            case TokenType.T_MINUS_EQUAL:
-                return PhraseFlag.BinarySubtractAssign;
-            case TokenType.T_MUL_EQUAL:
-                return PhraseFlag.BinaryMultiplyAssign;
-            case TokenType.T_DIV_EQUAL:
-                return PhraseFlag.BinaryDivideAssign;
-            case TokenType.T_MOD_EQUAL:
-                return PhraseFlag.BinaryModulusAssign;
-            case TokenType.T_POW_EQUAL:
-                return PhraseFlag.BinaryPowerAssign;
-            case TokenType.T_SL_EQUAL:
-                return PhraseFlag.BinaryShiftLeftAssign;
-            case TokenType.T_SR_EQUAL:
-                return PhraseFlag.BinaryShiftRightAssign;
-            case TokenType.T_OR_EQUAL:
-                return PhraseFlag.BinaryBitwiseOrAssign;
-            case TokenType.T_AND_EQUAL:
-                return PhraseFlag.BinaryBitwiseAndAssign;
-            case TokenType.T_XOR_EQUAL:
-                return PhraseFlag.BinaryBitwiseXorAssign;
-            case TokenType.T_INSTEADOF:
-                return PhraseFlag.BinaryInstanceOf;
-            default:
-                throw new Error(`Unknown operator ${op.text}`);
-
-        }
-
-    }
-
-    function ternaryExpression(lhs: any, precedence: number, startToken: Token) {
-
-        let n = tempNode(PhraseType.TernaryExpression, startToken);
-        n.children.push(lhs);
-
-        if (consume(':')) {
-            n.children.push(nodeFactory(null));
-        } else {
+        if (!consume(':', n.children)) {
             followOnStack.push([':']);
             n.children.push(expression(precedence));
             followOnStack.pop();
 
-            if (!consume(':')) {
+            if (!consume(':', n.children)) {
                 //error
                 error(n, [':']);
-                n.children.push(nodeFactory(null));
-                return node(n);
+                return nodeFactory(n.phrase, n.children);
             }
 
         }
 
         n.children.push(expression(precedence));
-        return node(n);
+        return nodeFactory(n.phrase, n.children);
 
     }
 
-    function atom() {
+    function variableCheckForPostUnaryExpression() {
+        isBinaryOpPredicate = isBinaryOp;
+        let variableNode = variable();
+        let t = peek();
+        //post inc/dec
+        if (t.tokenType === TokenType.T_INC || t.tokenType === TokenType.T_DEC) {
+            let unary = tempNode(PhraseType.UnaryExpression);
+            unary.children.push(variableNode);
+            next(unary.children);
+            unary.children.push(variableNode);
+            return nodeFactory(unary.phrase, unary.children);
+        } else {
+            return variableNode;
+        }
+    }
+
+    function scalar() {
+        let scalar = tempNode(PhraseType.Scalar);
+        next(scalar.children);
+        return nodeFactory(scalar.phrase, scalar.children);
+    }
+
+    function expressionAtom() {
 
         let t = peek();
 
@@ -710,31 +575,26 @@ export namespace Parser {
             case TokenType.T_STATIC:
                 if (peek(1).tokenType === TokenType.T_FUNCTION) {
                     return closure();
+                } else {
+                    return variableCheckForPostUnaryExpression();
                 }
-            //fall through
+            case TokenType.T_CONSTANT_ENCAPSED_STRING:
+                let derefToken = peek(1);
+                if (derefToken.tokenType === '[' || derefToken.tokenType === '{' ||
+                    derefToken.tokenType === TokenType.T_OBJECT_OPERATOR || derefToken.tokenType === '(') {
+                    return variableCheckForPostUnaryExpression();
+                } else {
+                    return scalar();
+                }
             case TokenType.T_VARIABLE:
             case '$':
             case TokenType.T_ARRAY:
             case '[':
-            case TokenType.T_CONSTANT_ENCAPSED_STRING:
             case TokenType.T_NS_SEPARATOR:
             case TokenType.T_STRING:
             case TokenType.T_NAMESPACE:
             case '(':
-                isBinaryOpPredicate = isBinaryOp;
-                let possibleUnaryStart = t;
-                let variableNode = variable();
-                t = peek();
-                if (t.tokenType === TokenType.T_INC || t.tokenType === TokenType.T_DEC) {
-                    next();
-                    let unary = tempNode(PhraseType.UnaryExpression, possibleUnaryStart);
-                    unary.value.flag = t.tokenType === TokenType.T_INC ?
-                        PhraseFlag.UnaryPostInc : PhraseFlag.UnaryPostDec
-                    unary.children.push(variableNode);
-                    return node(unary);
-                } else {
-                    return variableNode;
-                }
+                return variableCheckForPostUnaryExpression();
             case TokenType.T_INC:
             case TokenType.T_DEC:
             case '+':
@@ -759,7 +619,7 @@ export namespace Parser {
                 return newExpression();
             case TokenType.T_DNUMBER:
             case TokenType.T_LNUMBER:
-                return nodeFactory(next());
+                return scalar();
             case TokenType.T_LINE:
             case TokenType.T_FILE:
             case TokenType.T_DIR:
@@ -768,9 +628,7 @@ export namespace Parser {
             case TokenType.T_FUNC_C:
             case TokenType.T_NS_C:
             case TokenType.T_CLASS_C:
-                let magic = tempNode(PhraseType.MagicConstant);
-                magic.value.flag = magicConstantTokenToFlag(next());
-                return node(magic);
+            return magicConstant();
             case TokenType.T_START_HEREDOC:
                 return heredoc();
             case '"':
@@ -800,32 +658,15 @@ export namespace Parser {
                 //error
                 let err = tempNode(PhraseType.ErrorExpression);
                 error(err, []);
-                return node(err);
+                return nodeFactory(err.phrase, err.children);
         }
 
     }
 
-    function magicConstantTokenToFlag(t: Token) {
-        switch (t.tokenType) {
-            case TokenType.T_LINE:
-                return PhraseFlag.MagicLine;
-            case TokenType.T_FILE:
-                return PhraseFlag.MagicFile;
-            case TokenType.T_DIR:
-                return PhraseFlag.MagicDir;
-            case TokenType.T_TRAIT_C:
-                return PhraseFlag.MagicTrait;
-            case TokenType.T_METHOD_C:
-                return PhraseFlag.MagicMethod;
-            case TokenType.T_FUNC_C:
-                return PhraseFlag.MagicFunction;
-            case TokenType.T_NS_C:
-                return PhraseFlag.MagicNamespace;
-            case TokenType.T_CLASS_C:
-                return PhraseFlag.MagicClass;
-            default:
-                return 0;
-        }
+    function magicConstant() {
+        let magic = tempNode(PhraseType.MagicConstant);
+        next(magic.children);
+        return nodeFactory(magic.phrase, magic.children);
     }
 
     function isset() {
@@ -1576,7 +1417,7 @@ export namespace Parser {
 
     }
 
-    function extendsInterfaces(){
+    function extendsInterfaces() {
 
         let t = peek();
 
