@@ -7,7 +7,7 @@
 import { Token, Lexer, TokenType, Position, Range } from './lexer';
 
 export enum PhraseType {
-    None, Error, TopStatementList, Namespace, NamespaceName, UseElement, UseStatement,
+    None, Error, TopStatementList, Namespace, NamespaceName, UseDeclaration, UseStatement,
     UseGroup, UseList, HaltCompiler, ConstantDeclarationList, ConstantDeclaration,
     ArrayPair, Name, Call, Unpack, ArgumentList, Dimension, ClassConstant,
     StaticProperty, StaticMethodCall, MethodCall, Property, Closure, EncapsulatedExpression,
@@ -3862,7 +3862,7 @@ export namespace Parser {
         }
 
         let useListNode = tempNode(PhraseType.UseStatement);
-        let useElementNode = tempNode(PhraseType.UseElement);
+        let useElementNode = tempNode(PhraseType.UseDeclaration);
         consume(TokenType.T_NS_SEPARATOR);
 
         followOnStack.push([TokenType.T_NS_SEPARATOR, ',', ';']);
@@ -3936,7 +3936,7 @@ export namespace Parser {
         while (true) {
 
             followOnStack.push(followOn);
-            n.children.push(useElement(tempNode(PhraseType.UseElement), isMixed, lookForPrefix));
+            n.children.push(useElement(tempNode(PhraseType.UseDeclaration), isMixed, lookForPrefix));
             followOnStack.pop();
             t = peek();
             if (t.tokenType === ',') {
