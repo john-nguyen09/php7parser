@@ -12,7 +12,7 @@ export enum PhraseType {
     ArrayPair, Name, Call, Unpack, ArgumentList, Dimension, ClassConstant,
     StaticProperty, StaticMethodCall, MethodCall, Property, Closure, EncapsulatedExpression,
     ParameterList, Parameter, Isset, Empty, Eval, Include, YieldFrom, Yield, Print,
-    Backticks, EncapsulatedVariableList, AnonymousClassDeclaration, New,
+    Backticks, EncapsulatedVariableList, AnonymousClassDeclaration, New, identifier,
     NameList, ClassStatementList, PropertyDeclaration, PropertyDeclarationList,
     ClassConstantDeclaration, ClassConstantDeclarationList, TypeExpression, Block,
     InnerStatementList, FunctionDeclaration, MethodDeclaration, UseTrait, TraitAdaptationList,
@@ -1508,14 +1508,9 @@ export namespace Parser {
             n.value.flag |= PhraseFlag.ReturnsRef;
         }
 
-        let t = peek();
-        if (t.tokenType !== TokenType.T_STRING && !isSemiReservedToken(t)) {
-            //error
-            error(n, [TokenType.T_STRING], [';', ':', '{', '(']);
-            n.children.push(nodeFactory(null));
-        } else {
-            n.children.push(nodeFactory(next()));
-        }
+        followOnStack.push([';', ':', '{', '(']);
+        n.children.push(identifier());
+        followOnStack.pop();
 
         followOnStack.push([':', ';', '{']);
         n.children.push(parameterList());
@@ -1527,7 +1522,7 @@ export namespace Parser {
             n.children.push(nodeFactory(null));
         }
 
-        t = peek();
+        let t = peek();
         if (t.tokenType === ';' && (n.value.flag & PhraseFlag.ModifierAbstract)) {
             next();
             n.children.push(nodeFactory(null));
@@ -1537,6 +1532,19 @@ export namespace Parser {
 
         return node(n);
 
+    }
+
+    function identifier(){
+        let n = tempNode(PhraseType.identifier);
+        let t = peek();
+        if (t.tokenType !== TokenType.T_STRING && !isSemiReservedToken(t)) {
+            //error
+            error(n, [TokenType.T_STRING]);
+            n.children.push(nodeFactory(null));
+        } else {
+            n.children.push(nodeFactory(next()));
+        }
+        return node(n);
     }
 
     function innerStatementList(breakOn: (TokenType | string)[]) {
@@ -2872,16 +2880,11 @@ export namespace Parser {
     function classConstantDeclaration() {
 
         let n = tempNode(PhraseType.ClassConstantDeclarationList);
-        let t = peek();
+        
+        followOnStack.push(['=']);
+        n.children.push(identifier());
+        followOnStack.pop();
 
-        if (t.tokenType !== TokenType.T_STRING && !isSemiReservedToken(t)) {
-            //error
-            error(n, [TokenType.T_STRING]);
-            n.children.push(nodeFactory(null), nodeFactory(null));
-            return node(n);
-        }
-
-        n.children.push(nodeFactory(next()));
         n.value.doc = lastDocComment();
 
         if (!consume('=')) {
@@ -3415,12 +3418,12 @@ export namespace Parser {
                 n.value.phraseType = PhraseType.StaticProperty;
                 break;
             case TokenType.T_STRING:
-                n.children.push(nodeFactory(next()));
+                n.children.push(identifier());
                 n.value.phraseType = PhraseType.ClassConstant;
                 break;
             default:
                 if (isSemiReservedToken(t)) {
-                    n.children.push(nodeFactory(next()));
+                    n.children.push(identifier());
                     n.value.phraseType = PhraseType.ClassConstant;
                     break;
                 } else {
