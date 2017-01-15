@@ -1785,7 +1785,7 @@ export namespace Parser {
         let n = start(PhraseType.Goto);
         next();
         expect(TokenType.T_STRING, [';']);
-        expect(';', [';'], [';']);
+        expect(';', [';']);
         return end();
 
     }
@@ -1794,8 +1794,8 @@ export namespace Parser {
 
         let n = start(PhraseType.Throw);
         next(); //throw
-        phrase(expression, [0], undefined, [';']);
-        expect(';', [';'], [';']);
+        phrase(expression, [0], [';']);
+        expect(';', [';']);
         return end();
     }
 
@@ -1809,28 +1809,26 @@ export namespace Parser {
         }
 
         let recover = [...recoverStatementStartTokenTypes, ':', ')', TokenType.T_DOUBLE_ARROW, TokenType.T_AS];
-        phrase(expression, [0], undefined, recover);
+        phrase(expression, [0], recover);
         recover.pop();
         expect(TokenType.T_AS, recover);
-        phrase(foreachVariable, [], foreachVariableStartTokenTypes, recover);
+        phrase(foreachVariable, [], recover, foreachVariableStartTokenTypes);
         recover.pop();
 
         if (next(TokenType.T_DOUBLE_ARROW)) {
-            phrase(foreachVariable, [], undefined, recover);
+            phrase(foreachVariable, [], recover);
         }
 
         recover.pop();
         expect(')', recover);
-        recover.pop();
-        recover.pop();
 
         let t = peek();
 
         if (t.tokenType === ':') {
             next();
-            phrase(innerStatementList, [[TokenType.T_ENDFOREACH]], undefined, [TokenType.T_ENDFOREACH, ';']);
+            phrase(innerStatementList, [[TokenType.T_ENDFOREACH]], [TokenType.T_ENDFOREACH, ';']);
             expect(TokenType.T_ENDFOREACH, [';']);
-            expect(';', [';'], [';']);
+            expect(';', [';']);
         } else if (isStatementStartToken(t)) {
             phrase(statement, []);
         } else {
