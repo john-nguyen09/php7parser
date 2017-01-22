@@ -4,34 +4,185 @@
 
 'use strict';
 
-export enum TokenType {
-    T_EOF, T_ABSTRACT, T_AND_EQUAL, T_ARRAY, T_ARRAY_CAST, T_AS,
-    T_BAD_CHARACTER, T_BOOLEAN_AND, T_BOOLEAN_OR, T_BOOL_CAST, T_BREAK,
-    T_CALLABLE, T_CASE, T_CATCH, T_CHARACTER, T_CLASS, T_CLASS_C,
-    T_CLONE, T_CLOSE_TAG, T_COALESCE, T_COMMENT, T_CONCAT_EQUAL, T_CONST,
-    T_CONSTANT_ENCAPSED_STRING, T_CONTINUE, T_CURLY_OPEN, T_DEC, T_DECLARE,
-    T_DEFAULT, T_DIR, T_DIV_EQUAL, T_DNUMBER, T_DOC_COMMENT, T_DO,
-    T_DOLLAR_OPEN_CURLY_BRACES, T_DOUBLE_ARROW, T_DOUBLE_CAST, T_DOUBLE_COLON,
-    T_ECHO, T_ELLIPSIS, T_ELSE, T_ELSEIF, T_EMPTY, T_ENCAPSED_AND_WHITESPACE,
-    T_ENDDECLARE, T_ENDFOR, T_ENDFOREACH, T_ENDIF, T_ENDSWITCH, T_ENDWHILE,
-    T_END_HEREDOC, T_EVAL, T_EXIT, T_EXTENDS, T_FILE, T_FINAL, T_FINALLY,
-    T_FOR, T_FOREACH, T_FUNCTION, T_FUNC_C, T_GLOBAL, T_GOTO, T_HALT_COMPILER,
-    T_IF, T_IMPLEMENTS, T_INC, T_INCLUDE, T_INCLUDE_ONCE, T_INLINE_HTML,
-    T_INSTANCEOF, T_INSTEADOF, T_INT_CAST, T_INTERFACE, T_ISSET, T_IS_EQUAL,
-    T_IS_GREATER_OR_EQUAL, T_IS_IDENTICAL, T_IS_NOT_EQUAL, T_IS_NOT_IDENTICAL,
-    T_IS_SMALLER_OR_EQUAL, T_SPACESHIP, T_LINE, T_LIST, T_LNUMBER, T_LOGICAL_AND,
-    T_LOGICAL_OR, T_LOGICAL_XOR, T_METHOD_C, T_MINUS_EQUAL, T_MOD_EQUAL,
-    T_MUL_EQUAL, T_NAMESPACE, T_NS_C, T_NS_SEPARATOR, T_NEW, T_NUM_STRING,
-    T_OBJECT_CAST, T_OBJECT_OPERATOR, T_OPEN_TAG, T_OPEN_TAG_WITH_ECHO,
-    T_OR_EQUAL, T_PAAMAYIM_NEKUDOTAYIM, T_PLUS_EQUAL, T_POW, T_POW_EQUAL,
-    T_PRINT, T_PRIVATE, T_PUBLIC, T_PROTECTED, T_REQUIRE, T_REQUIRE_ONCE,
-    T_RETURN, T_SL, T_SL_EQUAL, T_SR, T_SR_EQUAL, T_START_HEREDOC, T_STATIC,
-    T_STRING, T_STRING_CAST, T_STRING_VARNAME, T_SWITCH, T_THROW, T_TRAIT,
-    T_TRAIT_C, T_TRY, T_UNSET, T_UNSET_CAST, T_USE, T_VAR, T_VARIABLE,
-    T_WHILE, T_WHITESPACE, T_XOR_EQUAL, T_YIELD, T_YIELD_FROM
+export const enum TokenType {
+    //Misc
+    Unknown,
+    EndOfFile,
+
+    //Comments and whitespace
+    Comment,
+    DocumentComment,
+    Whitespace,
+
+    //Keywords
+    Abstract,
+    Array,
+    ArrayCast,
+    As,
+    Break,
+    Callable,
+    Case,
+    Catch,
+    Class,
+    ClassConstant,
+    Clone,
+    Const,
+    Continue,
+    Declare,
+    Default,
+    Do,
+    Echo,
+    Else,
+    ElseIf,
+    Empty,
+    EndDeclare,
+    EndFor,
+    EndForeach,
+    EndIf,
+    EndSwitch,
+    EndWhile,
+    EndHeredoc,
+    Eval,
+    Exit,
+    Extends,
+    Final,
+    Finally,
+    For,
+    ForEach,
+    Function,
+    Global,
+    Goto,
+    HaltCompiler,
+    If,
+    Implements,
+    Include,
+    IncludeOnce,
+    InstanceOf,
+    InsteadOf,
+    Interface,
+    Isset,
+    List,
+    And,
+    Or,
+    Xor,
+    Namespace,
+    New,
+    Print,
+    Private,
+    Public,
+    Protected,
+    Require,
+    RequireOnce,
+    Return,
+    Static,
+    Switch,
+    Throw,
+    Trait,
+    Try,
+    Unset,
+    Use,
+    Var,
+    While,
+    Yield,
+    YieldFrom,
+
+    //keyword magic constants
+    DirectoryConstant,
+    FileConstant,
+    LineConstant,
+    FunctionConstant,
+    MethodConstant,
+    NamespaceConstant,
+    TraitConstant,
+
+    //literals
+    StringLiteral,
+    FloatingLiteral,
+    EncapsulatedAndWhitespace,
+    Text,
+    IntegerLiteral,
+
+    //Names
+    Name,
+    VariableName,
+
+    //Operators and Punctuation
+    Equals,
+    Tilde,
+    Colon,
+    Semicolon,
+    Exclamation,
+    Dollar,
+    ForwardSlash,
+    Percent,
+    Comma,
+    AtSymbol,
+    Backtick,
+    Question,
+    DoubleQuote,
+    SingleQuote,
+    LessThan,
+    GreaterThan,
+    Asterisk,
+    AmpersandAmpersand,
+    Ampersand,
+    AmpersandEquals,
+    CaretEquals,
+    LessThanLessThan,
+    LessThanLessThanEquals,
+    GreaterThanGreaterThan,
+    GreaterThanGreaterThanEquals,
+    BarEquals,
+    Plus,
+    PlusEquals,
+    AsteriskAsterisk,
+    AsteriskAsteriskEquals,
+    Arrow,
+    OpenBrace,
+    OpenBracket,
+    OpenParenthesis,
+    CloseBrace,
+    CloseBracket,
+    CloseParenthesis,
+    QuestionQuestion,
+    Bar,
+    BarBar,
+    Caret,
+    Dot,
+    DotEquals,
+    CurlyOpen,
+    MinusMinus,
+    ForwardslashEquals,
+    DollarCurlyOpen,
+    FatArrow,
+    ColonColon,
+    Ellipsis,
+    PlusPlus,
+    EqualsEquals,
+    GreaterThanEquals,
+    EqualsEqualsEquals,
+    ExclamationEquals,
+    ExclamationEqualsEquals,
+    LessThanEquals,
+    Spaceship,
+    Minus,
+    MinusEquals,
+    PercentEquals,
+    AsteriskEquals,
+    Backslash,
+    BooleanCast,
+    UnsetCast,
+    StringCast,
+    ObjectCast,
+    IntegerCast,
+    FloatCast,
+    OpenTag,
+    OpenTagEcho,
+    StartHeredoc,
+    CloseTag
 }
 
-export enum LexerMode {
+export const enum LexerMode {
     Initial,
     Scripting,
     LookingForProperty,
@@ -39,41 +190,31 @@ export enum LexerMode {
     NowDoc,
     HereDoc,
     EndHereDoc,
-    BackQuote,
+    Backtick,
     VarOffset,
     LookingForVarName
 }
 
 export interface Token {
-    tokenType: TokenType | string,
-    index: number,
-    text: string,
-    mode: LexerMode[],
-    range: Range
-}
-
-export interface Position {
+    tokenType: TokenType,
     line: number,
-    char: number
-}
-
-export interface Range {
-    start: Position,
-    end: Position
+    character: number,
+    text: string,
+    modeStack: LexerMode[],
 }
 
 export namespace Lexer {
 
     var input: string;
     var lexeme: string;
-    var mode: LexerMode[];
+    var modeStack: LexerMode[];
     var line: number;
-    var char: number;
+    var character: number;
     var lastLexemeEndedWithNewline: boolean;
     var hereDocLabel: string;
     var doubleQuoteScannedLength: number;
-    var tokenCount: number
-    var table: [RegExp, (TokenType | LexerAction)][][] = [
+
+    const table: [RegExp, (TokenType | LexerAction)][][] = [
         //INITIAL
         [
             [/^<\?=/, action1],
@@ -83,131 +224,131 @@ export namespace Lexer {
         ],
         //IN_SCRIPTING
         [
-            [/^exit(?=\b)/, TokenType.T_EXIT],
-            [/^die(?=\b)/, TokenType.T_EXIT],
-            [/^function(?=\b)/, TokenType.T_FUNCTION],
-            [/^const(?=\b)/, TokenType.T_CONST],
-            [/^return(?=\b)/, TokenType.T_RETURN],
+            [/^exit(?=\b)/, TokenType.Exit],
+            [/^die(?=\b)/, TokenType.Exit],
+            [/^function(?=\b)/, TokenType.Function],
+            [/^const(?=\b)/, TokenType.Const],
+            [/^return(?=\b)/, TokenType.Return],
             [/^yield[ \n\r\t]+from/, action5],
-            [/^yield(?=\b)/, TokenType.T_YIELD],
-            [/^try(?=\b)/, TokenType.T_TRY],
-            [/^catch(?=\b)/, TokenType.T_CATCH],
-            [/^finally(?=\b)/, TokenType.T_FINALLY],
-            [/^throw(?=\b)/, TokenType.T_THROW],
-            [/^if(?=\b)/, TokenType.T_IF],
-            [/^elseif(?=\b)/, TokenType.T_ELSEIF],
-            [/^endif(?=\b)/, TokenType.T_ENDIF],
-            [/^else(?=\b)/, TokenType.T_ELSE],
-            [/^while(?=\b)/, TokenType.T_WHILE],
-            [/^endwhile(?=\b)/, TokenType.T_ENDWHILE],
-            [/^do(?=\b)/, TokenType.T_DO],
-            [/^for(?=\b)/, TokenType.T_FOR],
-            [/^endfor(?=\b)/, TokenType.T_ENDFOR],
-            [/^foreach(?=\b)/, TokenType.T_FOREACH],
-            [/^endforeach(?=\b)/, TokenType.T_ENDFOREACH],
-            [/^declare(?=\b)/, TokenType.T_DECLARE],
-            [/^enddeclare(?=\b)/, TokenType.T_ENDDECLARE],
-            [/^instanceof(?=\b)/, TokenType.T_INSTANCEOF],
-            [/^as(?=\b)/, TokenType.T_AS],
-            [/^switch(?=\b)/, TokenType.T_SWITCH],
-            [/^endswitch(?=\b)/, TokenType.T_ENDSWITCH],
-            [/^case(?=\b)/, TokenType.T_CASE],
-            [/^default(?=\b)/, TokenType.T_DEFAULT],
-            [/^break(?=\b)/, TokenType.T_BREAK],
-            [/^continue(?=\b)/, TokenType.T_CONTINUE],
-            [/^goto(?=\b)/, TokenType.T_GOTO],
-            [/^echo(?=\b)/, TokenType.T_ECHO],
-            [/^print(?=\b)/, TokenType.T_PRINT],
-            [/^class(?=\b)/, TokenType.T_CLASS],
-            [/^interface(?=\b)/, TokenType.T_INTERFACE],
-            [/^trait(?=\b)/, TokenType.T_TRAIT],
-            [/^extends(?=\b)/, TokenType.T_EXTENDS],
-            [/^implements(?=\b)/, TokenType.T_IMPLEMENTS],
+            [/^yield(?=\b)/, TokenType.Yield],
+            [/^try(?=\b)/, TokenType.Try],
+            [/^catch(?=\b)/, TokenType.Catch],
+            [/^finally(?=\b)/, TokenType.Finally],
+            [/^throw(?=\b)/, TokenType.Throw],
+            [/^if(?=\b)/, TokenType.If],
+            [/^elseif(?=\b)/, TokenType.ElseIf],
+            [/^endif(?=\b)/, TokenType.EndIf],
+            [/^else(?=\b)/, TokenType.Else],
+            [/^while(?=\b)/, TokenType.While],
+            [/^endwhile(?=\b)/, TokenType.EndWhile],
+            [/^do(?=\b)/, TokenType.Do],
+            [/^for(?=\b)/, TokenType.For],
+            [/^endfor(?=\b)/, TokenType.EndFor],
+            [/^foreach(?=\b)/, TokenType.ForEach],
+            [/^endforeach(?=\b)/, TokenType.EndForeach],
+            [/^declare(?=\b)/, TokenType.Declare],
+            [/^enddeclare(?=\b)/, TokenType.EndDeclare],
+            [/^instanceof(?=\b)/, TokenType.InstanceOf],
+            [/^as(?=\b)/, TokenType.As],
+            [/^switch(?=\b)/, TokenType.Switch],
+            [/^endswitch(?=\b)/, TokenType.EndSwitch],
+            [/^case(?=\b)/, TokenType.Case],
+            [/^default(?=\b)/, TokenType.Default],
+            [/^break(?=\b)/, TokenType.Break],
+            [/^continue(?=\b)/, TokenType.Continue],
+            [/^goto(?=\b)/, TokenType.Goto],
+            [/^echo(?=\b)/, TokenType.Echo],
+            [/^print(?=\b)/, TokenType.Print],
+            [/^class(?=\b)/, TokenType.Class],
+            [/^interface(?=\b)/, TokenType.Interface],
+            [/^trait(?=\b)/, TokenType.Trait],
+            [/^extends(?=\b)/, TokenType.Extends],
+            [/^implements(?=\b)/, TokenType.Implements],
             [/^->/, action6],
             [/^[ \n\r\t]+/, action7],
-            [/^::/, TokenType.T_PAAMAYIM_NEKUDOTAYIM],
-            [/^\\/, TokenType.T_NS_SEPARATOR],
-            [/^\.\.\./, TokenType.T_ELLIPSIS],
-            [/^\?\?/, TokenType.T_COALESCE],
-            [/^new(?=\b)/, TokenType.T_NEW],
-            [/^clone(?=\b)/, TokenType.T_CLONE],
-            [/^var(?=\b)/, TokenType.T_VAR],
-            [/^\([ \t]*(?:int|integer)[ \t]*\)/, TokenType.T_INT_CAST],
-            [/^\([ \t]*(?:real|double|float)[ \t]*\)/, TokenType.T_DOUBLE_CAST],
-            [/^\([ \t]*(?:string|binary)[ \t]*\)/, TokenType.T_STRING_CAST],
-            [/^\([ \t]*array[ \t]*\)/, TokenType.T_ARRAY_CAST],
-            [/^\([ \t]*object[ \t]*\)/, TokenType.T_OBJECT_CAST],
-            [/^\([ \t]*(?:boolean|bool)[ \t]*\)/, TokenType.T_BOOL_CAST],
-            [/^\([ \t]*unset[ \t]*\)/, TokenType.T_UNSET_CAST],
-            [/^eval(?=\b)/, TokenType.T_EVAL],
-            [/^include_once(?=\b)/, TokenType.T_INCLUDE_ONCE],
-            [/^include(?=\b)/, TokenType.T_INCLUDE],
-            [/^require_once(?=\b)/, TokenType.T_REQUIRE_ONCE],
-            [/^require(?=\b)/, TokenType.T_REQUIRE],
-            [/^namespace(?=\b)/, TokenType.T_NAMESPACE],
-            [/^use(?=\b)/, TokenType.T_USE],
-            [/^insteadof(?=\b)/, TokenType.T_INSTEADOF],
-            [/^global(?=\b)/, TokenType.T_GLOBAL],
-            [/^isset(?=\b)/, TokenType.T_ISSET],
-            [/^empty(?=\b)/, TokenType.T_EMPTY],
-            [/^__halt_compiler/, TokenType.T_HALT_COMPILER],
-            [/^static(?=\b)/, TokenType.T_STATIC],
-            [/^abstract(?=\b)/, TokenType.T_ABSTRACT],
-            [/^final(?=\b)/, TokenType.T_FINAL],
-            [/^private(?=\b)/, TokenType.T_PRIVATE],
-            [/^protected(?=\b)/, TokenType.T_PROTECTED],
-            [/^public(?=\b)/, TokenType.T_PUBLIC],
-            [/^unset(?=\b)/, TokenType.T_UNSET],
-            [/^=>/, TokenType.T_DOUBLE_ARROW],
-            [/^list(?=\b)/, TokenType.T_LIST],
-            [/^array(?=\b)/, TokenType.T_ARRAY],
-            [/^callable(?=\b)/, TokenType.T_CALLABLE],
-            [/^--/, TokenType.T_DEC],
-            [/^\+\+/, TokenType.T_INC],
-            [/^===/, TokenType.T_IS_IDENTICAL],
-            [/^!==/, TokenType.T_IS_NOT_IDENTICAL],
-            [/^==/, TokenType.T_IS_EQUAL],
-            [/^!=|^<>/, TokenType.T_IS_NOT_EQUAL],
-            [/^<=>/, TokenType.T_SPACESHIP],
-            [/^<=/, TokenType.T_IS_SMALLER_OR_EQUAL],
-            [/^>=/, TokenType.T_IS_GREATER_OR_EQUAL],
-            [/^\+=/, TokenType.T_PLUS_EQUAL],
-            [/^-=/, TokenType.T_MINUS_EQUAL],
-            [/^\*=/, TokenType.T_MUL_EQUAL],
-            [/^\*\*/, TokenType.T_POW],
-            [/^\*\*=/, TokenType.T_POW_EQUAL],
-            [/^\/=/, TokenType.T_DIV_EQUAL],
-            [/^\.=/, TokenType.T_CONCAT_EQUAL],
-            [/^%=/, TokenType.T_MOD_EQUAL],
-            [/^<<=/, TokenType.T_SL_EQUAL],
-            [/^>>=/, TokenType.T_SR_EQUAL],
-            [/^&=/, TokenType.T_AND_EQUAL],
-            [/^\|=/, TokenType.T_OR_EQUAL],
-            [/^\^=/, TokenType.T_XOR_EQUAL],
-            [/^\|\|/, TokenType.T_BOOLEAN_OR],
-            [/^&&/, TokenType.T_BOOLEAN_AND],
-            [/^(?:OR|or)(?=\b)/, TokenType.T_LOGICAL_OR],
-            [/^(?:AND|and)(?=\b)/, TokenType.T_LOGICAL_AND],
-            [/^(?:XOR|xor)(?=\b)/, TokenType.T_LOGICAL_XOR],
+            [/^::/, TokenType.ColonColon],
+            [/^\\/, TokenType.Backslash],
+            [/^\.\.\./, TokenType.Ellipsis],
+            [/^\?\?/, TokenType.QuestionQuestion],
+            [/^new(?=\b)/, TokenType.New],
+            [/^clone(?=\b)/, TokenType.Clone],
+            [/^var(?=\b)/, TokenType.Var],
+            [/^\([ \t]*(?:int|integer)[ \t]*\)/, TokenType.IntegerCast],
+            [/^\([ \t]*(?:real|double|float)[ \t]*\)/, TokenType.FloatCast],
+            [/^\([ \t]*(?:string|binary)[ \t]*\)/, TokenType.StringCast],
+            [/^\([ \t]*array[ \t]*\)/, TokenType.ArrayCast],
+            [/^\([ \t]*object[ \t]*\)/, TokenType.ObjectCast],
+            [/^\([ \t]*(?:boolean|bool)[ \t]*\)/, TokenType.BooleanCast],
+            [/^\([ \t]*unset[ \t]*\)/, TokenType.UnsetCast],
+            [/^eval(?=\b)/, TokenType.Eval],
+            [/^include_once(?=\b)/, TokenType.IncludeOnce],
+            [/^include(?=\b)/, TokenType.Include],
+            [/^require_once(?=\b)/, TokenType.RequireOnce],
+            [/^require(?=\b)/, TokenType.Require],
+            [/^namespace(?=\b)/, TokenType.Namespace],
+            [/^use(?=\b)/, TokenType.Use],
+            [/^insteadof(?=\b)/, TokenType.InsteadOf],
+            [/^global(?=\b)/, TokenType.Global],
+            [/^isset(?=\b)/, TokenType.Isset],
+            [/^empty(?=\b)/, TokenType.Empty],
+            [/^__halt_compiler/, TokenType.HaltCompiler],
+            [/^static(?=\b)/, TokenType.Static],
+            [/^abstract(?=\b)/, TokenType.Abstract],
+            [/^final(?=\b)/, TokenType.Final],
+            [/^private(?=\b)/, TokenType.Private],
+            [/^protected(?=\b)/, TokenType.Protected],
+            [/^public(?=\b)/, TokenType.Public],
+            [/^unset(?=\b)/, TokenType.Unset],
+            [/^=>/, TokenType.FatArrow],
+            [/^list(?=\b)/, TokenType.List],
+            [/^array(?=\b)/, TokenType.Array],
+            [/^callable(?=\b)/, TokenType.Callable],
+            [/^--/, TokenType.MinusMinus],
+            [/^\+\+/, TokenType.PlusPlus],
+            [/^===/, TokenType.EqualsEqualsEquals],
+            [/^!==/, TokenType.ExclamationEqualsEquals],
+            [/^==/, TokenType.EqualsEquals],
+            [/^!=|^<>/, TokenType.ExclamationEquals],
+            [/^<=>/, TokenType.Spaceship],
+            [/^<=/, TokenType.LessThanEquals],
+            [/^>=/, TokenType.GreaterThanEquals],
+            [/^\+=/, TokenType.PlusEquals],
+            [/^-=/, TokenType.MinusEquals],
+            [/^\*=/, TokenType.AsteriskEquals],
+            [/^\*\*/, TokenType.AsteriskAsterisk],
+            [/^\*\*=/, TokenType.AsteriskAsteriskEquals],
+            [/^\/=/, TokenType.ForwardslashEquals],
+            [/^\.=/, TokenType.DotEquals],
+            [/^%=/, TokenType.PercentEquals],
+            [/^<<=/, TokenType.LessThanLessThanEquals],
+            [/^>>=/, TokenType.GreaterThanGreaterThanEquals],
+            [/^&=/, TokenType.AmpersandEquals],
+            [/^\|=/, TokenType.BarEquals],
+            [/^\^=/, TokenType.CaretEquals],
+            [/^\|\|/, TokenType.BarBar],
+            [/^&&/, TokenType.AmpersandAmpersand],
+            [/^(?:OR|or)(?=\b)/, TokenType.Or],
+            [/^(?:AND|and)(?=\b)/, TokenType.And],
+            [/^(?:XOR|xor)(?=\b)/, TokenType.Xor],
             [/^\\?<<<[ \t]*(?:[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*|'[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*'|"[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*")(?:\r\n|\n|\r)/, action15],
-            [/^<</, TokenType.T_SL],
-            [/^>>/, TokenType.T_SR],
+            [/^<</, TokenType.LessThanLessThan],
+            [/^>>/, TokenType.GreaterThanGreaterThan],
             [/^\{/, action8],
             [/^\}/, action9],
-            [/^0b[01]+/, TokenType.T_LNUMBER],
-            [/^0x[0-9a-fA-F]+/, TokenType.T_LNUMBER],
-            [/^(?:[0-9]*\.[0-9]+|[0-9]+\.[0-9]*)|^(?:[0-9]+|(?:[0-9]*\.[0-9]+|[0-9]+\.[0-9]*))[eE][+-]?[0-9]+/, TokenType.T_DNUMBER],
-            [/^[0-9]+/, TokenType.T_LNUMBER],
-            [/^__CLASS__/, TokenType.T_CLASS_C],
-            [/^__TRAIT__/, TokenType.T_TRAIT_C],
-            [/^__FUNCTION__/, TokenType.T_FUNC_C],
-            [/^__METHOD__/, TokenType.T_METHOD_C],
-            [/^__LINE__/, TokenType.T_LINE],
-            [/^__FILE__/, TokenType.T_FILE],
-            [/^__DIR__/, TokenType.T_DIR],
-            [/^__NAMESPACE__/, TokenType.T_NS_C],
-            [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, TokenType.T_VARIABLE],
-            [/^[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, TokenType.T_STRING],
+            [/^0b[01]+/, TokenType.IntegerLiteral],
+            [/^0x[0-9a-fA-F]+/, TokenType.IntegerLiteral],
+            [/^(?:[0-9]*\.[0-9]+|[0-9]+\.[0-9]*)|^(?:[0-9]+|(?:[0-9]*\.[0-9]+|[0-9]+\.[0-9]*))[eE][+-]?[0-9]+/, TokenType.FloatingLiteral],
+            [/^[0-9]+/, TokenType.IntegerLiteral],
+            [/^__CLASS__/, TokenType.ClassConstant],
+            [/^__TRAIT__/, TokenType.TraitConstant],
+            [/^__FUNCTION__/, TokenType.FunctionConstant],
+            [/^__METHOD__/, TokenType.MethodConstant],
+            [/^__LINE__/, TokenType.LineConstant],
+            [/^__FILE__/, TokenType.FileConstant],
+            [/^__DIR__/, TokenType.DirectoryConstant],
+            [/^__NAMESPACE__/, TokenType.NamespaceConstant],
+            [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, TokenType.VariableName],
+            [/^[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, TokenType.Name],
             [/^#|\/\//, action10],
             [/^\/\*\*|^\/\*/, action11],
             [/^\?>(?:\r\n|\n|\r)?/, action12],
@@ -220,7 +361,7 @@ export namespace Lexer {
         //LOOKING_FOR_PROPERTY
         [
             [/^[ \n\r\t]+/, action7],
-            [/^->/, TokenType.T_OBJECT_OPERATOR],
+            [/^->/, TokenType.Arrow],
             [/^[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, action18],
             [/^[^]/, action19]
         ],
@@ -229,7 +370,7 @@ export namespace Lexer {
             [/^\$\{/, action20],
             [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*->[a-zA-Z_\x7f-\xff]/, action21],
             [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*\[/, action22],
-            [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, TokenType.T_VARIABLE],
+            [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, TokenType.VariableName],
             [/^\{\$/, action23],
             [/^"/, action24],
             [/^[^]/, action25]
@@ -243,7 +384,7 @@ export namespace Lexer {
             [/^\$\{/, action20],
             [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*->[a-zA-Z_\x7f-\xff]/, action21],
             [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*\[/, action22],
-            [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, TokenType.T_VARIABLE],
+            [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, TokenType.VariableName],
             [/^\{\$/, action23],
             [/^[^]/, action27]
         ],
@@ -256,19 +397,19 @@ export namespace Lexer {
             [/^\$\{/, action20],
             [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*->[a-zA-Z_\x7f-\xff]/, action21],
             [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*\[/, action22],
-            [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, TokenType.T_VARIABLE],
+            [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, TokenType.VariableName],
             [/^\{\$/, action23],
             [/^`/, action29],
             [/^[^]/, action30]
         ],
         //VAR_OFFSET
         [
-            [/^[0-9]+|^0x[0-9a-fA-F]+|^0b[01]+/, TokenType.T_NUM_STRING],
-            [/^0|^[1-9][0-9]*/, TokenType.T_NUM_STRING],
-            [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, TokenType.T_VARIABLE],
+            [/^[0-9]+|^0x[0-9a-fA-F]+|^0b[01]+/, TokenType.IntegerLiteral],
+            [/^0|^[1-9][0-9]*/, TokenType.IntegerLiteral],
+            [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, TokenType.VariableName],
             [/^\]/, action31],
             [/^\[/, action35],
-            [/^[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, TokenType.T_STRING],
+            [/^[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, TokenType.Name],
             [/^[^]/, action32]
         ],
         //ST_LOOKING_FOR_VARNAME
@@ -280,11 +421,10 @@ export namespace Lexer {
 
     function clear() {
         input = lexeme = hereDocLabel = doubleQuoteScannedLength = null;
-        mode = [LexerMode.Initial];
-        char = -1;
+        modeStack = [LexerMode.Initial];
+        character = -1;
         line = 0;
         lastLexemeEndedWithNewline = false;
-        tokenCount = 0;
     }
 
     function less(n: number = 0) {
@@ -304,11 +444,11 @@ export namespace Lexer {
 
         if (!countLines) {
             if (lastLexemeEndedWithNewline) {
-                char = -1;
+                character = -1;
                 ++line;
                 lastLexemeEndedWithNewline = false;
             }
-            char += lexeme.length;
+            character += lexeme.length;
             return;
         }
 
@@ -317,17 +457,17 @@ export namespace Lexer {
 
         while (n < lexeme.length) {
             if (lastLexemeEndedWithNewline) {
-                char = -1;
+                character = -1;
                 ++line;
                 lastLexemeEndedWithNewline = false;
             }
-            ++char;
+            ++character;
             c = lexeme[n++];
             if (c === '\n' || c === '\r') {
                 lastLexemeEndedWithNewline = true;
                 if (c === '\r' && n < lexeme.length && lexeme[n] === '\n') {
                     ++n;
-                    ++char;
+                    ++character;
                 }
             }
         }
@@ -346,33 +486,48 @@ export namespace Lexer {
         patterns.push(concatRegExpArray(table[n].map((v, i, a) => { return v[0]; })));
     }
 
-    function lex(): Token {
+    export function setInput(text: string, lexerModeStack?: LexerMode[]) {
+        clear();
+        input = text;
+        if (lexerModeStack) {
+            modeStack = lexerModeStack;
+        }
+    }
 
-        let firstLine: number, firstChar: number;
-        let match: RegExpMatchArray;
-        let actionIndex: number;
-        let type: TokenType | string;
-        let action: TokenType | LexerAction;
-        let lexerMode: LexerMode;
-        let lexerModeStack: LexerMode[];
+    export function lex(): Token {
 
         if (!input.length) {
-            return null;
+            return {
+                tokenType: TokenType.EndOfFile,
+                text: null,
+                modeStack: modeStack,
+                line: line,
+                character: character
+            };
         }
 
-        firstLine = line;
-        firstChar = char + 1;
+        let match: RegExpMatchArray;
+        let actionIndex: number;
+        let action: TokenType | LexerAction;
+        let lexerMode: LexerMode;
+
+        let token: Token = {
+            tokenType: 0,
+            text: null,
+            modeStack: modeStack,
+            line: line,
+            character: character + 1
+        };
 
         if (lastLexemeEndedWithNewline) {
-            ++firstLine;
-            firstChar = 0;
+            ++token.line;
+            token.character = 0;
         }
 
-        lexerModeStack = mode.slice(0);
-        lexerMode = mode[mode.length - 1];
+        lexerMode = modeStack[modeStack.length - 1];
         match = input.match(patterns[lexerMode]);
 
-        //skip first element which is the matched string
+        //skip first element -- the matched string
         for (let n = 1; n < match.length; ++n) {
             if (match[n]) {
                 actionIndex = n - 1;
@@ -384,43 +539,20 @@ export namespace Lexer {
 
         more(match[0].length);
         action = table[lexerMode][actionIndex][1];
+        
         if (typeof action === 'function') {
-            type = action();
-            if (type === -1) {
+            token.tokenType = action();
+            if (token.tokenType === -1) {
                 return lex();
             }
         } else {
-            type = action;
+            token.tokenType = action;
             advancePosition(false);
         }
 
-        return {
-            tokenType: type,
-            index: tokenCount++,
-            text: lexeme,
-            mode: lexerModeStack,
-            range: {
-                start: { line: firstLine, char: firstChar },
-                end: { line: line, char: char }
-            }
-        };
+        return token;
 
     }
-
-    export function tokenise(text: string, modeState: LexerMode[] = [LexerMode.Initial]) {
-        clear();
-        input = text;
-        mode = modeState;
-
-        let tokens: Token[] = [];
-        let t: Token;
-
-        while (t = lex()) {
-            tokens.push(t);
-        }
-        return tokens;
-    }
-
 
     function isLabelStart(char: string) {
         let cp = char.charCodeAt(0);
@@ -428,25 +560,25 @@ export namespace Lexer {
     }
 
     interface LexerAction {
-        (): TokenType | string;
+        (): TokenType;
     }
 
     function action1() {
         advancePosition(false);
-        mode = [LexerMode.Scripting];
-        return TokenType.T_OPEN_TAG_WITH_ECHO;
+        modeStack = [LexerMode.Scripting];
+        return TokenType.OpenTagEcho;
     }
 
     function action2() {
         advancePosition(true);
-        mode = [LexerMode.Scripting];
-        return TokenType.T_OPEN_TAG;
+        modeStack = [LexerMode.Scripting];
+        return TokenType.OpenTag;
     }
 
     function action3() {
         advancePosition(false);
-        mode = [LexerMode.Scripting];
-        return TokenType.T_OPEN_TAG;
+        modeStack = [LexerMode.Scripting];
+        return TokenType.OpenTag;
     }
 
     function action4() {
@@ -461,37 +593,39 @@ export namespace Lexer {
         }
 
         advancePosition(true);
-        return TokenType.T_INLINE_HTML;
+        return TokenType.Text;
     }
 
     function action5() {
         advancePosition(true);
-        return TokenType.T_YIELD_FROM;
+        return TokenType.YieldFrom;
     }
 
     function action6() {
         advancePosition(false);
-        mode = [...mode.slice(), LexerMode.LookingForProperty];
-        return TokenType.T_OBJECT_OPERATOR;
+        modeStack = modeStack.slice(0);
+        modeStack.push(LexerMode.LookingForProperty);
+        return TokenType.Arrow;
     }
 
     function action7() {
         advancePosition(true);
-        return TokenType.T_WHITESPACE;
+        return TokenType.Whitespace;
     }
 
     function action8() {
         advancePosition(false);
-        mode = [...mode.slice(), LexerMode.Scripting];
-        return '{';
+        modeStack = modeStack.slice(0);
+        modeStack.push(LexerMode.Scripting);
+        return TokenType.OpenBrace;
     }
 
     function action9() {
         advancePosition(false);
-        if (mode.length > 1) {
-            mode = mode.slice(0, -1);
+        if (modeStack.length > 1) {
+            modeStack = modeStack.slice(0, -1);
         }
-        return '}';
+        return TokenType.CloseBrace;
     }
 
     function action10() {
@@ -509,7 +643,7 @@ export namespace Lexer {
         }
 
         advancePosition(true);
-        return TokenType.T_COMMENT;
+        return TokenType.Comment;
     }
 
     function action11() {
@@ -532,17 +666,17 @@ export namespace Lexer {
         advancePosition(true);
 
         if (isDocComment) {
-            return TokenType.T_DOC_COMMENT;
+            return TokenType.DocumentComment;
         }
 
-        return TokenType.T_COMMENT;
+        return TokenType.Comment;
 
     }
 
     function action12() {
-        mode = [LexerMode.Initial];
+        modeStack = [LexerMode.Initial];
         advancePosition(true);
-        return TokenType.T_CLOSE_TAG;
+        return TokenType.CloseTag;
     }
 
     function action13() {
@@ -559,13 +693,13 @@ export namespace Lexer {
                 }
             } else {
                 advancePosition(false);
-                return TokenType.T_ENCAPSED_AND_WHITESPACE;
+                return TokenType.EncapsulatedAndWhitespace;
             }
         }
 
         more(n);
         advancePosition(true);
-        return TokenType.T_CONSTANT_ENCAPSED_STRING;
+        return TokenType.StringLiteral;
     }
 
     function action14() {
@@ -581,7 +715,7 @@ export namespace Lexer {
                 case '"':
                     more(n);
                     advancePosition(true);
-                    return TokenType.T_CONSTANT_ENCAPSED_STRING;
+                    return TokenType.StringLiteral;
                 case '$':
                     if (n < input.length && (isLabelStart(input[n]) || input[n] === '{')) {
                         break;
@@ -607,8 +741,8 @@ export namespace Lexer {
 
         advancePosition(false);
         doubleQuoteScannedLength = n;
-        mode = [LexerMode.DoubleQuotes];
-        return '"';
+        modeStack = [LexerMode.DoubleQuotes];
+        return TokenType.DoubleQuote;
 
     }
 
@@ -619,76 +753,80 @@ export namespace Lexer {
         let c = lexeme[match.index - 1];
 
         if (c === '\'') {
-            mode = [LexerMode.NowDoc];
+            modeStack = [LexerMode.NowDoc];
         } else {
-            mode = [LexerMode.HereDoc];
+            modeStack = [LexerMode.HereDoc];
         }
 
         //check for end on next line
         if (input.search(new RegExp('^' + hereDocLabel + ';?(?:\r\n|\n|\r)')) !== -1) {
-            mode = [LexerMode.EndHereDoc];
+            modeStack = [LexerMode.EndHereDoc];
         }
 
         advancePosition(true);
-        return TokenType.T_START_HEREDOC;
+        return TokenType.StartHeredoc;
     }
 
     function action16() {
         advancePosition(false);
-        mode = [LexerMode.BackQuote];
-        return '`';
+        modeStack = [LexerMode.Backtick];
+        return TokenType.Backtick;
     }
 
     function action17() {
         //Unexpected character
         advancePosition(false);
-        return input[0];
+        return TokenType.Unknown;
     }
 
     function action18() {
-        mode = mode.slice(0, -1);
+        modeStack = modeStack.slice(0, -1);
         advancePosition(false);
-        return TokenType.T_STRING;
+        return TokenType.Name;
     }
 
     function action19() {
         less();
-        mode = mode.slice(0, -1);
+        modeStack = modeStack.slice(0, -1);
         return -1;
     }
 
     function action20() {
-        mode = [...mode, LexerMode.LookingForVarName];
+        modeStack = modeStack.slice(0);
+        modeStack.push(LexerMode.LookingForVarName);
         advancePosition(false);
-        return TokenType.T_DOLLAR_OPEN_CURLY_BRACES;
+        return TokenType.DollarCurlyOpen;
     }
 
     function action21() {
         less(lexeme.length - 3);
-        mode = [...mode, LexerMode.LookingForProperty];
+        modeStack = modeStack.slice(0);
+        modeStack.push(LexerMode.LookingForProperty);
         advancePosition(false);
-        return TokenType.T_VARIABLE;
+        return TokenType.VariableName;
     }
 
     function action22() {
         less(lexeme.length - 1);
-        mode = [...mode, LexerMode.VarOffset];
+        modeStack = modeStack.slice(0);
+        modeStack.push(LexerMode.VarOffset);
         advancePosition(false);
-        return TokenType.T_VARIABLE;
+        return TokenType.VariableName;
     }
 
     function action23() {
         less(1);
-        mode = [...mode, LexerMode.Scripting];
+        modeStack = modeStack.slice(0);
+        modeStack.push(LexerMode.Scripting);
         advancePosition(false);
-        return TokenType.T_CURLY_OPEN;
+        return TokenType.CurlyOpen;
     }
 
 
     function action24() {
-        mode = [LexerMode.Scripting];
+        modeStack = [LexerMode.Scripting];
         advancePosition(false);
-        return '"';
+        return TokenType.DoubleQuote;
     }
 
     function action25() {
@@ -737,7 +875,7 @@ export namespace Lexer {
         }
 
         advancePosition(true);
-        return TokenType.T_ENCAPSED_AND_WHITESPACE;
+        return TokenType.EncapsulatedAndWhitespace;
 
     }
 
@@ -752,11 +890,11 @@ export namespace Lexer {
         } else {
             nNewlineChars = match[0].substr(0, 2) === '\r\n' ? 2 : 1;
             more(match.index + nNewlineChars);
-            mode = [LexerMode.EndHereDoc];
+            modeStack = [LexerMode.EndHereDoc];
         }
 
         advancePosition(true);
-        return TokenType.T_ENCAPSED_AND_WHITESPACE;
+        return TokenType.EncapsulatedAndWhitespace;
 
     }
 
@@ -782,10 +920,10 @@ export namespace Lexer {
                         }
 
                         if (k < input.length && (input[k] === '\n' || input[k] === '\r')) {
-                            mode = [LexerMode.EndHereDoc];
+                            modeStack = [LexerMode.EndHereDoc];
                             more(n);
                             advancePosition(true);
-                            return TokenType.T_ENCAPSED_AND_WHITESPACE;
+                            return TokenType.EncapsulatedAndWhitespace;
                         }
                     }
                     continue;
@@ -814,22 +952,22 @@ export namespace Lexer {
 
         more(n);
         advancePosition(true);
-        return TokenType.T_ENCAPSED_AND_WHITESPACE;
+        return TokenType.EncapsulatedAndWhitespace;
 
     }
 
     function action28() {
         more(hereDocLabel.length - 1);
         hereDocLabel = null;
-        mode = [LexerMode.Scripting];
+        modeStack = [LexerMode.Scripting];
         advancePosition(false);
-        return TokenType.T_END_HEREDOC;
+        return TokenType.EndHeredoc;
     }
 
     function action29() {
-        mode = [LexerMode.Scripting];
+        modeStack = [LexerMode.Scripting];
         advancePosition(false);
-        return '`';
+        return TokenType.Backtick;
     }
 
     function action30() {
@@ -871,13 +1009,13 @@ export namespace Lexer {
 
         more(n);
         advancePosition(true);
-        return TokenType.T_ENCAPSED_AND_WHITESPACE;
+        return TokenType.EncapsulatedAndWhitespace;
     }
 
     function action31() {
-        mode = mode.slice(0, -1);
+        modeStack = modeStack.slice(0, -1);
         advancePosition(false);
-        return ']';
+        return TokenType.CloseBracket;
     }
 
     function action32() {
@@ -885,27 +1023,97 @@ export namespace Lexer {
         if (lexeme === '\r' && input && input[0] === '\n') {
             more(1);
         }
-        mode = [...mode.slice(0, -1)];
+        modeStack = modeStack.slice(0, -1);
         advancePosition(true);
-        return lexeme;
+        return TokenType.Unknown;
     }
 
     function action33() {
         less(lexeme.length - 1);
-        mode = [...mode.slice(0, -1), LexerMode.Scripting];
+        modeStack = modeStack.slice(0, -1);
+        modeStack.push(LexerMode.Scripting);
         advancePosition(false);
-        return TokenType.T_STRING_VARNAME;
+        return TokenType.VariableName;
     }
 
     function action34() {
         less();
-        mode = [...mode.slice(0, -1), LexerMode.Scripting];
+        modeStack = modeStack.slice(0, -1);
+        modeStack.push(LexerMode.Scripting);
         return -1;
     }
 
     function action35() {
         advancePosition(false);
-        return lexeme;
+        return charTokenType(lexeme);
+    }
+
+    function charTokenType(c: string) {
+
+        switch (c) {
+            case '\\':
+                return TokenType.Backslash;
+            case '/':
+                return TokenType.ForwardSlash;
+            case '!':
+                return TokenType.Exclamation;
+            case ';':
+                return TokenType.Semicolon;
+            case ':':
+                return TokenType.Colon;
+            case '~':
+                return TokenType.Tilde;
+            case '^':
+                return TokenType.Caret;
+            case '|':
+                return TokenType.Bar;
+            case '&':
+                return TokenType.Ampersand;
+            case '<':
+                return TokenType.LessThan;
+            case '>':
+                return TokenType.GreaterThan;
+            case '=':
+                return TokenType.Equals;
+            case '*':
+                return TokenType.Asterisk;
+            case '-':
+                return TokenType.Minus;
+            case '+':
+                return TokenType.Plus;
+            case '%':
+                return TokenType.Percent;
+            case '$':
+                return TokenType.Dollar;
+            case ',':
+                return TokenType.Comma;
+            case '@':
+                return TokenType.AtSymbol;
+            case '?':
+                return TokenType.Question;
+            case '[':
+                return TokenType.OpenBracket;
+            case ']':
+                return TokenType.CloseBracket;
+            case '{':
+                return TokenType.OpenBrace;
+            case '}':
+                return TokenType.CloseBrace;
+            case '(':
+                return TokenType.OpenParenthesis;
+            case ')':
+                return TokenType.CloseParenthesis;
+            case '\'':
+                return TokenType.SingleQuote;
+            case '"':
+                return TokenType.DoubleQuote;
+            case '`':
+                return TokenType.Backtick;
+            default:
+                return TokenType.Unknown;
+        }
+
+
     }
 
 }

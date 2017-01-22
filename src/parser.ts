@@ -4,18 +4,39 @@
 
 'use strict';
 
-import { Token, Lexer, TokenType, Position, Range } from './lexer';
+import { Token, Lexer, TokenType } from './lexer';
 
 export enum PhraseType {
-    None, Error, TopStatements, Namespace, NamespaceName, UseDeclaration, UseStatement,
-    UseGroup, UseList, HaltCompiler, ConstantDeclarationStatement, ConstantDeclaration,
-    ConstantDeclarations, ArrayPair, Name, Call, Unpack, ArgumentList, Dimension, ClassConstant,
+    None,
+    Script,
+    StatementList,
+    ConstDeclaration,
+    ClassConstDeclaration,
+    ConstElements,
+    ConstElement,
+    NamespaceUseDeclaration,
+    NamespaceUseGroupClauses,
+    NamespaceUseGroupClause,
+    NamespaceUseClauses,
+    NamespaceUseClause,
+    NamespaceAliasingClause,
+    QualifiedName,
+    RelativeQualifiedName,
+    FullyQualifiedName,
+    FunctionDefinition,
+    FunctionDefinitionHeader,
+    ParameterDeclarationList,
+    ParameterDeclaration,
+
+    Error, NamespaceDefinition, NamespaceName, UseDeclaration,
+    UseGroup, UseList, HaltCompilerStatement,
+    ArrayPair, Name, Call, Unpack, ArgumentList, Dimension, ClassConstant,
     StaticProperty, StaticMethodCall, MethodCall, Property, Closure, EncapsulatedExpression,
-    ParameterList, Parameter, Isset, Empty, Eval, Include, YieldFrom, Yield, Print, TryGroup,
+    ParameterList, Isset, Empty, Eval, Include, YieldFrom, Yield, Print, TryGroup,
     Backticks, EncapsulatedVariableList, AnonymousClassDeclaration, New, identifier, Variables,
     NameList, ClassBody, PropertyDeclaration, PropertyDeclarationList, Scalar, ClassModifiers,
-    ClassConstantDeclaration, ClassConstantDeclarationList, TypeExpression, Block, ReservedNonModifier,
-    InnerStatementList, FunctionDeclaration, MethodDeclaration, UseTraitStatement, TraitAdaptations,
+    ClassConstElement, ClassConstantDeclarationList, TypeDeclaration, CompoundStatement, ReservedNonModifier,
+    InnerStatementList, MethodDeclaration, UseTraitStatement, TraitAdaptations,
     MethodReference, TraitPrecendence, TraitAlias, ClassDeclaration, TraitDeclaration, Expressions,
     InterfaceDeclaration, Variable, ArrayPairList, ClosureUseVariable, ClosureUseList,
     Clone, Heredoc, DoubleQuotes, EmptyStatement, IfList, If, While, DoWhile, Implements,
@@ -27,19 +48,10 @@ export enum PhraseType {
     ErrorPropertyName, ErrorTraitAdaptation
 }
 
-export interface NodeFactory<T> {
-    (value: Phrase | Token, children?: T[]): T;
-}
-
 export interface Phrase {
     phraseType: PhraseType;
-    errors?: ParseError[];
-}
-
-export interface ParseError {
-    unexpected: Token;
-    expected?: (TokenType | string);
-    skipped?: Token[];
+    children: (Phrase | Token)[];
+    errors?: Token[];
 }
 
 export namespace Parser {
@@ -54,71 +66,52 @@ export namespace Parser {
         Right
     }
 
-    const enum OpType {
-        None,
-        Unary,
-        Binary
-    }
-
-    var opPrecedenceMap: { [op: string]: [number, number, number] } = {
-        'clone': [50, Associativity.None, OpType.Unary],
-        'new': [50, Associativity.None, OpType.Unary],
-        '[': [49, Associativity.Left, OpType.Unary],
-        '**': [48, Associativity.Right, OpType.Binary],
-        '++': [47, Associativity.Right, OpType.Unary],
-        '--': [47, Associativity.Right, OpType.Unary],
-        '@': [47, Associativity.Right, OpType.Unary],
-        '~': [47, Associativity.Right, OpType.Unary],
-        '(int)': [47, Associativity.Right, OpType.Unary],
-        '(string)': [47, Associativity.Right, OpType.Unary],
-        '(float)': [47, Associativity.Right, OpType.Unary],
-        '(array)': [47, Associativity.Right, OpType.Unary],
-        '(object)': [47, Associativity.Right, OpType.Unary],
-        '(bool)': [47, Associativity.Right, OpType.Unary],
-        'instanceof': [46, Associativity.None, OpType.Binary],
-        '!': [45, Associativity.Right, OpType.Unary],
-        '*': [44, Associativity.Left, OpType.Binary],
-        '/': [44, Associativity.Left, OpType.Binary],
-        '%': [44, Associativity.Left, OpType.Binary],
-        '+': [43, Associativity.Left, OpType.Binary | OpType.Unary],
-        '-': [43, Associativity.Left, OpType.Binary | OpType.Unary],
-        '.': [43, Associativity.Left, OpType.Binary],
-        '<<': [42, Associativity.Left, OpType.Binary],
-        '>>': [42, Associativity.Left, OpType.Binary],
-        '<': [41, Associativity.None, OpType.Binary],
-        '>': [41, Associativity.None, OpType.Binary],
-        '<=': [41, Associativity.None, OpType.Binary],
-        '>=': [41, Associativity.None, OpType.Binary],
-        '==': [40, Associativity.None, OpType.Binary],
-        '===': [40, Associativity.None, OpType.Binary],
-        '!=': [40, Associativity.None, OpType.Binary],
-        '!==': [40, Associativity.None, OpType.Binary],
-        '<>': [40, Associativity.None, OpType.Binary],
-        '<=>': [40, Associativity.None, OpType.Binary],
-        '&': [39, Associativity.Left, OpType.Binary | OpType.Unary],
-        '^': [38, Associativity.Left, OpType.Binary],
-        '|': [37, Associativity.Left, OpType.Binary],
-        '&&': [36, Associativity.Left, OpType.Binary],
-        '||': [35, Associativity.Left, OpType.Binary],
-        '??': [34, Associativity.Right, OpType.Binary],
-        '?': [33, Associativity.Left, OpType.Binary], //?: ternary
-        ':': [33, Associativity.Left, OpType.Binary], //?: ternary
-        '=': [32, Associativity.Right, OpType.Binary],
-        '.=': [32, Associativity.Right, OpType.Binary],
-        '+=': [32, Associativity.Right, OpType.Binary],
-        '-=': [32, Associativity.Right, OpType.Binary],
-        '*=': [32, Associativity.Right, OpType.Binary],
-        '/=': [32, Associativity.Right, OpType.Binary],
-        '%=': [32, Associativity.Right, OpType.Binary],
-        '**=': [32, Associativity.Right, OpType.Binary],
-        '&=': [32, Associativity.Right, OpType.Binary],
-        '|=': [32, Associativity.Right, OpType.Binary],
-        '^=': [32, Associativity.Right, OpType.Binary],
-        '<<=': [32, Associativity.Right, OpType.Binary],
-        '>>=': [32, Associativity.Right, OpType.Binary],
-        'and': [31, Associativity.Left, OpType.Binary],
-        'xor': [30, Associativity.Left, OpType.Binary],
-        'or': [29, Associativity.Left, OpType.Binary],
+    const opPrecedenceMap: { [index: string]: [number, number] } = {
+        '**': [47, Associativity.Right],
+        'instanceof': [46, Associativity.None],
+        '!': [45, Associativity.Right],
+        '*': [44, Associativity.Left],
+        '/': [44, Associativity.Left],
+        '%': [44, Associativity.Left],
+        '+': [43, Associativity.Left],
+        '-': [43, Associativity.Left],
+        '.': [43, Associativity.Left],
+        '<<': [42, Associativity.Left],
+        '>>': [42, Associativity.Left],
+        '<': [41, Associativity.None],
+        '>': [41, Associativity.None],
+        '<=': [41, Associativity.None],
+        '>=': [41, Associativity.None],
+        '==': [40, Associativity.None],
+        '===': [40, Associativity.None],
+        '!=': [40, Associativity.None],
+        '!==': [40, Associativity.None],
+        '<>': [40, Associativity.None],
+        '<=>': [40, Associativity.None],
+        '&': [39, Associativity.Left],
+        '^': [38, Associativity.Left],
+        '|': [37, Associativity.Left],
+        '&&': [36, Associativity.Left],
+        '||': [35, Associativity.Left],
+        '??': [34, Associativity.Right],
+        '?': [33, Associativity.Left], //?: ternary
+        ':': [33, Associativity.Left], //?: ternary
+        '=': [32, Associativity.Right],
+        '.=': [32, Associativity.Right],
+        '+=': [32, Associativity.Right],
+        '-=': [32, Associativity.Right],
+        '*=': [32, Associativity.Right],
+        '/=': [32, Associativity.Right],
+        '%=': [32, Associativity.Right],
+        '**=': [32, Associativity.Right],
+        '&=': [32, Associativity.Right],
+        '|=': [32, Associativity.Right],
+        '^=': [32, Associativity.Right],
+        '<<=': [32, Associativity.Right],
+        '>>=': [32, Associativity.Right],
+        'and': [31, Associativity.Left],
+        'xor': [30, Associativity.Left],
+        'or': [29, Associativity.Left],
     };
 
     function isBinaryOp(t: Token) {
@@ -136,24 +129,24 @@ export namespace Parser {
             case '*':
             case '/':
             case '%':
-            case TokenType.T_POW:
-            case TokenType.T_SL:
-            case TokenType.T_SR:
-            case TokenType.T_BOOLEAN_AND:
-            case TokenType.T_BOOLEAN_OR:
-            case TokenType.T_LOGICAL_AND:
-            case TokenType.T_LOGICAL_OR:
-            case TokenType.T_LOGICAL_XOR:
-            case TokenType.T_IS_IDENTICAL:
-            case TokenType.T_IS_NOT_IDENTICAL:
-            case TokenType.T_IS_EQUAL:
-            case TokenType.T_IS_NOT_EQUAL:
+            case TokenType.AsteriskAsterisk:
+            case TokenType.LessThanLessThan:
+            case TokenType.GreaterThanGreaterThan:
+            case TokenType.AmpersandAmpersand:
+            case TokenType.BarBar:
+            case TokenType.And:
+            case TokenType.Or:
+            case TokenType.Xor:
+            case TokenType.EqualsEqualsEquals:
+            case TokenType.ExclamationEqualsEquals:
+            case TokenType.EqualsEquals:
+            case TokenType.ExclamationEquals:
             case '<':
-            case TokenType.T_IS_SMALLER_OR_EQUAL:
+            case TokenType.LessThanEquals:
             case '>':
-            case TokenType.T_IS_GREATER_OR_EQUAL:
-            case TokenType.T_SPACESHIP:
-            case TokenType.T_COALESCE:
+            case TokenType.GreaterThanEquals:
+            case TokenType.Spaceship:
+            case TokenType.QuestionQuestion:
                 return true;
             default:
                 return false;
@@ -168,135 +161,114 @@ export namespace Parser {
     function isVariableOnlyBinaryOp(t: Token) {
         switch (t.tokenType) {
             case '=':
-            case TokenType.T_PLUS_EQUAL:
-            case TokenType.T_MINUS_EQUAL:
-            case TokenType.T_MUL_EQUAL:
-            case TokenType.T_POW_EQUAL:
-            case TokenType.T_DIV_EQUAL:
-            case TokenType.T_CONCAT_EQUAL:
-            case TokenType.T_MOD_EQUAL:
-            case TokenType.T_AND_EQUAL:
-            case TokenType.T_OR_EQUAL:
-            case TokenType.T_XOR_EQUAL:
-            case TokenType.T_SL_EQUAL:
-            case TokenType.T_SR_EQUAL:
+            case TokenType.PlusEquals:
+            case TokenType.MinusEquals:
+            case TokenType.AsteriskEquals:
+            case TokenType.AsteriskAsteriskEquals:
+            case TokenType.ForwardslashEquals:
+            case TokenType.DotEquals:
+            case TokenType.PercentEquals:
+            case TokenType.AmpersandEquals:
+            case TokenType.BarEquals:
+            case TokenType.CaretEquals:
+            case TokenType.LessThanLessThanEquals:
+            case TokenType.GreaterThanGreaterThanEquals:
                 return true;
             default:
                 return false;
         }
     }
 
-    interface TempNode {
-        phrase: Phrase;
-        children: any[];
-    }
-
     var recoverTopStatementStartTokenTypes: (TokenType | string)[] = [
-        TokenType.T_NAMESPACE, TokenType.T_USE, TokenType.T_HALT_COMPILER, TokenType.T_CONST,
-        TokenType.T_FUNCTION, TokenType.T_CLASS, TokenType.T_ABSTRACT, TokenType.T_FINAL,
-        TokenType.T_TRAIT, TokenType.T_INTERFACE, TokenType.T_IF, TokenType.T_WHILE, TokenType.T_DO,
-        TokenType.T_FOR, TokenType.T_SWITCH, TokenType.T_BREAK, TokenType.T_CONTINUE, TokenType.T_RETURN,
-        TokenType.T_GLOBAL, TokenType.T_STATIC, TokenType.T_ECHO, TokenType.T_INLINE_HTML,
-        TokenType.T_UNSET, TokenType.T_FOREACH, TokenType.T_DECLARE, TokenType.T_TRY,
-        TokenType.T_THROW, TokenType.T_GOTO, ';'
+        TokenType.Namespace, TokenType.Use, TokenType.HaltCompiler, TokenType.Const,
+        TokenType.Function, TokenType.Class, TokenType.Abstract, TokenType.Final,
+        TokenType.Trait, TokenType.Interface, TokenType.If, TokenType.While, TokenType.Do,
+        TokenType.For, TokenType.Switch, TokenType.Break, TokenType.Continue, TokenType.Return,
+        TokenType.Global, TokenType.Static, TokenType.Echo, TokenType.Text,
+        TokenType.Unset, TokenType.ForEach, TokenType.Declare, TokenType.Try,
+        TokenType.Throw, TokenType.Goto, ';'
     ];
 
     var recoverInnerStatementStartTokenTypes: (TokenType | string)[] = [
-        TokenType.T_FUNCTION, TokenType.T_ABSTRACT, TokenType.T_FINAL, TokenType.T_CLASS, TokenType.T_TRAIT,
-        TokenType.T_INTERFACE, TokenType.T_IF, TokenType.T_WHILE, TokenType.T_DO,
-        TokenType.T_FOR, TokenType.T_SWITCH, TokenType.T_BREAK, TokenType.T_CONTINUE, TokenType.T_RETURN,
-        TokenType.T_GLOBAL, TokenType.T_STATIC, TokenType.T_ECHO, TokenType.T_INLINE_HTML,
-        TokenType.T_UNSET, TokenType.T_FOREACH, TokenType.T_DECLARE, TokenType.T_TRY,
-        TokenType.T_THROW, TokenType.T_GOTO, ';'
+        TokenType.Function, TokenType.Abstract, TokenType.Final, TokenType.Class, TokenType.Trait,
+        TokenType.Interface, TokenType.If, TokenType.While, TokenType.Do,
+        TokenType.For, TokenType.Switch, TokenType.Break, TokenType.Continue, TokenType.Return,
+        TokenType.Global, TokenType.Static, TokenType.Echo, TokenType.Text,
+        TokenType.Unset, TokenType.ForEach, TokenType.Declare, TokenType.Try,
+        TokenType.Throw, TokenType.Goto, ';'
     ];
 
     var recoverClassStatementStartTokenTypes: (TokenType | string)[] = [
-        TokenType.T_PUBLIC, TokenType.T_PROTECTED, TokenType.T_PRIVATE, TokenType.T_STATIC,
-        TokenType.T_ABSTRACT, TokenType.T_FINAL, TokenType.T_FUNCTION, TokenType.T_VAR,
-        TokenType.T_CONST, TokenType.T_USE
+        TokenType.Public, TokenType.Protected, TokenType.Private, TokenType.Static,
+        TokenType.Abstract, TokenType.Final, TokenType.Function, TokenType.Var,
+        TokenType.Const, TokenType.Use
     ];
 
     var parameterStartTokenTypes: (TokenType | string)[] = [
-        '&', TokenType.T_ELLIPSIS, TokenType.T_VARIABLE, TokenType.T_NS_SEPARATOR,
-        TokenType.T_STRING, TokenType.T_NAMESPACE, '?', TokenType.T_ARRAY,
-        TokenType.T_CALLABLE
+        '&', TokenType.Ellipsis, TokenType.VariableName, TokenType.Backslash,
+        TokenType.Name, TokenType.Namespace, '?', TokenType.Array,
+        TokenType.Callable
     ];
 
     var recoverStatementStartTokenTypes: (TokenType | string)[] = [
-        TokenType.T_IF, TokenType.T_WHILE, TokenType.T_DO, TokenType.T_FOR, TokenType.T_SWITCH,
-        TokenType.T_BREAK, TokenType.T_CONTINUE, TokenType.T_RETURN, '{', ';',
-        TokenType.T_GLOBAL, TokenType.T_STATIC, TokenType.T_ECHO, TokenType.T_INLINE_HTML, TokenType.T_UNSET,
-        TokenType.T_FOREACH, TokenType.T_DECLARE, TokenType.T_TRY, TokenType.T_THROW, TokenType.T_GOTO
+        TokenType.If, TokenType.While, TokenType.Do, TokenType.For, TokenType.Switch,
+        TokenType.Break, TokenType.Continue, TokenType.Return, '{', ';',
+        TokenType.Global, TokenType.Static, TokenType.Echo, TokenType.Text, TokenType.Unset,
+        TokenType.ForEach, TokenType.Declare, TokenType.Try, TokenType.Throw, TokenType.Goto
     ];
 
     var foreachVariableStartTokenTypes: (TokenType | string)[] = [
-        '&', TokenType.T_LIST,
-        TokenType.T_VARIABLE, '$', '(', TokenType.T_ARRAY, '[',
-        TokenType.T_CONSTANT_ENCAPSED_STRING, TokenType.T_STATIC,
-        TokenType.T_STRING, TokenType.T_NAMESPACE, TokenType.T_NS_SEPARATOR
-    ]
+        '&', TokenType.List,
+        TokenType.VariableName, '$', '(', TokenType.Array, '[',
+        TokenType.StringLiteral, TokenType.Static,
+        TokenType.Name, TokenType.Namespace, TokenType.Backslash
+    ];
 
-    var endToken: Token = {
-        tokenType: TokenType.T_EOF,
-        index: -1,
-        text: null,
-        mode: null,
-        range: null
-    };
-
-    export var nodeFactory: NodeFactory<any>;
-    var tokens: Token[];
+    var tokenBuffer: Token[];
     var recoverSetStack: (TokenType | string)[][];
     var isBinaryOpPredicate: Predicate;
     var variableAtomType: PhraseType;
     var pos: number;
-    var tempNodeStack: TempNode[];
+    var phraseStack: Phrase[];
     var isRecovering = false;
 
-    export function parse<T>(tokenArray: Token[]): T {
 
-        assertNodeFactory();
+    export function parseScript(text: string): Phrase {
+
+        Lexer.setInput(text);
+
         tokens = tokenArray;
         pos = -1;
-        tempNodeStack = [];
+        phraseStack = [];
 
         if (!tokenArray.length) {
             return null;
         }
 
-        return topStatements(TokenType.T_EOF);
+        return statementList(TokenType.EndOfFile);
 
-    }
-
-    function assertNodeFactory() {
-        if (typeof nodeFactory !== 'function') {
-            throw new Error('Invalid operation -- nodeFactory');
-        }
     }
 
     function start(phraseType?: PhraseType) {
         //parent node gets hidden tokens between children
         hidden();
 
-        let node: TempNode = {
-            phrase: {
-                phraseType: phraseType
-            },
+        let phrase: Phrase = {
+            phraseType: phraseType,
             children: []
         };
 
-        tempNodeStack.push(node);
-        return node;
+        phraseStack.push(phrase);
+        return phrase;
     }
 
     function end() {
-        let node = tempNodeStack.pop();
-        return nodeFactory(node.phrase, node.children);
+        return phraseStack.pop()
     }
 
     function hidden() {
 
-        let node = top<TempNode>(tempNodeStack);
+        let node = phraseStackTop();
 
         while (pos < tokens.length - 1 && isHidden(tokens[pos + 1])) {
             ++pos;
@@ -304,44 +276,46 @@ export namespace Parser {
         }
     }
 
-    function current() {
-        return pos >= 0 ? tokens[pos] : null;
+    function optional(tokenType: TokenType) {
+
+        if (tokenType !== peek().tokenType) {
+            return null;
+        } else {
+            isRecovering = false;
+        }
+
+        return next();
+
     }
 
-    function next(tokenType?: TokenType | string): Token {
+    function optionalOneOf(tokenTypes: TokenType[]) {
 
-        if (tokenType) {
-            if (tokenType !== peek().tokenType) {
-                return null;
-            } else {
-                isRecovering = false;
-            }
+        if (tokenTypes.indexOf(peek().tokenType) >= 0) {
+            return next();
+        } else {
+            return null;
         }
 
-        if (pos === tokens.length - 1) {
-            return endToken;
+    }
+
+    function next(): Token {
+
+        let t = tokenBuffer.length ? tokenBuffer.shift() : Lexer.lex();
+
+        if (t.tokenType === TokenType.EndOfFile) {
+            return t;
         }
 
-        ++pos;
-        let node = top<TempNode>(tempNodeStack);
-        let childNode = nodeFactory(tokens[pos]);
-
-        if (childNode) {
-            node.children.push();
-        }
-
-        if (isHidden(tokens[pos])) {
+        phraseStackTop().children.push(t);
+        if (isHidden(t)) {
             return this.next();
         }
 
-        return tokens[pos];
+        return t;
 
     }
 
-    function expect(
-        tokenType: TokenType | string,
-        phraseRecoverSet?: (TokenType | string)[]
-    ) {
+    function expect(tokenType: TokenType, phraseRecoverSet?: TokenType[]) {
 
         if (peek().tokenType === tokenType) {
             isRecovering = false;
@@ -349,41 +323,46 @@ export namespace Parser {
         }
         else {
             error(tokenType, phraseRecoverSet, [tokenType]);
+            return null;
         }
 
-        return null;
     }
 
-    function expectOneOf(
-        tokenTypes: (TokenType | string)[],
-        phraseRecoverSet?: (TokenType | string)[]
-    ) {
+    function expectOneOf(tokenTypes: TokenType[], phraseRecoverSet?: TokenType[]) {
 
         if (tokenTypes.indexOf(peek().tokenType) >= 0) {
             isRecovering = false;
             return next();
         } else {
             error(undefined, phraseRecoverSet, tokenTypes);
+            return null;
         }
 
     }
 
-    function peek(n = 0) {
+    function peek(n?: number) {
 
-        let k = n + 1
-        let peekPos = pos;
+        let k = n ? n + 1 : 1;
+        let bufferPos = -1;
+        let t: Token;
 
         while (k) {
-            if (++peekPos < tokens.length) {
-                if (!isHidden(tokens[peekPos])) {
-                    --k;
-                }
-            } else {
-                return endToken;
+
+            ++bufferPos;
+            if (bufferPos === tokenBuffer.length) {
+                tokenBuffer.push(Lexer.lex());
             }
+
+            t = tokenBuffer[bufferPos];
+
+            if (t.tokenType === TokenType.EndOfFile ||
+                (!isHidden(t) && --k === 0)) {
+                break;
+            }
+
         }
 
-        return tokens[peekPos];
+        return t;
     }
 
     function skip(until: (TokenType | string)[]) {
@@ -393,7 +372,7 @@ export namespace Parser {
 
         while (true) {
             t = peek();
-            if (until.indexOf(t.tokenType) >= 0 || t.tokenType === TokenType.T_EOF) {
+            if (until.indexOf(t.tokenType) >= 0 || t.tokenType === TokenType.EndOfFile) {
                 break;
             } else {
                 ++pos;
@@ -427,12 +406,9 @@ export namespace Parser {
 
     function isHidden(t: Token) {
         switch (t.tokenType) {
-            case TokenType.T_DOC_COMMENT:
-            case TokenType.T_WHITESPACE:
-            case TokenType.T_COMMENT:
-            case TokenType.T_OPEN_TAG:
-            case TokenType.T_OPEN_TAG_WITH_ECHO:
-            case TokenType.T_CLOSE_TAG:
+            case TokenType.DocumentComment:
+            case TokenType.Whitespace:
+            case TokenType.Comment:
                 return true;
             default:
                 return false;
@@ -452,7 +428,7 @@ export namespace Parser {
             return;
         }
 
-        let n = top<TempNode>(tempNodeStack);
+        let n = phraseStackTop<TempNode>(phraseStack);
         recoverSetStack.push(recoverSet);
         let node = func.call(func, ...args);
         recoverSetStack.pop();
@@ -470,7 +446,7 @@ export namespace Parser {
             return peek();
         }
 
-        let tempNode = top<TempNode>(tempNodeStack);
+        let tempNode = phraseStackTop<TempNode>(phraseStack);
         let unexpected = peek();
         let n = recoverSetStack.length;
         let syncTokens = phraseRecoverSet ? phraseRecoverSet.slice(0) : [];
@@ -503,89 +479,77 @@ export namespace Parser {
         return peek();
     }
 
-    function top<T>(array: T[]) {
-        return array.length ? array[array.length - 1] : null;
+    function phraseStackTop() {
+        return phraseStack.length ? phraseStack[phraseStack.length - 1] : null;
     }
 
-    function topStatements(breakOn: TokenType | string) {
+    function script() {
 
-        let n = start(PhraseType.TopStatements);
+        let p = start(PhraseType.Script);
+        optional(TokenType.Text);
+        expectOneOf([TokenType.OpenTag, TokenType.OpenTagEcho]);
+        if (isStatementStartToken(peek())) {
+            p.children.push(statementList(TokenType.EndOfFile))
+        }
+        optional(TokenType.CloseTag);
+        optional(TokenType.Text);
+        return p;
+    }
+
+    function statementList(breakOn: TokenType) {
+
+        let p = start(PhraseType.StatementList);
         let t: Token;
-        let recover = recoverTopStatementStartTokenTypes.slice(0);
-        recover.push(breakOn);
 
         while (true) {
 
             t = peek();
-            if (isTopStatementStartToken(t)) {
-                phrase(topStatement, [], recover);
+            if (isStatementStartToken(t)) {
+                p.children.push(statement());
             } else if (t.tokenType === breakOn) {
                 break;
-            } else if (error(undefined, recover).tokenType === TokenType.T_EOF) {
-                break;
+            } else {
+                error(undefined, recover);
             }
 
         }
 
-        return end();
+        return p;
 
     }
 
-    function topStatement() {
+    function constDeclaration() {
 
-        let t = peek();
-
-        switch (t.tokenType) {
-            case TokenType.T_NAMESPACE:
-                return namespaceStatement();
-            case TokenType.T_USE:
-                return useStatement();
-            case TokenType.T_HALT_COMPILER:
-                return haltCompilerStatement();
-            case TokenType.T_CONST:
-                return constantDeclarationStatement();
-            case TokenType.T_FUNCTION:
-                return functionDeclaration();
-            case TokenType.T_CLASS:
-            case TokenType.T_ABSTRACT:
-            case TokenType.T_FINAL:
-                return classDeclarationStatement();
-            case TokenType.T_TRAIT:
-                return traitDeclarationStatement();
-            case TokenType.T_INTERFACE:
-                return interfaceDeclarationStatement();
-            default:
-                return statement();
-        }
-
-    }
-
-    function constantDeclarationStatement() {
-
-        start(PhraseType.ConstantDeclarationStatement);
+        let p = start(PhraseType.ConstDeclaration);
         next(); //const
-        phrase(constantDeclarations, [PhraseType.ConstantDeclarations], [';']);
-        expect(';', [';']);
-        return end();
+        p.children.push(delimitedList(
+            PhraseType.ConstElements,
+            constElement,
+            isConstElementStartToken,
+            TokenType.Comma,
+            TokenType.Semicolon
+        ));
+        expect(TokenType.Semicolon);
+        return p;
 
     }
 
-    function constantDeclarations(type: PhraseType, breakOn: TokenType | string) {
+    function isConstElementStartToken(t:Token){
+        return t.tokenType === TokenType.Name;
+    }
 
-        let recover: (TokenType | string)[] = [','];
+    function constElements() {
+
         let t: Token;
-        let func = type === PhraseType.ConstantDeclarations ?
-            constantDeclaration : classConstantDeclaration;
-
-        start(type);
+        let p = start(PhraseType.ConstElements);
 
         while (true) {
 
-            phrase(func, [], recover);
+            p.children.push(constElement());
             t = peek();
-            if (t.tokenType === ',') {
+            if (t.tokenType === TokenType.Comma) {
                 next();
-            } else if (t.tokenType === breakOn) {
+            } else if (t.tokenType === TokenType.Semicolon) {
                 break;
             } else {
                 error();
@@ -593,22 +557,17 @@ export namespace Parser {
             }
         }
 
-        return end();
+        return p;
 
     }
 
-    function constantDeclaration() {
+    function constElement() {
 
-        let t: Token;
-
-        start(PhraseType.ConstantDeclaration);
-
-        if (!expect(TokenType.T_STRING) || !expect('=')) {
-            return end();
-        }
-
-        phrase(expression, [0]);
-        return end();
+        let p = start(PhraseType.ConstElement);
+        expect(TokenType.Name);
+        expect(TokenType.Equals);
+        p.children.push(expression(0));
+        return p;
 
     }
 
@@ -650,7 +609,7 @@ export namespace Parser {
                 if (op.tokenType === '=' && peek().tokenType === '&') {
                     n.children.push(unaryExpression());
                 } else {
-                    n.children.push(op.tokenType === TokenType.T_INSTANCEOF ? newVariable() : expression(precedence));
+                    n.children.push(op.tokenType === TokenType.InstanceOf ? newVariable() : expression(precedence));
                 }
                 lhs = end();
             }
@@ -684,7 +643,7 @@ export namespace Parser {
         let variableNode = variable();
         let t = peek();
         //post inc/dec
-        if (t.tokenType === TokenType.T_INC || t.tokenType === TokenType.T_DEC) {
+        if (t.tokenType === TokenType.PlusPlus || t.tokenType === TokenType.MinusMinus) {
             let unary = start(PhraseType.UnaryExpression);
             unary.children.push(variableNode);
             next();
@@ -705,87 +664,87 @@ export namespace Parser {
         let t = peek();
 
         switch (t.tokenType) {
-            case TokenType.T_STATIC:
-                if (peek(1).tokenType === TokenType.T_FUNCTION) {
+            case TokenType.Static:
+                if (peek(1).tokenType === TokenType.Function) {
                     return closure();
                 } else {
                     return variableCheckForPostUnaryExpression();
                 }
-            case TokenType.T_CONSTANT_ENCAPSED_STRING:
+            case TokenType.StringLiteral:
                 let derefToken = peek(1);
                 if (derefToken.tokenType === '[' || derefToken.tokenType === '{' ||
-                    derefToken.tokenType === TokenType.T_OBJECT_OPERATOR || derefToken.tokenType === '(') {
+                    derefToken.tokenType === TokenType.Arrow || derefToken.tokenType === '(') {
                     return variableCheckForPostUnaryExpression();
                 } else {
                     return scalar();
                 }
-            case TokenType.T_VARIABLE:
+            case TokenType.VariableName:
             case '$':
-            case TokenType.T_ARRAY:
+            case TokenType.Array:
             case '[':
-            case TokenType.T_NS_SEPARATOR:
-            case TokenType.T_STRING:
-            case TokenType.T_NAMESPACE:
+            case TokenType.Backslash:
+            case TokenType.Name:
+            case TokenType.Namespace:
             case '(':
                 return variableCheckForPostUnaryExpression();
-            case TokenType.T_INC:
-            case TokenType.T_DEC:
+            case TokenType.PlusPlus:
+            case TokenType.MinusMinus:
             case '+':
             case '-':
             case '!':
             case '~':
             case '@':
-            case TokenType.T_INT_CAST:
-            case TokenType.T_DOUBLE_CAST:
-            case TokenType.T_STRING_CAST:
-            case TokenType.T_ARRAY_CAST:
-            case TokenType.T_OBJECT_CAST:
-            case TokenType.T_BOOL_CAST:
-            case TokenType.T_UNSET_CAST:
+            case TokenType.IntegerCast:
+            case TokenType.FloatCast:
+            case TokenType.StringCast:
+            case TokenType.ArrayCast:
+            case TokenType.ObjectCast:
+            case TokenType.BooleanCast:
+            case TokenType.UnsetCast:
                 return unaryExpression();
-            case TokenType.T_LIST:
+            case TokenType.List:
                 isBinaryOpPredicate = isAssignBinaryOp;
                 return listExpression();
-            case TokenType.T_CLONE:
+            case TokenType.Clone:
                 return cloneExpression();
-            case TokenType.T_NEW:
+            case TokenType.New:
                 return newExpression();
-            case TokenType.T_DNUMBER:
-            case TokenType.T_LNUMBER:
+            case TokenType.FloatingLiteral:
+            case TokenType.IntegerLiteral:
                 return scalar();
-            case TokenType.T_LINE:
-            case TokenType.T_FILE:
+            case TokenType.LineConstant:
+            case TokenType.FileConstant:
             case TokenType.T_DIR:
-            case TokenType.T_TRAIT_C:
-            case TokenType.T_METHOD_C:
-            case TokenType.T_FUNC_C:
-            case TokenType.T_NS_C:
-            case TokenType.T_CLASS_C:
+            case TokenType.TraitConstant:
+            case TokenType.MethodConstant:
+            case TokenType.FunctionConstant:
+            case TokenType.NamespaceConstant:
+            case TokenType.ClassConstant:
                 return magicConstant();
-            case TokenType.T_START_HEREDOC:
+            case TokenType.StartHeredoc:
                 return heredoc();
             case '"':
                 return quotedEncapsulatedVariableList(PhraseType.DoubleQuotes, '"');
             case '`':
                 return quotedEncapsulatedVariableList(PhraseType.Backticks, '`');
-            case TokenType.T_PRINT:
+            case TokenType.Print:
                 return keywordExpression(PhraseType.Print);
-            case TokenType.T_YIELD:
+            case TokenType.Yield:
                 return yieldExpression();
-            case TokenType.T_YIELD_FROM:
+            case TokenType.YieldFrom:
                 return keywordExpression(PhraseType.YieldFrom);
-            case TokenType.T_FUNCTION:
+            case TokenType.Function:
                 return closure();
-            case TokenType.T_INCLUDE:
-            case TokenType.T_INCLUDE_ONCE:
-            case TokenType.T_REQUIRE:
-            case TokenType.T_REQUIRE_ONCE:
+            case TokenType.Include:
+            case TokenType.IncludeOnce:
+            case TokenType.Require:
+            case TokenType.RequireOnce:
                 return keywordExpression(PhraseType.Include);
-            case TokenType.T_EVAL:
+            case TokenType.Eval:
                 return keywordEncapsulatedExpression(PhraseType.Eval);
-            case TokenType.T_EMPTY:
+            case TokenType.Empty:
                 return keywordEncapsulatedExpression(PhraseType.Empty);
-            case TokenType.T_ISSET:
+            case TokenType.Isset:
                 return isset();
             default:
                 //error
@@ -870,9 +829,9 @@ export namespace Parser {
             return end();
         }
 
-        phrase(expression, [0], [TokenType.T_DOUBLE_ARROW]);
+        phrase(expression, [0], [TokenType.FatArrow]);
 
-        if (peek().tokenType !== TokenType.T_DOUBLE_ARROW) {
+        if (peek().tokenType !== TokenType.FatArrow) {
             return end();
         }
 
@@ -895,8 +854,8 @@ export namespace Parser {
 
         let n = start(PhraseType.EncapsulatedVariableList);
         let recover: (TokenType | string)[] = [
-            TokenType.T_ENCAPSED_AND_WHITESPACE, TokenType.T_VARIABLE,
-            TokenType.T_DOLLAR_OPEN_CURLY_BRACES, TokenType.T_CURLY_OPEN, breakOn
+            TokenType.EncapsulatedAndWhitespace, TokenType.VariableName,
+            TokenType.DollarCurlyOpen, TokenType.CurlyOpen, breakOn
         ];
         let t: Token;
 
@@ -920,10 +879,10 @@ export namespace Parser {
     function isEncapsulatedVariableStartToken(t: Token) {
 
         switch (t.tokenType) {
-            case TokenType.T_ENCAPSED_AND_WHITESPACE:
-            case TokenType.T_VARIABLE:
-            case TokenType.T_DOLLAR_OPEN_CURLY_BRACES:
-            case TokenType.T_CURLY_OPEN:
+            case TokenType.EncapsulatedAndWhitespace:
+            case TokenType.VariableName:
+            case TokenType.DollarCurlyOpen:
+            case TokenType.CurlyOpen:
                 return true;
             default:
                 return false;
@@ -934,21 +893,21 @@ export namespace Parser {
     function encapsulatedVariable() {
 
         switch (peek().tokenType) {
-            case TokenType.T_ENCAPSED_AND_WHITESPACE:
+            case TokenType.EncapsulatedAndWhitespace:
                 next();
                 break;
-            case TokenType.T_VARIABLE:
+            case TokenType.VariableName:
                 let t = peek(1);
                 if (t.tokenType === '[') {
                     return encapsulatedDimension();
-                } else if (t.tokenType === TokenType.T_OBJECT_OPERATOR) {
+                } else if (t.tokenType === TokenType.Arrow) {
                     return encapsulatedProperty();
                 } else {
                     return simpleVariable();
                 }
-            case TokenType.T_DOLLAR_OPEN_CURLY_BRACES:
+            case TokenType.DollarCurlyOpen:
                 return dollarCurlyOpenEncapsulatedVariable();
-            case TokenType.T_CURLY_OPEN:
+            case TokenType.CurlyOpen:
                 return curlyOpenEncapsulatedVariable();
             default:
                 //error
@@ -974,7 +933,7 @@ export namespace Parser {
         next(); //${
         let t = peek();
 
-        if (t.tokenType === TokenType.T_STRING_VARNAME) {
+        if (t.tokenType === TokenType.VariableName) {
 
             if (peek(1).tokenType === '[') {
                 phrase(dollarCurlyOpenEncapsulatedVariable, [], ['}']);
@@ -1012,11 +971,11 @@ export namespace Parser {
         next(); //[
 
         switch (peek().tokenType) {
-            case TokenType.T_STRING:
+            case TokenType.Name:
             case TokenType.T_NUM_STRING:
                 next();
                 break;
-            case TokenType.T_VARIABLE:
+            case TokenType.VariableName:
                 phrase(simpleVariable, [], [']']);
                 break;
             case '-':
@@ -1040,7 +999,7 @@ export namespace Parser {
         start(PhraseType.Property);
         phrase(simpleVariable, []); //T_VARIABLE
         next(); //T_OBJECT_OPERATOR
-        expect(TokenType.T_STRING);
+        expect(TokenType.Name);
         return end();
     }
 
@@ -1048,8 +1007,8 @@ export namespace Parser {
 
         start(PhraseType.Heredoc);
         next();
-        phrase(encapsulatedVariableList, [TokenType.T_END_HEREDOC], [TokenType.T_END_HEREDOC]);
-        expect(TokenType.T_END_HEREDOC, [TokenType.T_END_HEREDOC]);
+        phrase(encapsulatedVariableList, [TokenType.EndHeredoc], [TokenType.EndHeredoc]);
+        expect(TokenType.EndHeredoc, [TokenType.EndHeredoc]);
         return end();
 
     }
@@ -1060,14 +1019,14 @@ export namespace Parser {
         next(); //class
 
         if (peek().tokenType === '(') {
-            phrase(argumentList, [], [TokenType.T_EXTENDS, TokenType.T_IMPLEMENTS, '{']);
+            phrase(argumentList, [], [TokenType.Extends, TokenType.Implements, '{']);
         }
 
-        if (peek().tokenType === TokenType.T_EXTENDS) {
-            phrase(extendsClass, [], [TokenType.T_IMPLEMENTS, '{']);
+        if (peek().tokenType === TokenType.Extends) {
+            phrase(extendsClass, [], [TokenType.Implements, '{']);
         }
 
-        if (peek().tokenType === TokenType.T_IMPLEMENTS) {
+        if (peek().tokenType === TokenType.Implements) {
             phrase(implementsInterfaces, [], ['{']);
         }
 
@@ -1120,16 +1079,16 @@ export namespace Parser {
 
     function isClassStatementStartToken(t: Token) {
         switch (t.tokenType) {
-            case TokenType.T_PUBLIC:
-            case TokenType.T_PROTECTED:
-            case TokenType.T_PRIVATE:
-            case TokenType.T_STATIC:
-            case TokenType.T_ABSTRACT:
-            case TokenType.T_FINAL:
-            case TokenType.T_FUNCTION:
-            case TokenType.T_VAR:
-            case TokenType.T_CONST:
-            case TokenType.T_USE:
+            case TokenType.Public:
+            case TokenType.Protected:
+            case TokenType.Private:
+            case TokenType.Static:
+            case TokenType.Abstract:
+            case TokenType.Final:
+            case TokenType.Function:
+            case TokenType.Var:
+            case TokenType.Const:
+            case TokenType.Use:
                 return true;
             default:
                 return false;
@@ -1142,33 +1101,33 @@ export namespace Parser {
         let t = peek();
 
         switch (t.tokenType) {
-            case TokenType.T_PUBLIC:
-            case TokenType.T_PROTECTED:
-            case TokenType.T_PRIVATE:
-            case TokenType.T_STATIC:
-            case TokenType.T_ABSTRACT:
-            case TokenType.T_FINAL:
+            case TokenType.Public:
+            case TokenType.Protected:
+            case TokenType.Private:
+            case TokenType.Static:
+            case TokenType.Abstract:
+            case TokenType.Final:
                 n.children.push(memberModifiers());
                 t = peek();
-                if (t.tokenType === TokenType.T_VARIABLE) {
+                if (t.tokenType === TokenType.VariableName) {
                     return propertyDeclarationStatement(n);
-                } else if (t.tokenType === TokenType.T_FUNCTION) {
+                } else if (t.tokenType === TokenType.Function) {
                     return methodDeclaration(n);
-                } else if (t.tokenType === TokenType.T_CONST) {
+                } else if (t.tokenType === TokenType.Const) {
                     return classConstantDeclarationStatement(n);
                 } else {
                     //error
                     error();
                     return end();
                 }
-            case TokenType.T_FUNCTION:
+            case TokenType.Function:
                 return methodDeclaration(n);
-            case TokenType.T_VAR:
+            case TokenType.Var:
                 next();
                 return propertyDeclarationStatement(n);
-            case TokenType.T_CONST:
+            case TokenType.Const:
                 return classConstantDeclarationStatement(n);
-            case TokenType.T_USE:
+            case TokenType.Use:
                 return useTraitStatement();
             default:
                 //error
@@ -1210,9 +1169,9 @@ export namespace Parser {
             if (t.tokenType === '}') {
                 next();
                 break;
-            } else if (t.tokenType === TokenType.T_STRING ||
-                t.tokenType === TokenType.T_NAMESPACE ||
-                t.tokenType === TokenType.T_NS_SEPARATOR ||
+            } else if (t.tokenType === TokenType.Name ||
+                t.tokenType === TokenType.Namespace ||
+                t.tokenType === TokenType.Backslash ||
                 isSemiReservedToken(t)) {
                 phrase(traitAdaptation, [], ['}']);
             } else if (error(undefined, ['}']).tokenType !== '}') {
@@ -1231,19 +1190,19 @@ export namespace Parser {
         let t = peek();
         let t2 = peek(1);
 
-        if (t.tokenType === TokenType.T_NAMESPACE ||
-            t.tokenType === TokenType.T_NS_SEPARATOR ||
-            (t.tokenType === TokenType.T_STRING &&
-                (t2.tokenType === TokenType.T_PAAMAYIM_NEKUDOTAYIM || t2.tokenType === TokenType.T_NS_SEPARATOR))) {
+        if (t.tokenType === TokenType.Namespace ||
+            t.tokenType === TokenType.Backslash ||
+            (t.tokenType === TokenType.Name &&
+                (t2.tokenType === TokenType.ColonColon || t2.tokenType === TokenType.Backslash))) {
 
-            phrase(methodReference, [], [TokenType.T_INSTEADOF, TokenType.T_AS]);
+            phrase(methodReference, [], [TokenType.InsteadOf, TokenType.As]);
 
-            if (peek().tokenType === TokenType.T_INSTEADOF) {
+            if (peek().tokenType === TokenType.InsteadOf) {
                 next();
                 return traitPrecedence(n);
             }
 
-        } else if (t.tokenType === TokenType.T_STRING || isSemiReservedToken(t)) {
+        } else if (t.tokenType === TokenType.Name || isSemiReservedToken(t)) {
 
             let methodRef = start(PhraseType.MethodReference);
             methodRef.children.push(identifier());
@@ -1262,16 +1221,16 @@ export namespace Parser {
     function traitAlias(n: TempNode) {
 
         n.phrase.phraseType = PhraseType.TraitAlias;
-        expect(TokenType.T_AS, [';']);
+        expect(TokenType.As, [';']);
 
         let t = peek();
 
-        if (t.tokenType === TokenType.T_STRING || isReservedToken(t)) {
+        if (t.tokenType === TokenType.Name || isReservedToken(t)) {
             n.children.push(identifier());
         } else if (isMemberModifier(t)) {
             next();
             t = peek();
-            if (t.tokenType === TokenType.T_STRING || isSemiReservedToken(t)) {
+            if (t.tokenType === TokenType.Name || isSemiReservedToken(t)) {
                 n.children.push(identifier());
             }
         } else {
@@ -1296,8 +1255,8 @@ export namespace Parser {
     function methodReference() {
 
         let n = start(PhraseType.MethodReference);
-        phrase(name, [], [TokenType.T_PAAMAYIM_NEKUDOTAYIM]);
-        if (!expect(TokenType.T_PAAMAYIM_NEKUDOTAYIM)) {
+        phrase(qualifiedName, [], [TokenType.ColonColon]);
+        if (!expect(TokenType.ColonColon)) {
             return end();
         }
 
@@ -1329,7 +1288,7 @@ export namespace Parser {
         if (peek().tokenType === ';') {
             next();
         } else {
-            n.children.push(block());
+            n.children.push(compoundStatement());
         }
         return end();
     }
@@ -1337,7 +1296,7 @@ export namespace Parser {
     function identifier() {
         let n = start(PhraseType.identifier);
         let t = peek();
-        if (t.tokenType === TokenType.T_STRING || isSemiReservedToken(t)) {
+        if (t.tokenType === TokenType.Name || isSemiReservedToken(t)) {
             next();
         } else {
             error();
@@ -1375,15 +1334,15 @@ export namespace Parser {
     function innerStatement() {
 
         switch (peek().tokenType) {
-            case TokenType.T_FUNCTION:
-                return functionDeclaration();
-            case TokenType.T_ABSTRACT:
-            case TokenType.T_FINAL:
-            case TokenType.T_CLASS:
+            case TokenType.Function:
+                return functionDefinition();
+            case TokenType.Abstract:
+            case TokenType.Final:
+            case TokenType.Class:
                 return classDeclarationStatement();
-            case TokenType.T_TRAIT:
+            case TokenType.Trait:
                 return traitDeclarationStatement();
-            case TokenType.T_INTERFACE:
+            case TokenType.Interface:
                 return interfaceDeclarationStatement();
             default:
                 return statement();
@@ -1396,9 +1355,9 @@ export namespace Parser {
 
         let n = start(PhraseType.InterfaceDeclaration);
         next(); //interface
-        expect(TokenType.T_STRING, [TokenType.T_EXTENDS, '{']);
+        expect(TokenType.Name, [TokenType.Extends, '{']);
 
-        if (peek().tokenType === TokenType.T_EXTENDS) {
+        if (peek().tokenType === TokenType.Extends) {
             phrase(extendsInterfaces, [], ['{']);
         }
 
@@ -1420,25 +1379,54 @@ export namespace Parser {
 
         start(PhraseType.TraitDeclaration);
         next(); //trait
-        expect(TokenType.T_STRING, ['{']);
+        expect(TokenType.Name, ['{']);
         phrase(classBody, [], [], ['{']);
         return end();
     }
 
-    function functionDeclaration() {
+    function functionDefinition() {
 
-        let n = start(PhraseType.FunctionDeclaration);
-        next(); //T_FUNCTION
-        next('&');
-        expect(TokenType.T_STRING, ['(', ':', '{']);
-        phrase(parameterList, [], [':', '{'], ['(']);
+        let p = start(PhraseType.FunctionDefinition);
+        p.children.push(functionDefinitionHeader(), compoundStatement());
+        return p;
 
-        if (peek().tokenType === ':') {
-            phrase(returnType, [], ['{']);
+    }
+
+    function functionDefinitionHeader(){
+
+        let p = start(PhraseType.FunctionDefinitionHeader);
+
+        next(); //function
+        optional(TokenType.Ampersand);
+        expect(TokenType.Name);
+        expect(TokenType.OpenParenthesis);
+        
+        if(isParameterStart(peek())){
+            p.children.push(delimitedList(
+                PhraseType.ParameterDeclarationList,
+                parameterDeclaration,
+                isParameterStart,
+                TokenType.Comma,
+                TokenType.CloseParenthesis
+            ));
         }
 
-        phrase(block, [], [],['{']);
-        return end();
+        expect(TokenType.CloseParenthesis);
+
+        return p;
+
+    }
+
+    function isParameterStart(t:Token){
+
+        switch(t.tokenType){
+            case TokenType.Ampersand:
+            case TokenType.Ellipsis:
+            case TokenType.VariableName:
+                return true;
+            default:
+                return isTypeDeclarationStart(t);
+        }
 
     }
 
@@ -1447,18 +1435,18 @@ export namespace Parser {
         let n = start(PhraseType.ClassDeclaration);
         let t = peek();
 
-        if (t.tokenType === TokenType.T_ABSTRACT || t.tokenType === TokenType.T_FINAL) {
+        if (t.tokenType === TokenType.Abstract || t.tokenType === TokenType.Final) {
             n.children.push(classModifiers());
         }
 
-        expect(TokenType.T_CLASS, [TokenType.T_EXTENDS, TokenType.T_IMPLEMENTS, '{']);
-        expect(TokenType.T_STRING, [TokenType.T_EXTENDS, TokenType.T_IMPLEMENTS, '{']);
+        expect(TokenType.Class, [TokenType.Extends, TokenType.Implements, '{']);
+        expect(TokenType.Name, [TokenType.Extends, TokenType.Implements, '{']);
 
-        if (peek().tokenType === TokenType.T_EXTENDS) {
-            phrase(extendsClass, [], [TokenType.T_IMPLEMENTS, '{']);
+        if (peek().tokenType === TokenType.Extends) {
+            phrase(extendsClass, [], [TokenType.Implements, '{']);
         }
 
-        if (peek().tokenType === TokenType.T_IMPLEMENTS) {
+        if (peek().tokenType === TokenType.Implements) {
             phrase(implementsInterfaces, [], ['{']);
         }
 
@@ -1481,7 +1469,7 @@ export namespace Parser {
 
         while (true) {
             t = peek();
-            if (t.tokenType === TokenType.T_ABSTRACT || t.tokenType === TokenType.T_FINAL) {
+            if (t.tokenType === TokenType.Abstract || t.tokenType === TokenType.Final) {
                 next();
             } else {
                 break;
@@ -1493,15 +1481,17 @@ export namespace Parser {
 
     }
 
-    function block() {
+    function compoundStatement() {
 
-        start(PhraseType.Block);
-        if (!expect('{')) {
-            return end();
+        let p = start(PhraseType.CompoundStatement);
+        expect(TokenType.OpenBrace);
+        
+        if(isStatementStartToken(peek())){
+            p.children.push(statementList(TokenType.CloseBrace));
         }
-        phrase(innerStatementList, [['}']], ['}']);
-        expect('}', ['}']);
-        return end();
+
+        expect(TokenType.CloseBrace);
+        return p;
 
     }
 
@@ -1510,49 +1500,67 @@ export namespace Parser {
         let t = peek();
 
         switch (t.tokenType) {
+            case TokenType.Namespace:
+                return namespaceDefinition();
+            case TokenType.Use:
+                return namespaceUseDeclaration();
+            case TokenType.HaltCompiler:
+                return haltCompilerStatement();
+            case TokenType.Const:
+                return constDeclaration();
+            case TokenType.Function:
+                return functionDefinition();
+            case TokenType.Class:
+            case TokenType.Abstract:
+            case TokenType.Final:
+                return classDeclarationStatement();
+            case TokenType.Trait:
+                return traitDeclarationStatement();
+            case TokenType.Interface:
+                return interfaceDeclarationStatement();
             case '{':
-                return block();
-            case TokenType.T_IF:
+                return compoundStatement();
+            case TokenType.If:
                 return ifStatementList();
-            case TokenType.T_WHILE:
+            case TokenType.While:
                 return whileStatement();
-            case TokenType.T_DO:
+            case TokenType.Do:
                 return doWhileStatement();
-            case TokenType.T_FOR:
+            case TokenType.For:
                 return forStatement();
-            case TokenType.T_SWITCH:
+            case TokenType.Switch:
                 return switchStatement();
-            case TokenType.T_BREAK:
+            case TokenType.Break:
                 return keywordOptionalExpressionStatement(PhraseType.Break);
-            case TokenType.T_CONTINUE:
+            case TokenType.Continue:
                 return keywordOptionalExpressionStatement(PhraseType.Continue);
-            case TokenType.T_RETURN:
+            case TokenType.Return:
                 return keywordOptionalExpressionStatement(PhraseType.Return);
-            case TokenType.T_GLOBAL:
+            case TokenType.Global:
                 return globalVariableDeclarationStatement();
-            case TokenType.T_STATIC:
+            case TokenType.Static:
                 return staticVariableDeclarationStatement();
-            case TokenType.T_ECHO:
+            case TokenType.Echo:
                 return echoStatement();
-            case TokenType.T_INLINE_HTML:
-                return nodeFactory(t);
-            case TokenType.T_UNSET:
+            case TokenType.Text:
+                return t;
+            case TokenType.Unset:
                 return unsetStatement();
-            case TokenType.T_FOREACH:
+            case TokenType.ForEach:
                 return foreachStatement();
-            case TokenType.T_DECLARE:
+            case TokenType.Declare:
                 return declareStatement();
-            case TokenType.T_TRY:
+            case TokenType.Try:
                 return tryGroup();
-            case TokenType.T_THROW:
+            case TokenType.Throw:
                 return throwStatement();
-            case TokenType.T_GOTO:
+            case TokenType.Goto:
                 return gotoStatement();
             case ';':
                 start(PhraseType.EmptyStatement);
                 next();
                 return end();
-            case TokenType.T_STRING:
+            case TokenType.Name:
                 if (peek(1).tokenType === ':') {
                     return labelStatement();
                 }
@@ -1567,13 +1575,13 @@ export namespace Parser {
     function tryGroup() {
 
         let n = start(PhraseType.TryGroup);
-        phrase(tryStmt, [][TokenType.T_CATCH, TokenType.T_FINALLY]);
+        phrase(tryStmt, [][TokenType.Catch, TokenType.Finally]);
 
-        if (peek().tokenType === TokenType.T_CATCH) {
-            phrase(catches, [], [TokenType.T_FINALLY]);
+        if (peek().tokenType === TokenType.Catch) {
+            phrase(catches, [], [TokenType.Finally]);
         }
 
-        if (peek().tokenType === TokenType.T_FINALLY) {
+        if (peek().tokenType === TokenType.Finally) {
             phrase(finallyStatement, []);
         }
 
@@ -1584,18 +1592,18 @@ export namespace Parser {
     function tryStmt() {
         let n = start(PhraseType.Try);
         next(); //try
-        n.children.push(block());
+        n.children.push(compoundStatement());
         return end();
     }
 
     function catches() {
 
         start(PhraseType.Catches);
-        let recover = [TokenType.T_CATCH];
+        let recover = [TokenType.Catch];
 
         while (true) {
 
-            if (peek().tokenType === TokenType.T_CATCH) {
+            if (peek().tokenType === TokenType.Catch) {
                 phrase(catchStatement, [], recover);
             } else {
                 break;
@@ -1611,7 +1619,7 @@ export namespace Parser {
 
         let n = start(PhraseType.Finally);
         next(); //T_FINALLY
-        n.children.push(block());
+        n.children.push(compoundStatement());
         return end();
 
     }
@@ -1621,14 +1629,14 @@ export namespace Parser {
         start(PhraseType.Catch);
         next(); //catch
 
-        if(!expect('(')){
+        if (!expect('(')) {
             return end();
         }
 
         phrase(catchNameList, [], [')', '{']);
-        expect(TokenType.T_VARIABLE, [')', '{']);
+        expect(TokenType.VariableName, [')', '{']);
         expect(')', [')', '{']);
-        phrase(block, [], ['{']);
+        phrase(compoundStatement, [], ['{']);
         return end();
 
     }
@@ -1640,12 +1648,12 @@ export namespace Parser {
 
         while (true) {
 
-            n.children.push(name());
+            n.children.push(qualifiedName());
             t = peek();
 
             if (t.tokenType === '|') {
                 next();
-            } else if (t.tokenType === TokenType.T_VARIABLE) {
+            } else if (t.tokenType === TokenType.VariableName) {
                 break;
             } else {
                 error();
@@ -1665,11 +1673,11 @@ export namespace Parser {
         recover.push(':');
         next(); //declare
 
-        if(!expect('(')){
+        if (!expect('(')) {
             return end();
         }
 
-        phrase(constantDeclarations, [PhraseType.ConstantDeclarations, ')'], [')']);
+        phrase(constElements, [PhraseType.ConstElements, ')'], [')']);
         expect(')', recover);
 
         let t = peek();
@@ -1677,8 +1685,8 @@ export namespace Parser {
         if (t.tokenType === ':') {
 
             next();
-            phrase(innerStatementList, [[TokenType.T_ENDDECLARE]], [TokenType.T_ENDDECLARE, ';']);
-            expect(TokenType.T_ENDDECLARE, [';']);
+            phrase(innerStatementList, [[TokenType.EndDeclare]], [TokenType.EndDeclare, ';']);
+            expect(TokenType.EndDeclare, [';']);
             expect(';', [';']);
 
         } else if (isStatementStartToken(t)) {
@@ -1695,17 +1703,17 @@ export namespace Parser {
 
         start(PhraseType.Switch);
         next(); //switch
-        let recover = [':', '{', TokenType.T_CASE, TokenType.T_DEFAULT, TokenType.T_ENDSWITCH];
+        let recover = [':', '{', TokenType.Case, TokenType.Default, TokenType.EndSwitch];
         phrase(encapsulatedExpression, ['(', ')'], recover);
         expectOneOf(['{', ':'], recover);
 
         next(';');
-        phrase(cases, [], ['}', TokenType.T_ENDSWITCH], [TokenType.T_CASE, TokenType.T_DEFAULT]);
+        phrase(cases, [], ['}', TokenType.EndSwitch], [TokenType.Case, TokenType.Default]);
         let t = peek();
 
         if (t.tokenType === '}') {
             next();
-        } else if (t.tokenType === TokenType.T_ENDSWITCH) {
+        } else if (t.tokenType === TokenType.EndSwitch) {
             next();
             expect(';', [';']);
         } else {
@@ -1719,21 +1727,21 @@ export namespace Parser {
     function cases() {
 
         let n = start(PhraseType.Cases);
-        let recover: (TokenType | string)[] = [TokenType.T_CASE, TokenType.T_DEFAULT];
+        let recover: (TokenType | string)[] = [TokenType.Case, TokenType.Default];
         let t: Token;
-        let breakOn = ['}', TokenType.T_ENDSWITCH];
+        let breakOn = ['}', TokenType.EndSwitch];
 
         while (true) {
 
             t = peek();
 
-            if (t.tokenType === TokenType.T_CASE || t.tokenType === TokenType.T_DEFAULT) {
+            if (t.tokenType === TokenType.Case || t.tokenType === TokenType.Default) {
                 phrase(caseStatement, [], recover);
             } else if (breakOn.indexOf(t.tokenType) >= 0) {
                 break;
             } else {
                 //error
-                let rec = [TokenType.T_CASE, TokenType.T_DEFAULT, '}', TokenType.T_ENDSWITCH];
+                let rec = [TokenType.Case, TokenType.Default, '}', TokenType.EndSwitch];
                 if (rec.indexOf(error(undefined, rec).tokenType) >= 0) {
                     break;
                 }
@@ -1750,10 +1758,10 @@ export namespace Parser {
         let n = start(PhraseType.Case);
         let t = peek();
 
-        if (t.tokenType === TokenType.T_CASE) {
+        if (t.tokenType === TokenType.Case) {
             next();
             phrase(expression, [0], [';', ':']);
-        } else if (t.tokenType === TokenType.T_DEFAULT) {
+        } else if (t.tokenType === TokenType.Default) {
             next();
         } else {
             //error
@@ -1764,7 +1772,7 @@ export namespace Parser {
         expectOneOf([':', ';'], [...recoverInnerStatementStartTokenTypes, ':']);
 
         if (isInnerStatementStartToken(peek())) {
-            phrase(innerStatementList, [['}', TokenType.T_ENDSWITCH, TokenType.T_CASE, TokenType.T_DEFAULT]]);
+            phrase(innerStatementList, [['}', TokenType.EndSwitch, TokenType.Case, TokenType.Default]]);
         }
 
         return end();
@@ -1784,7 +1792,7 @@ export namespace Parser {
 
         let n = start(PhraseType.Goto);
         next();
-        expect(TokenType.T_STRING, [';']);
+        expect(TokenType.Name, [';']);
         expect(';', [';']);
         return end();
 
@@ -1808,14 +1816,14 @@ export namespace Parser {
             return end();
         }
 
-        let recover = [...recoverStatementStartTokenTypes, ':', ')', TokenType.T_DOUBLE_ARROW, TokenType.T_AS];
+        let recover = [...recoverStatementStartTokenTypes, ':', ')', TokenType.FatArrow, TokenType.As];
         phrase(expression, [0], recover);
         recover.pop();
-        expect(TokenType.T_AS, recover);
+        expect(TokenType.As, recover);
         phrase(foreachVariable, [], recover, foreachVariableStartTokenTypes);
         recover.pop();
 
-        if (next(TokenType.T_DOUBLE_ARROW)) {
+        if (next(TokenType.FatArrow)) {
             phrase(foreachVariable, [], recover);
         }
 
@@ -1826,8 +1834,8 @@ export namespace Parser {
 
         if (t.tokenType === ':') {
             next();
-            phrase(innerStatementList, [[TokenType.T_ENDFOREACH]], [TokenType.T_ENDFOREACH, ';']);
-            expect(TokenType.T_ENDFOREACH, [';']);
+            phrase(innerStatementList, [[TokenType.EndForeach]], [TokenType.EndForeach, ';']);
+            expect(TokenType.EndForeach, [';']);
             expect(';', [';']);
         } else if (isStatementStartToken(t)) {
             phrase(statement, []);
@@ -1849,7 +1857,7 @@ export namespace Parser {
                 next();
                 unary.children.push(variable());
                 return end();
-            case TokenType.T_LIST:
+            case TokenType.List:
                 return listExpression();
             case '[':
                 return shortArray();
@@ -1870,16 +1878,16 @@ export namespace Parser {
     function isVariableStartToken(t: Token) {
 
         switch (t.tokenType) {
-            case TokenType.T_VARIABLE:
+            case TokenType.VariableName:
             case '$':
             case '(':
-            case TokenType.T_ARRAY:
+            case TokenType.Array:
             case '[':
-            case TokenType.T_CONSTANT_ENCAPSED_STRING:
-            case TokenType.T_STATIC:
-            case TokenType.T_STRING:
-            case TokenType.T_NAMESPACE:
-            case TokenType.T_NS_SEPARATOR:
+            case TokenType.StringLiteral:
+            case TokenType.Static:
+            case TokenType.Name:
+            case TokenType.Namespace:
+            case TokenType.Backslash:
                 return true;
             default:
                 return false;
@@ -2030,11 +2038,11 @@ export namespace Parser {
 
         let n = tempNode(PhraseType.StaticVariable);
 
-        if (peek().tokenType === TokenType.T_VARIABLE) {
+        if (peek().tokenType === TokenType.VariableName) {
             n.children.push(nodeFactory(next()));
         } else {
             n.children.push(nodeFactory(null), nodeFactory(null));
-            error([TokenType.T_VARIABLE]);
+            error([TokenType.VariableName]);
             return node(n);
         }
 
@@ -2116,13 +2124,13 @@ export namespace Parser {
 
         if (expect(':')) {
 
-            recoverPush([TokenType.T_ENDFOR, ';']);
-            n.children.push(innerStatementList([TokenType.T_ENDFOR]));
+            recoverPush([TokenType.EndFor, ';']);
+            n.children.push(innerStatementList([TokenType.EndFor]));
             recoverPop();
 
-            if (!next(TokenType.T_ENDFOR)) {
+            if (!next(TokenType.EndFor)) {
                 //error
-                error([TokenType.T_ENDFOR], [';']);
+                error([TokenType.EndFor], [';']);
             }
 
             if (!expect(';')) {
@@ -2177,14 +2185,14 @@ export namespace Parser {
         let n = tempNode(PhraseType.DoWhile);
         next();
 
-        recoverPush([TokenType.T_WHILE, ';']);
+        recoverPush([TokenType.While, ';']);
         n.children.push(statement());
         recoverPop();
 
-        if (!next(TokenType.T_WHILE)) {
+        if (!next(TokenType.While)) {
             //error
             n.children.push(nodeFactory(null));
-            error([TokenType.T_WHILE], [';']);
+            error([TokenType.While], [';']);
             expect(';');
             return node(n);
         }
@@ -2214,13 +2222,13 @@ export namespace Parser {
         recoverPop();
 
         if (expect(':')) {
-            recoverPush([TokenType.T_ENDWHILE, ';']);
-            n.children.push(innerStatementList([TokenType.T_ENDWHILE]));
+            recoverPush([TokenType.EndWhile, ';']);
+            n.children.push(innerStatementList([TokenType.EndWhile]));
             recoverPop();
 
-            if (!next(TokenType.T_ENDWHILE)) {
+            if (!next(TokenType.EndWhile)) {
                 //error
-                error([TokenType.T_ENDWHILE], [';']);
+                error([TokenType.EndWhile], [';']);
             }
 
             if (!expect(';')) {
@@ -2242,7 +2250,7 @@ export namespace Parser {
 
         let n = tempNode(PhraseType.IfList);
         let discoverAlt = { isAlt: false };
-        let followOn = [TokenType.T_ELSEIF, TokenType.T_ELSE, TokenType.T_ENDIF];
+        let followOn = [TokenType.ElseIf, TokenType.Else, TokenType.EndIf];
         recoverPush(followOn);
         n.children.push(ifStatement(false, discoverAlt));
         recoverPop();
@@ -2253,7 +2261,7 @@ export namespace Parser {
 
             t = peek();
 
-            if (t.tokenType === TokenType.T_ELSEIF || t.tokenType === TokenType.T_ELSE) {
+            if (t.tokenType === TokenType.ElseIf || t.tokenType === TokenType.Else) {
                 n.children.push(ifStatement(discoverAlt.isAlt));
             } else {
                 break;
@@ -2265,9 +2273,9 @@ export namespace Parser {
 
         if (discoverAlt.isAlt) {
 
-            if (!next(TokenType.T_ENDIF)) {
+            if (!next(TokenType.EndIf)) {
                 //error
-                error([TokenType.T_ENDIF], [';']);
+                error([TokenType.EndIf], [';']);
             }
 
             if (!expect(';')) {
@@ -2286,7 +2294,7 @@ export namespace Parser {
         let n = tempNode(PhraseType.If);
         let t = peek();
 
-        if (t.tokenType === TokenType.T_IF || t.tokenType === TokenType.T_ELSEIF) {
+        if (t.tokenType === TokenType.If || t.tokenType === TokenType.ElseIf) {
 
             let recover = recoverStatementStartTokenTypes.slice(0);
             recover.push(':');
@@ -2294,7 +2302,7 @@ export namespace Parser {
             n.children.push(encapsulatedExpression('(', ')'));
             recoverPop();
 
-        } else if (t.tokenType === TokenType.T_ELSE) {
+        } else if (t.tokenType === TokenType.Else) {
             next();
             n.children.push(nodeFactory(null));
         } else {
@@ -2306,7 +2314,7 @@ export namespace Parser {
                 discoverAlt.isAlt = true;
             }
 
-            n.children.push(innerStatementList([TokenType.T_ENDIF, TokenType.T_ELSEIF, TokenType.T_ELSE]));
+            n.children.push(innerStatementList([TokenType.EndIf, TokenType.ElseIf, TokenType.Else]));
         } else if (isStatementStartToken(peek())) {
             n.children.push(statement());
         } else {
@@ -2338,36 +2346,33 @@ export namespace Parser {
 
     function returnType() {
         next(); //:
-        return typeExpression();
+        return typeDeclaration();
     }
 
-    function typeExpression() {
+    function typeDeclaration() {
 
-        let n = tempNode(PhraseType.TypeExpression);
-
-        if (expect('?')) {
-            n.value.flag = PhraseFlag.Nullable;
-        }
+        let p = start(PhraseType.TypeDeclaration);
+        optional(TokenType.Question);
 
         switch (peek().tokenType) {
-            case TokenType.T_CALLABLE:
-            case TokenType.T_ARRAY:
-                n.children.push(nodeFactory(next()));
+            case TokenType.Callable:
+            case TokenType.Array:
+                next();
                 break;
-            case TokenType.T_STRING:
-            case TokenType.T_NAMESPACE:
-            case TokenType.T_NS_SEPARATOR:
-                n.children.push(name());
+            case TokenType.Name:
+            case TokenType.Namespace:
+            case TokenType.Backslash:
+                p.children.push(qualifiedName());
                 break;
             default:
                 //error
-                error(n,
-                    [TokenType.T_CALLABLE, TokenType.T_ARRAY, TokenType.T_STRING, TokenType.T_NAMESPACE, TokenType.T_NS_SEPARATOR]
+                error(p,
+                    [TokenType.Callable, TokenType.Array, TokenType.Name, TokenType.Namespace, TokenType.Backslash]
                 );
                 break;
         }
 
-        return node(n);
+        return p;
 
     }
 
@@ -2403,57 +2408,57 @@ export namespace Parser {
     function isExpressionStartToken(t: Token) {
 
         switch (t.tokenType) {
-            case TokenType.T_VARIABLE:
+            case TokenType.VariableName:
             case '$':
-            case TokenType.T_ARRAY:
+            case TokenType.Array:
             case '[':
-            case TokenType.T_CONSTANT_ENCAPSED_STRING:
-            case TokenType.T_NS_SEPARATOR:
-            case TokenType.T_STRING:
-            case TokenType.T_NAMESPACE:
+            case TokenType.StringLiteral:
+            case TokenType.Backslash:
+            case TokenType.Name:
+            case TokenType.Namespace:
             case '(':
-            case TokenType.T_STATIC:
-            case TokenType.T_INC:
-            case TokenType.T_DEC:
+            case TokenType.Static:
+            case TokenType.PlusPlus:
+            case TokenType.MinusMinus:
             case '+':
             case '-':
             case '!':
             case '~':
             case '@':
-            case TokenType.T_INT_CAST:
-            case TokenType.T_DOUBLE_CAST:
-            case TokenType.T_STRING_CAST:
-            case TokenType.T_ARRAY_CAST:
-            case TokenType.T_OBJECT_CAST:
-            case TokenType.T_BOOL_CAST:
-            case TokenType.T_UNSET_CAST:
-            case TokenType.T_LIST:
-            case TokenType.T_CLONE:
-            case TokenType.T_NEW:
-            case TokenType.T_DNUMBER:
-            case TokenType.T_LNUMBER:
-            case TokenType.T_LINE:
-            case TokenType.T_FILE:
+            case TokenType.IntegerCast:
+            case TokenType.FloatCast:
+            case TokenType.StringCast:
+            case TokenType.ArrayCast:
+            case TokenType.ObjectCast:
+            case TokenType.BooleanCast:
+            case TokenType.UnsetCast:
+            case TokenType.List:
+            case TokenType.Clone:
+            case TokenType.New:
+            case TokenType.FloatingLiteral:
+            case TokenType.IntegerLiteral:
+            case TokenType.LineConstant:
+            case TokenType.FileConstant:
             case TokenType.T_DIR:
-            case TokenType.T_TRAIT_C:
-            case TokenType.T_METHOD_C:
-            case TokenType.T_FUNC_C:
-            case TokenType.T_NS_C:
-            case TokenType.T_CLASS_C:
-            case TokenType.T_START_HEREDOC:
+            case TokenType.TraitConstant:
+            case TokenType.MethodConstant:
+            case TokenType.FunctionConstant:
+            case TokenType.NamespaceConstant:
+            case TokenType.ClassConstant:
+            case TokenType.StartHeredoc:
             case '"':
             case '`':
-            case TokenType.T_PRINT:
-            case TokenType.T_YIELD:
-            case TokenType.T_YIELD_FROM:
-            case TokenType.T_FUNCTION:
-            case TokenType.T_INCLUDE:
-            case TokenType.T_INCLUDE_ONCE:
-            case TokenType.T_REQUIRE:
-            case TokenType.T_REQUIRE_ONCE:
-            case TokenType.T_EVAL:
-            case TokenType.T_EMPTY:
-            case TokenType.T_ISSET:
+            case TokenType.Print:
+            case TokenType.Yield:
+            case TokenType.YieldFrom:
+            case TokenType.Function:
+            case TokenType.Include:
+            case TokenType.IncludeOnce:
+            case TokenType.Require:
+            case TokenType.RequireOnce:
+            case TokenType.Eval:
+            case TokenType.Empty:
+            case TokenType.Isset:
                 return true;
             default:
                 return false;
@@ -2519,9 +2524,9 @@ export namespace Parser {
 
         let n = tempNode(PhraseType.PropertyDeclaration);
 
-        if (!next(TokenType.T_VARIABLE)) {
+        if (!next(TokenType.VariableName)) {
             //error
-            error([TokenType.T_VARIABLE]);
+            error([TokenType.VariableName]);
             n.children.push(nodeFactory(null), nodeFactory(null));
             return node(n);
         }
@@ -2553,12 +2558,12 @@ export namespace Parser {
 
     function isMemberModifier(t: Token) {
         switch (t.tokenType) {
-            case TokenType.T_PUBLIC:
-            case TokenType.T_PROTECTED:
-            case TokenType.T_PRIVATE:
-            case TokenType.T_STATIC:
-            case TokenType.T_ABSTRACT:
-            case TokenType.T_FINAL:
+            case TokenType.Public:
+            case TokenType.Protected:
+            case TokenType.Private:
+            case TokenType.Static:
+            case TokenType.Abstract:
+            case TokenType.Final:
                 return true;
             default:
                 return false;
@@ -2571,7 +2576,7 @@ export namespace Parser {
         let n = tempNode(PhraseType.NameList);
 
         while (true) {
-            n.children.push(name());
+            n.children.push(qualifiedName());
 
             if (!expect(',')) {
                 break;
@@ -2587,7 +2592,7 @@ export namespace Parser {
         let n = tempNode(PhraseType.New);
         next(); //new
 
-        if (peek().tokenType === TokenType.T_CLASS) {
+        if (peek().tokenType === TokenType.Class) {
             n.children.push(anonymousClassDeclaration());
             return node(n);
         }
@@ -2618,13 +2623,13 @@ export namespace Parser {
                 case '{':
                     part = dimension(part, startToken);
                     continue;
-                case TokenType.T_OBJECT_OPERATOR:
+                case TokenType.Arrow:
                     n = tempNode(PhraseType.Property, startToken);
                     next();
                     n.children.push(part, propertyName());
                     part = node(n);
                     continue;
-                case TokenType.T_PAAMAYIM_NEKUDOTAYIM:
+                case TokenType.ColonColon:
                     n = tempNode(PhraseType.StaticProperty, startToken);
                     next();
                     n.children.push(part, simpleVariable());
@@ -2648,23 +2653,23 @@ export namespace Parser {
         let n = tempNode(PhraseType.ErrorVariable);
 
         switch (t.tokenType) {
-            case TokenType.T_STATIC:
+            case TokenType.Static:
                 n.value.phraseType = PhraseType.Name;
                 n.value.flag = PhraseFlag.NameNotFullyQualified;
                 n.children.push(nodeFactory(next()));
                 return node(n);
-            case TokenType.T_VARIABLE:
+            case TokenType.VariableName:
             case '$':
                 return simpleVariable();
-            case TokenType.T_STRING:
-            case TokenType.T_NAMESPACE:
-            case TokenType.T_NS_SEPARATOR:
-                return name();
+            case TokenType.Name:
+            case TokenType.Namespace:
+            case TokenType.Backslash:
+                return qualifiedName();
             default:
                 //error
                 error(n,
-                    [TokenType.T_STATIC, TokenType.T_VARIABLE, '$', TokenType.T_STRING,
-                    TokenType.T_NAMESPACE, TokenType.T_NS_SEPARATOR]
+                    [TokenType.Static, TokenType.VariableName, '$', TokenType.Name,
+                    TokenType.Namespace, TokenType.Backslash]
                 );
                 return node(n);
         }
@@ -2730,7 +2735,7 @@ export namespace Parser {
     function closure() {
 
         let n = tempNode(PhraseType.Closure);
-        if (next(TokenType.T_STATIC)) {
+        if (next(TokenType.Static)) {
             n.value.flag = PhraseFlag.ModifierStatic;
         }
 
@@ -2740,11 +2745,11 @@ export namespace Parser {
             n.value.flag |= PhraseFlag.ReturnsRef;
         }
 
-        recoverPush([TokenType.T_USE, ':', '{']);
+        recoverPush([TokenType.Use, ':', '{']);
         n.children.push(parameterList());
         recoverPop();
 
-        if (peek().tokenType === TokenType.T_USE) {
+        if (peek().tokenType === TokenType.Use) {
             recoverPush([':', '{']);
             n.children.push(closureUse());
             recoverPop();
@@ -2823,108 +2828,49 @@ export namespace Parser {
             n.value.flag = PhraseFlag.PassByRef;
         }
 
-        if (next(TokenType.T_VARIABLE)) {
+        if (next(TokenType.VariableName)) {
             n.children.push(nodeFactory(current()));
         } else {
             //error
-            error([TokenType.T_VARIABLE]);
+            error([TokenType.VariableName]);
         }
 
         return node(n);
 
     }
 
-    function parameterList() {
-
-        let n = tempNode(PhraseType.ParameterList);
-        let t: Token;
-
-        if (!expect('(')) {
-            //error
-            error(['('], [')']);
-            expect(')');
-            return node(n);
-        }
-
-        if (expect(')')) {
-            return node(n);
-        }
-
-        let followOn: (TokenType | string)[] = [',', ')'];
-
-        while (true) {
-
-            recoverPush(followOn);
-            n.children.push(parameter());
-            recoverPop();
-            t = peek();
-
-            if (t.tokenType === ',') {
-                next();
-            } else if (t.tokenType === ')') {
-                next();
-                break;
-            } else {
-                //error
-                error(followOn, [')']);
-                expect(')');
-                break;
-            }
-        }
-
-        return node(n);
-
-    }
-
-    function isTypeExpressionStartToken(t: Token) {
+    function isTypeDeclarationStart(t: Token) {
         switch (t.tokenType) {
-            case TokenType.T_NS_SEPARATOR:
-            case TokenType.T_STRING:
-            case TokenType.T_NAMESPACE:
-            case '?':
-            case TokenType.T_ARRAY:
-            case TokenType.T_CALLABLE:
+            case TokenType.Backslash:
+            case TokenType.Name:
+            case TokenType.Namespace:
+            case TokenType.Question:
+            case TokenType.Array:
+            case TokenType.Callable:
                 return true;
             default:
                 return false;
         }
     }
 
-    function parameter() {
+    function parameterDeclaration() {
 
-        let n = tempNode(PhraseType.Parameter);
+        let p = start(PhraseType.ParameterDeclaration);
 
-        if (isTypeExpressionStartToken(peek())) {
-            recoverPush(['&', TokenType.T_ELLIPSIS, TokenType.T_VARIABLE]);
-            n.children.push(typeExpression());
-            recoverPop();
-        } else {
-            n.children.push(nodeFactory(null));
+        if (isTypeDeclarationStart(peek())) {
+            p.children.push(typeDeclaration());
         }
 
-        if (expect('&')) {
-            n.value.flag = PhraseFlag.PassByRef;
+        optional(TokenType.Ampersand);
+        optional(TokenType.Ellipsis);
+        expect(TokenType.VariableName);
+        
+        if(peek().tokenType === TokenType.Equals){
+            next();
+            p.children.push(expression(0));
         }
 
-        if (next(TokenType.T_ELLIPSIS)) {
-            n.value.flag = PhraseFlag.Variadic;
-        }
-
-        if (next(TokenType.T_VARIABLE)) {
-            n.children.push(nodeFactory(current()));
-        } else {
-            n.children.push(nodeFactory(null));
-            error([TokenType.T_VARIABLE]);
-            return node(n);
-        }
-
-        if (expect('=')) {
-            n.children.push(expression());
-        } else {
-            n.children.push(nodeFactory(null));
-        }
-
-        return node(n);
+        return p;
 
     }
 
@@ -2940,10 +2886,10 @@ export namespace Parser {
         while (true) {
             ++count;
             switch (peek().tokenType) {
-                case TokenType.T_PAAMAYIM_NEKUDOTAYIM:
+                case TokenType.ColonColon:
                     variableAtomNode = staticMember(variableAtomNode, startToken);
                     continue;
-                case TokenType.T_OBJECT_OPERATOR:
+                case TokenType.Arrow:
                     variableAtomNode = instanceMember(variableAtomNode, startToken);
                     continue;
                 case '[':
@@ -2961,7 +2907,7 @@ export namespace Parser {
                         let errNode = tempNode(PhraseType.ErrorVariable, startToken);
                         errNode.children.push(variableAtomNode);
                         error(errNode,
-                            [TokenType.T_PAAMAYIM_NEKUDOTAYIM, TokenType.T_OBJECT_OPERATOR, '[', '{', '(']);
+                            [TokenType.ColonColon, TokenType.Arrow, '[', '{', '(']);
                         return node(errNode);
                     }
                     break;
@@ -2986,11 +2932,11 @@ export namespace Parser {
                 n.children.push(encapsulatedExpression('{', '}'));
                 break;
             case '$':
-            case TokenType.T_VARIABLE:
+            case TokenType.VariableName:
                 n.children.push(simpleVariable());
                 n.value.phraseType = PhraseType.StaticProperty;
                 break;
-            case TokenType.T_STRING:
+            case TokenType.Name:
                 n.children.push(identifier());
                 n.value.phraseType = PhraseType.ClassConstant;
                 break;
@@ -3002,7 +2948,7 @@ export namespace Parser {
                 } else {
                     //error
                     error(n,
-                        ['{', '$', TokenType.T_VARIABLE, TokenType.T_STRING]
+                        ['{', '$', TokenType.VariableName, TokenType.Name]
                     );
                     return node(n);
                 }
@@ -3043,17 +2989,17 @@ export namespace Parser {
     function propertyName() {
 
         switch (peek().tokenType) {
-            case TokenType.T_STRING:
+            case TokenType.Name:
                 return nodeFactory(next());
             case '{':
                 return encapsulatedExpression('{', '}');
             case '$':
-            case TokenType.T_VARIABLE:
+            case TokenType.VariableName:
                 return simpleVariable();
             default:
                 //error
                 let e = tempNode(PhraseType.Error);
-                error(e, [TokenType.T_STRING, '{', '$']);
+                error(e, [TokenType.Name, '{', '$']);
                 return node(e);
         }
 
@@ -3126,7 +3072,7 @@ export namespace Parser {
     }
 
     function isArgumentStartToken(t: Token) {
-        return t.tokenType === TokenType.T_ELLIPSIS || isExpressionStartToken(t);
+        return t.tokenType === TokenType.Ellipsis || isExpressionStartToken(t);
     }
 
     function argument() {
@@ -3134,7 +3080,7 @@ export namespace Parser {
         let n = start(PhraseType.ErrorArgument);
         let t = peek();
 
-        if (t.tokenType === TokenType.T_ELLIPSIS) {
+        if (t.tokenType === TokenType.Ellipsis) {
             next();
             n.value.phraseType = PhraseType.Unary;
             n.children.push(expression());
@@ -3149,28 +3095,34 @@ export namespace Parser {
 
     }
 
-    function name() {
+    function qualifiedName() {
 
-        let n = tempNode(PhraseType.Name);
+        let p = start(PhraseType.QualifiedName);
+        let t = peek();
 
-        if (next(TokenType.T_NS_SEPARATOR)) {
-            n.value.flag = PhraseFlag.NameFullyQualified;
-        } else if (next(TokenType.T_NAMESPACE)) {
-            n.value.flag = PhraseFlag.NameRelative;
-            if (!next(TokenType.T_NS_SEPARATOR)) {
-                //error
-                if (error([TokenType.T_NS_SEPARATOR], [TokenType.T_STRING]).tokenType !== TokenType.T_STRING) {
-                    n.children.push(nodeFactory(null));
-                    return node(n);
-                }
-            }
-        } else {
-            n.value.flag = PhraseFlag.NameNotFullyQualified;
+        if (t.tokenType === TokenType.Backslash) {
+            next();
+            p.phraseType = PhraseType.FullyQualifiedName;
+        } else if (t.tokenType === TokenType.Namespace) {
+            p.phraseType = PhraseType.RelativeQualifiedName;
+            next();
+            expect(TokenType.Backslash);
         }
 
-        n.children.push(namespaceName());
-        return node(n);
+        p.children.push(namespaceName());
+        return p;
 
+    }
+
+    function isQualifiedNameStartToken(t:Token){
+        switch(t.tokenType){
+            case TokenType.Backslash:
+            case TokenType.Name:
+            case TokenType.Namespace:
+                return true;
+            default:
+                return false;
+        }
     }
 
     function shortArray() {
@@ -3273,11 +3225,11 @@ export namespace Parser {
             return node(n);
         }
 
-        recoverPush([TokenType.T_DOUBLE_ARROW]);
+        recoverPush([TokenType.FatArrow]);
         n.children.push(expression());
         recoverPop();
 
-        if (!next(TokenType.T_DOUBLE_ARROW)) {
+        if (!next(TokenType.FatArrow)) {
             n.children.push(nodeFactory(null));
             return node(n);
         }
@@ -3329,38 +3281,38 @@ export namespace Parser {
 
         let n: TempNode;
         switch (peek().tokenType) {
-            case TokenType.T_VARIABLE:
+            case TokenType.VariableName:
             case '$':
                 variableAtomType = PhraseType.Variable;
                 return simpleVariable();
             case '(':
                 return encapsulatedExpression('(', ')');
-            case TokenType.T_ARRAY:
+            case TokenType.Array:
                 variableAtomType = PhraseType.ArrayPairList;
                 return longArray();
             case '[':
                 variableAtomType = PhraseType.ArrayPairList;
                 return shortArray();
-            case TokenType.T_CONSTANT_ENCAPSED_STRING:
+            case TokenType.StringLiteral:
                 return nodeFactory(next());
-            case TokenType.T_STATIC:
+            case TokenType.Static:
                 variableAtomType = PhraseType.Name;
                 n = tempNode(PhraseType.Name);
                 n.value.flag = PhraseFlag.NameNotFullyQualified;
                 n.children.push(nodeFactory(next()));
                 return node(n);
-            case TokenType.T_STRING:
-            case TokenType.T_NAMESPACE:
-            case TokenType.T_NS_SEPARATOR:
+            case TokenType.Name:
+            case TokenType.Namespace:
+            case TokenType.Backslash:
                 variableAtomType = PhraseType.Name;
-                return name();
+                return qualifiedName();
             default:
                 //error
                 variableAtomType = PhraseType.ErrorVariable;
                 n = tempNode(PhraseType.ErrorVariable);
                 error(n,
-                    [TokenType.T_VARIABLE, '$', '(', '[', TokenType.T_ARRAY, TokenType.T_CONSTANT_ENCAPSED_STRING,
-                    TokenType.T_STATIC, TokenType.T_STRING, TokenType.T_NAMESPACE, TokenType.T_NS_SEPARATOR]);
+                    [TokenType.VariableName, '$', '(', '[', TokenType.Array, TokenType.StringLiteral,
+                    TokenType.Static, TokenType.Name, TokenType.Namespace, TokenType.Backslash]);
                 return node(n);
         }
 
@@ -3371,18 +3323,18 @@ export namespace Parser {
         let n = tempNode(PhraseType.Variable);
         let t = peek();
 
-        if (t.tokenType === TokenType.T_VARIABLE) {
+        if (t.tokenType === TokenType.VariableName) {
             n.children.push(nodeFactory(next()));
         } else if (t.tokenType === '$') {
             next();
             t = peek();
             if (t.tokenType === '{') {
                 n.children.push(encapsulatedExpression('{', '}'));
-            } else if (t.tokenType === '$' || t.tokenType === TokenType.T_VARIABLE) {
+            } else if (t.tokenType === '$' || t.tokenType === TokenType.VariableName) {
                 n.children.push(simpleVariable());
             } else {
                 //error
-                error(['{', '$', TokenType.T_VARIABLE]);
+                error(['{', '$', TokenType.VariableName]);
             }
         } else {
             //shouldnt get here
@@ -3399,123 +3351,82 @@ export namespace Parser {
 
     function haltCompilerStatement() {
 
-        let n = tempNode(PhraseType.HaltCompiler);
-        next();
-
-        let expected: (TokenType | string)[] = ['(', ')', ';'];
-        let t: Token;
-
-        if (!expect('(')) {
-            error(['('], [';']);
-            expect(';');
-            return node(n);
-        }
-
-        if (!expect(')')) {
-            error([')'], [';']);
-            expect(';');
-            return node(n);
-        }
-
-        if (!expect(';')) {
-            error([';'], [';']);
-            expect(';');
-        }
-
-        return node(n);
+        let p = start(PhraseType.HaltCompilerStatement);
+        next(); // __halt_compiler
+        expect(TokenType.OpenParenthesis);
+        expect(TokenType.CloseParenthesis);
+        expect(TokenType.Semicolon);
+        return p;
 
     }
 
-    function useStatement() {
+    function namespaceUseDeclaration() {
 
-        let n = tempNode(PhraseType.UseStatement);
-        next();
-
-        if (next(TokenType.T_FUNCTION)) {
-            n.value.flag = PhraseFlag.UseFunction;
-        } else if (next(TokenType.T_CONST)) {
-            n.value.flag = PhraseFlag.UseConstant;
-        }
-
-        let useListNode = tempNode(PhraseType.UseStatement);
-        let useElementNode = tempNode(PhraseType.UseDeclaration);
-        next(TokenType.T_NS_SEPARATOR);
-
-        recoverPush([TokenType.T_NS_SEPARATOR, ',', ';']);
-        let nsName = namespaceName();
-        recoverPop();
-
+        let p = start(PhraseType.NamespaceUseDeclaration);
+        next(); //use
+        optionalOneOf([TokenType.Function, TokenType.Const]);
+        let qualifiedName = qualifiedName();
         let t = peek();
-        if (next(TokenType.T_NS_SEPARATOR) || t.tokenType === '{') {
-            if (t.tokenType === '{') {
-                n.value.errors.push(new ParseError(t, [TokenType.T_NS_SEPARATOR]));
+
+        if (t.tokenType === TokenType.Backslash || TokenType.OpenBrace) {
+            p.children.push(qualifiedName);
+            expect(TokenType.Backslash);
+            expect(TokenType.OpenBrace);
+            p.children.push(delimitedList(
+                PhraseType.NamespaceUseGroupClauses,
+                namespaceUseGroupClause,
+                isNamespaceUseGroupClauseStartToken,
+                TokenType.Comma,
+                TokenType.CloseBrace
+            ));
+            return p
+        } 
+
+        p.children.push(delimitedList(
+            PhraseType.NamespaceUseClauses,
+            namespaceUseClauseFunction(qualifiedName),
+            isQualifiedNameStartToken,
+            TokenType.Comma,
+            TokenType.Semicolon));
+
+        expect(TokenType.Semicolon);
+        return p;
+
+    }
+
+    function namespaceUseClauseFunction(qName:Phrase){
+
+        return () => {
+
+            let p = start(PhraseType.NamespaceUseClause);
+
+            if(qName){
+                p.children.push(qName);
+                qName = undefined;
+            } else {
+                p.children.push(qualifiedName());
             }
-            n.value.phraseType = PhraseType.UseGroup;
-            n.children.push(nsName);
-            return useGroup(n);
-        }
 
-        if (!n.value.flag) {
-            n.value.flag = PhraseFlag.UseClass;
-        }
+            if(peek().tokenType === TokenType.As){
+                p.children.push(namespaceAliasingClause());
+            }
 
-        useElementNode.children.push(nsName);
-        recoverPush([',', ';']);
-        useListNode.children.push(useElement(useElementNode, false, true));
-        recoverPop();
+            return p;
 
-        if (expect(',')) {
-            recoverPush([';']);
-            n.children.push(useList(useListNode, false, true, ';'));
-            recoverPop();
-        }
+        };
 
-        if (!expect(';')) {
-            error([';'], [';']);
-            expect(';');
-        }
-
-        return node(n);
     }
 
-    function useGroup(n: TempNode) {
-
-        if (!expect('{')) {
-            //error
-            error(['{'], [';']);
-            expect(';');
-            n.children.push(nodeFactory(null));
-            return node(n);
-        }
-
-        recoverPush(['}', ';']);
-        n.children.push(useList(tempNode(PhraseType.UseList), !n.value.flag, false, '}'));
-        recoverPop();
-
-        if (!expect('}')) {
-            error(['}'], [';']);
-        }
-
-        if (!expect(';')) {
-            error([';'], [';']);
-            expect(';');
-        }
-
-        return node(n);
-    }
-
-    function useList(n: TempNode, isMixed: boolean, lookForPrefix: boolean, breakOn: TokenType | string) {
-
-        let t: Token;
-        let followOn: (TokenType | string)[] = [','];
+    function delimitedList(phraseType: PhraseType, elementFunction: () => Phrase,
+        elementStartTokenPredicate: Predicate, delimeter: TokenType, breakOn: TokenType) {
+        let p = start(phraseType);
 
         while (true) {
 
-            recoverPush(followOn);
-            n.children.push(useElement(tempNode(PhraseType.UseDeclaration), isMixed, lookForPrefix));
-            recoverPop();
+            n.children.push(elementFunction);
             t = peek();
-            if (t.tokenType === ',') {
+
+            if (t.tokenType === delimeter) {
                 next();
             } else if (t.tokenType === breakOn) {
                 break;
@@ -3530,184 +3441,155 @@ export namespace Parser {
 
         }
 
-        return node(n);
+        return p;
+    }
+
+    function isNamespaceUseGroupClauseStartToken(t: Token) {
+        switch (t.tokenType) {
+            case TokenType.Const:
+            case TokenType.Function:
+            case TokenType.Name:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    function namespaceUseGroupClause() {
+
+        let p = start(PhraseType.NamespaceUseGroupClause);
+        optionalOneOf([TokenType.Function, TokenType.Const]);
+        p.children.push(namespaceName());
+
+        if (peek().tokenType === TokenType.As) {
+            p.children.push(namespaceAliasingClause());
+        }
+
+        return p;
 
     }
 
-    function useElement(n: TempNode, isMixed: boolean, lookForPrefix: boolean) {
+    function namespaceAliasingClause() {
 
-        //if children not empty then it contains tokens to left of T_AS
-        if (!n.children.length) {
+        let p = start(PhraseType.NamespaceAliasingClause);
+        next(); //as
+        expect(TokenType.Name);
+        return p;
 
-            if (isMixed) {
-                if (next(TokenType.T_FUNCTION)) {
-                    n.value.flag = PhraseFlag.UseFunction;
-                } else if (next(TokenType.T_CONST)) {
-                    n.value.flag = PhraseFlag.UseConstant;
-                } else {
-                    n.value.flag = PhraseFlag.UseClass;
-                }
-            } else if (lookForPrefix) {
-                next(TokenType.T_NS_SEPARATOR);
+    }
+
+    function namespaceDefinition() {
+
+        let p = start(PhraseType.NamespaceDefinition);
+        next(); //namespace
+
+        if (peek().tokenType === TokenType.Name) {
+
+            p.children.push(namespaceName());
+            if (expectOneOf([TokenType.Semicolon, TokenType.OpenBrace]).tokenType !== TokenType.OpenBrace) {
+                return p;
             }
 
-            recoverPush([TokenType.T_AS]);
-            n.children.push(namespaceName());
-            recoverPop();
-        }
-
-        if (!next(TokenType.T_AS)) {
-            n.children.push(nodeFactory(null));
-            return node(n);
-        }
-
-        if (next(TokenType.T_STRING)) {
-            n.children.push(nodeFactory(current()));
         } else {
-            //error
-            n.children.push(nodeFactory(null));
-            error([TokenType.T_STRING]);
+            expect(TokenType.OpenBrace);
         }
 
-        return node(n);
-    }
-
-    function namespaceStatement() {
-
-        let n = tempNode(PhraseType.Namespace);
-        next();
-        lastDocComment;
-
-        if (peek().tokenType === TokenType.T_STRING) {
-
-            recoverPush([';', '{']);
-            n.children.push(namespaceName());
-            recoverPop();
-
-            if (expect(';')) {
-                n.children.push(nodeFactory(null));
-                return node(n);
-            }
-
-        }
-
-        if (!expect('{')) {
-            //error
-            n.children.push(nodeFactory(null));
-            error(['{']);
-            return node(n);
-        }
-
-        n.children.push(topStatements(true));
-
-        if (!expect('}')) {
-            error(['}'], ['}']);
-            expect('}');
-
-        }
-
-        return node(n);
+        p.children.push(statementList(TokenType.CloseBrace));
+        expect(TokenType.CloseBrace);
+        return p;
 
     }
 
     function namespaceName() {
 
-        let n = tempNode(PhraseType.NamespaceName);
-
-        if (peek().tokenType === TokenType.T_STRING) {
-            n.children.push(nodeFactory(next()));
-        } else {
-            //error
-            error([TokenType.T_STRING]);
-            return node(n);
-        }
+        let p = start(PhraseType.NamespaceName);
+        expect(TokenType.Name);
 
         while (true) {
 
-            if (peek().tokenType === TokenType.T_NS_SEPARATOR &&
-                peek(1).tokenType === TokenType.T_STRING) {
+            if (peek().tokenType === TokenType.Backslash &&
+                peek(1).tokenType === TokenType.Name) {
                 next();
-                n.children.push(nodeFactory(next()));
+                next();
             } else {
                 break;
             }
 
         }
 
-        return node(n);
+        return p;
 
     }
 
-
     function isReservedToken(t: Token) {
         switch (t.tokenType) {
-            case TokenType.T_INCLUDE:
-            case TokenType.T_INCLUDE_ONCE:
-            case TokenType.T_EVAL:
-            case TokenType.T_REQUIRE:
-            case TokenType.T_REQUIRE_ONCE:
-            case TokenType.T_LOGICAL_OR:
-            case TokenType.T_LOGICAL_XOR:
-            case TokenType.T_LOGICAL_AND:
-            case TokenType.T_INSTANCEOF:
-            case TokenType.T_NEW:
-            case TokenType.T_CLONE:
-            case TokenType.T_EXIT:
-            case TokenType.T_IF:
-            case TokenType.T_ELSEIF:
-            case TokenType.T_ELSE:
-            case TokenType.T_ENDIF:
-            case TokenType.T_ECHO:
-            case TokenType.T_DO:
-            case TokenType.T_WHILE:
-            case TokenType.T_ENDWHILE:
-            case TokenType.T_FOR:
-            case TokenType.T_ENDFOR:
-            case TokenType.T_FOREACH:
-            case TokenType.T_ENDFOREACH:
-            case TokenType.T_DECLARE:
-            case TokenType.T_ENDDECLARE:
-            case TokenType.T_AS:
-            case TokenType.T_TRY:
-            case TokenType.T_CATCH:
-            case TokenType.T_FINALLY:
-            case TokenType.T_THROW:
-            case TokenType.T_USE:
-            case TokenType.T_INSTEADOF:
-            case TokenType.T_GLOBAL:
-            case TokenType.T_VAR:
-            case TokenType.T_UNSET:
-            case TokenType.T_ISSET:
-            case TokenType.T_EMPTY:
-            case TokenType.T_CONTINUE:
-            case TokenType.T_GOTO:
-            case TokenType.T_FUNCTION:
-            case TokenType.T_CONST:
-            case TokenType.T_RETURN:
-            case TokenType.T_PRINT:
-            case TokenType.T_YIELD:
-            case TokenType.T_LIST:
-            case TokenType.T_SWITCH:
-            case TokenType.T_ENDSWITCH:
-            case TokenType.T_CASE:
-            case TokenType.T_DEFAULT:
-            case TokenType.T_BREAK:
-            case TokenType.T_ARRAY:
-            case TokenType.T_CALLABLE:
-            case TokenType.T_EXTENDS:
-            case TokenType.T_IMPLEMENTS:
-            case TokenType.T_NAMESPACE:
-            case TokenType.T_TRAIT:
-            case TokenType.T_INTERFACE:
-            case TokenType.T_CLASS:
-            case TokenType.T_CLASS_C:
-            case TokenType.T_TRAIT_C:
-            case TokenType.T_FUNC_C:
-            case TokenType.T_METHOD_C:
-            case TokenType.T_LINE:
-            case TokenType.T_FILE:
-            case TokenType.T_DIR:
-            case TokenType.T_NS_C:
+            case TokenType.Include:
+            case TokenType.IncludeOnce:
+            case TokenType.Eval:
+            case TokenType.Require:
+            case TokenType.RequireOnce:
+            case TokenType.Or:
+            case TokenType.Xor:
+            case TokenType.And:
+            case TokenType.InstanceOf:
+            case TokenType.New:
+            case TokenType.Clone:
+            case TokenType.Exit:
+            case TokenType.If:
+            case TokenType.ElseIf:
+            case TokenType.Else:
+            case TokenType.EndIf:
+            case TokenType.Echo:
+            case TokenType.Do:
+            case TokenType.While:
+            case TokenType.EndWhile:
+            case TokenType.For:
+            case TokenType.EndFor:
+            case TokenType.ForEach:
+            case TokenType.EndForeach:
+            case TokenType.Declare:
+            case TokenType.EndDeclare:
+            case TokenType.As:
+            case TokenType.Try:
+            case TokenType.Catch:
+            case TokenType.Finally:
+            case TokenType.Throw:
+            case TokenType.Use:
+            case TokenType.InsteadOf:
+            case TokenType.Global:
+            case TokenType.Var:
+            case TokenType.Unset:
+            case TokenType.Isset:
+            case TokenType.Empty:
+            case TokenType.Continue:
+            case TokenType.Goto:
+            case TokenType.Function:
+            case TokenType.Const:
+            case TokenType.Return:
+            case TokenType.Print:
+            case TokenType.Yield:
+            case TokenType.List:
+            case TokenType.Switch:
+            case TokenType.EndSwitch:
+            case TokenType.Case:
+            case TokenType.Default:
+            case TokenType.Break:
+            case TokenType.Array:
+            case TokenType.Callable:
+            case TokenType.Extends:
+            case TokenType.Implements:
+            case TokenType.Namespace:
+            case TokenType.Trait:
+            case TokenType.Interface:
+            case TokenType.Class:
+            case TokenType.ClassConstant:
+            case TokenType.TraitConstant:
+            case TokenType.FunctionConstant:
+            case TokenType.MethodConstant:
+            case TokenType.LineConstant:
+            case TokenType.FileConstant:
+            case TokenType.DirectoryConstant:
+            case TokenType.NamespaceConstant:
                 return true;
             default:
                 return false;
@@ -3716,31 +3598,31 @@ export namespace Parser {
 
     function isSemiReservedToken(t: Token) {
         switch (t.tokenType) {
-            case TokenType.T_STATIC:
-            case TokenType.T_ABSTRACT:
-            case TokenType.T_FINAL:
-            case TokenType.T_PRIVATE:
-            case TokenType.T_PROTECTED:
-            case TokenType.T_PUBLIC:
+            case TokenType.Static:
+            case TokenType.Abstract:
+            case TokenType.Final:
+            case TokenType.Private:
+            case TokenType.Protected:
+            case TokenType.Public:
                 return true;
             default:
                 return isReservedToken(t);
         }
     }
 
-    function isTopStatementStartToken(t: Token) {
+    function isStatementStartToken(t: Token) {
 
         switch (t.tokenType) {
-            case TokenType.T_NAMESPACE:
-            case TokenType.T_USE:
-            case TokenType.T_HALT_COMPILER:
-            case TokenType.T_CONST:
-            case TokenType.T_FUNCTION:
-            case TokenType.T_CLASS:
-            case TokenType.T_ABSTRACT:
-            case TokenType.T_FINAL:
-            case TokenType.T_TRAIT:
-            case TokenType.T_INTERFACE:
+            case TokenType.Namespace:
+            case TokenType.Use:
+            case TokenType.HaltCompiler:
+            case TokenType.Const:
+            case TokenType.Function:
+            case TokenType.Class:
+            case TokenType.Abstract:
+            case TokenType.Final:
+            case TokenType.Trait:
+            case TokenType.Interface:
                 return true;
             default:
                 return isStatementStartToken(t);
@@ -3750,12 +3632,12 @@ export namespace Parser {
 
     function isInnerStatementStartToken(t: Token) {
         switch (t.tokenType) {
-            case TokenType.T_FUNCTION:
-            case TokenType.T_ABSTRACT:
-            case TokenType.T_FINAL:
-            case TokenType.T_CLASS:
-            case TokenType.T_TRAIT:
-            case TokenType.T_INTERFACE:
+            case TokenType.Function:
+            case TokenType.Abstract:
+            case TokenType.Final:
+            case TokenType.Class:
+            case TokenType.Trait:
+            case TokenType.Interface:
                 return true;
             default:
                 return isStatementStartToken(t);
@@ -3766,25 +3648,25 @@ export namespace Parser {
 
         switch (t.tokenType) {
             case '{':
-            case TokenType.T_IF:
-            case TokenType.T_WHILE:
-            case TokenType.T_DO:
-            case TokenType.T_FOR:
-            case TokenType.T_SWITCH:
-            case TokenType.T_BREAK:
-            case TokenType.T_CONTINUE:
-            case TokenType.T_RETURN:
-            case TokenType.T_GLOBAL:
-            case TokenType.T_STATIC:
-            case TokenType.T_ECHO:
-            case TokenType.T_INLINE_HTML:
-            case TokenType.T_UNSET:
-            case TokenType.T_FOREACH:
-            case TokenType.T_DECLARE:
-            case TokenType.T_TRY:
-            case TokenType.T_THROW:
-            case TokenType.T_GOTO:
-            case TokenType.T_STRING:
+            case TokenType.If:
+            case TokenType.While:
+            case TokenType.Do:
+            case TokenType.For:
+            case TokenType.Switch:
+            case TokenType.Break:
+            case TokenType.Continue:
+            case TokenType.Return:
+            case TokenType.Global:
+            case TokenType.Static:
+            case TokenType.Echo:
+            case TokenType.Text:
+            case TokenType.Unset:
+            case TokenType.ForEach:
+            case TokenType.Declare:
+            case TokenType.Try:
+            case TokenType.Throw:
+            case TokenType.Goto:
+            case TokenType.Name:
             case ';':
                 return true;
             default:
