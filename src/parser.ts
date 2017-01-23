@@ -6,7 +6,7 @@
 
 import { Token, Lexer, TokenType } from './lexer';
 
-export enum PhraseType {
+export const enum PhraseType {
     None,
     Script,
     StatementList,
@@ -27,6 +27,38 @@ export enum PhraseType {
     FunctionDefinitionHeader,
     ParameterDeclarationList,
     ParameterDeclaration,
+    ClassDeclaration,
+    ClassDeclarationHeader,
+    ClassDeclarationBody,
+    ClassMemberDeclarations,
+    TraitDeclaration,
+    TraitDeclarationHeader,
+    TraitDeclarationBody,
+    TraitMemberDeclarations,
+    InterfaceDeclaration,
+    InterfaceDeclarationHeader,
+    InterfaceDeclarationBody,
+    InterfaceMemberDeclarations,
+    EchoIntrinsic,
+    ExpressionList,
+    GlobalDeclaration,
+    VariableNameList,
+    FunctionStaticDeclaration,
+    StaticVariableNameList,
+    StaticVariableDeclaration,
+    FunctionStaticInitialiser,
+    DeclareStatement,
+    DeclareDirective,
+    ExpressionStatement,
+
+    ForInitialiser,
+    ForControl,
+    ForEndOfLoop,
+    ForExpressionGroup,
+
+    ForeachCollectionName,
+    ForeachKey,
+    ForeachValue,
 
     Error, NamespaceDefinition, NamespaceName, UseDeclaration,
     UseGroup, UseList, HaltCompilerStatement,
@@ -34,16 +66,16 @@ export enum PhraseType {
     StaticProperty, StaticMethodCall, MethodCall, Property, Closure, EncapsulatedExpression,
     ParameterList, Isset, Empty, Eval, Include, YieldFrom, Yield, Print, TryGroup,
     Backticks, EncapsulatedVariableList, AnonymousClassDeclaration, New, identifier, Variables,
-    NameList, ClassBody, PropertyDeclaration, PropertyDeclarationList, Scalar, ClassModifiers,
+    QualifiedNameList, PropertyDeclaration, PropertyDeclarationList, Scalar, ClassModifiers,
     ClassConstElement, ClassConstantDeclarationList, TypeDeclaration, CompoundStatement, ReservedNonModifier,
     InnerStatementList, MethodDeclaration, UseTraitStatement, TraitAdaptations,
-    MethodReference, TraitPrecendence, TraitAlias, ClassDeclaration, TraitDeclaration, Expressions,
-    InterfaceDeclaration, Variable, ArrayPairList, ClosureUseVariable, ClosureUseList,
-    Clone, Heredoc, DoubleQuotes, EmptyStatement, IfList, If, While, DoWhile, Implements,
-    ForExpressionList, For, Break, Continue, Return, GlobalVariableList, StaticVariableList,
-    StaticVariable, Echo, Unset, Throw, Goto, Label, Foreach, Cases, Switch, MemberModifiers,
-    Case, Declare, Try, Catch, CatchNameList, Finally, TernaryExpression, BinaryExpression,
-    UnaryExpression, MagicConstant, Catches, FunctionBody, MethodBody, ExtendsClass, ExtendsInterfaces,
+    MethodReference, TraitPrecendence, TraitAlias, Expressions,
+    Variable, ArrayPairList, ClosureUseVariable, ClosureUseList,
+    Clone, Heredoc, DoubleQuotes, EmptyStatement, IfList, If, WhileStatement, DoStatement, ClassInterfaceClause,
+    ForExpressionList, ForStatement, BreakStatement, ContinueStatement, ReturnStatement,
+    Unset, ThrowStatement, GotoStatement, NamedLabelStatement, Foreach, Cases, Switch, MemberModifiers,
+    Case, Try, Catch, CatchNameList, Finally, TernaryExpression, BinaryExpression,
+    UnaryExpression, MagicConstant, Catches, FunctionBody, MethodBody, ClassBaseClause, InterfaceBaseClause,
     EncapsulatedVariable, ErrorStaticMember, ErrorArgument, ErrorVariable, ErrorExpression, ErrorClassStatement,
     ErrorPropertyName, ErrorTraitAdaptation
 }
@@ -488,7 +520,7 @@ export namespace Parser {
         let p = start(PhraseType.Script);
         optional(TokenType.Text);
         expectOneOf([TokenType.OpenTag, TokenType.OpenTagEcho]);
-        if (isStatementStartToken(peek())) {
+        if (isStatementStart(peek())) {
             p.children.push(statementList(TokenType.EndOfFile))
         }
         optional(TokenType.CloseTag);
@@ -496,16 +528,17 @@ export namespace Parser {
         return p;
     }
 
-    function statementList(breakOn: TokenType) {
+    function list(phraseType: PhraseType, elementFunction: () => Phrase,
+        elementStartPredicate: Predicate, breakOn: TokenType) {
 
-        let p = start(PhraseType.StatementList);
+        let p = start(phraseType);
         let t: Token;
 
         while (true) {
 
             t = peek();
-            if (isStatementStartToken(t)) {
-                p.children.push(statement());
+            if (elementStartPredicate(t)) {
+                p.children.push(elementFunction());
             } else if (t.tokenType === breakOn) {
                 break;
             } else {
@@ -515,6 +548,16 @@ export namespace Parser {
         }
 
         return p;
+
+    }
+
+    function statementList(breakOn: TokenType) {
+
+        return list(
+            PhraseType.StatementList,
+            statement,
+            isStatementStart,
+            breakOn);
 
     }
 
@@ -534,7 +577,7 @@ export namespace Parser {
 
     }
 
-    function isConstElementStartToken(t:Token){
+    function isConstElementStartToken(t: Token) {
         return t.tokenType === TokenType.Name;
     }
 
@@ -825,7 +868,7 @@ export namespace Parser {
         start(PhraseType.Yield);
         next(); //yield
 
-        if (!isExpressionStartToken(peek())) {
+        if (!isExpressionStart(peek())) {
             return end();
         }
 
@@ -943,7 +986,7 @@ export namespace Parser {
                 n.children.push(end());
             }
 
-        } else if (isExpressionStartToken(t)) {
+        } else if (isExpressionStart(t)) {
             phrase(expression, [0], ['}']);
         } else {
             //error
@@ -1023,61 +1066,39 @@ export namespace Parser {
         }
 
         if (peek().tokenType === TokenType.Extends) {
-            phrase(extendsClass, [], [TokenType.Implements, '{']);
+            phrase(classBaseClause, [], [TokenType.Implements, '{']);
         }
 
         if (peek().tokenType === TokenType.Implements) {
-            phrase(implementsInterfaces, [], ['{']);
+            phrase(classInterfaceClause, [], ['{']);
         }
 
-        phrase(classBody, [], [], ['{']);
+        phrase(classMemberDeclarations, [], [], ['{']);
         return end();
 
     }
 
-    function implementsInterfaces() {
+    function classInterfaceClause() {
 
-        start(PhraseType.Implements);
+        let p = start(PhraseType.ClassInterfaceClause);
         next(); //implements
-        phrase(nameList, []);
-        return end();
+        p.children.push(qualifiedNameList(TokenType.OpenBrace));
+        return p;
 
     }
 
-    function classBody() {
+    function classMemberDeclarations() {
 
-        let n = start(PhraseType.ClassBody);
-        let t: Token;
-        let recover: (TokenType | string)[] = recoverClassStatementStartTokenTypes.slice(0);
-
-        if (!expect('{')) {
-            return end();
-        }
-
-        recover.push('}');
-
-        while (true) {
-            t = peek();
-
-            if (t.tokenType === '}') {
-                break;
-            } else if (isClassStatementStartToken(t)) {
-                phrase(classStatement, [], recover);
-            } else {
-                //error
-                t = error(undefined, recover);
-                if (!isClassStatementStartToken(t) && t.tokenType !== '}') {
-                    break;
-                }
-            }
-
-        }
-
-        return end();
+        return list(
+            PhraseType.ClassMemberDeclarations,
+            classStatement,
+            isClassMemberStart,
+            TokenType.CloseBrace
+        );
 
     }
 
-    function isClassStatementStartToken(t: Token) {
+    function isClassMemberStart(t: Token) {
         switch (t.tokenType) {
             case TokenType.Public:
             case TokenType.Protected:
@@ -1142,7 +1163,7 @@ export namespace Parser {
 
         start(PhraseType.UseTraitStatement);
         next();
-        phrase(nameList, [], [';', '{']);
+        phrase(qualifiedNameList, [], [';', '{']);
         phrase(traitAdaptationList, [], [], [';', '{']);
         return end();
 
@@ -1246,7 +1267,7 @@ export namespace Parser {
     function traitPrecedence(n: TempNode) {
 
         n.phrase.phraseType = PhraseType.TraitPrecendence;
-        phrase(nameList, [], [';']);
+        phrase(qualifiedNameList, [], [';']);
         expect(';', [';']);
         return end();
 
@@ -1339,11 +1360,11 @@ export namespace Parser {
             case TokenType.Abstract:
             case TokenType.Final:
             case TokenType.Class:
-                return classDeclarationStatement();
+                return classDeclaration();
             case TokenType.Trait:
-                return traitDeclarationStatement();
+                return traitDeclaration();
             case TokenType.Interface:
-                return interfaceDeclarationStatement();
+                return interfaceDeclaration();
             default:
                 return statement();
 
@@ -1351,37 +1372,92 @@ export namespace Parser {
 
     }
 
-    function interfaceDeclarationStatement() {
+    function interfaceDeclaration() {
 
-        let n = start(PhraseType.InterfaceDeclaration);
-        next(); //interface
-        expect(TokenType.Name, [TokenType.Extends, '{']);
+        let p = start(PhraseType.InterfaceDeclaration);
+        p.children.push(interfaceDeclarationHeader(), classTraitInterfaceDeclarationBody(
+            PhraseType.InterfaceDeclarationBody, isClassMemberStart, interfaceMemberDeclarations
+        ));
+        return end();
 
-        if (peek().tokenType === TokenType.Extends) {
-            phrase(extendsInterfaces, [], ['{']);
+    }
+
+    function classTraitInterfaceDeclarationBody(phraseType: PhraseType, isElementStartPredicate: Predicate, listFunction: () => Phrase) {
+
+        let p = start(phraseType);
+        expect(TokenType.OpenBrace);
+
+        if (isElementStartPredicate(peek())) {
+            p.children.push(listFunction());
         }
 
-        phrase(classBody, [], [], ['{']);
+        expect(TokenType.CloseBrace);
         return end();
 
     }
 
-    function extendsInterfaces() {
+    function interfaceMemberDeclarations() {
 
-        let n = start(PhraseType.ExtendsInterfaces);
+        return list(
+            PhraseType.InterfaceMemberDeclarations,
+            classStatement,
+            isClassMemberStart,
+            TokenType.CloseBrace
+        );
+
+
+    }
+
+    function interfaceDeclarationHeader() {
+
+        let p = start(PhraseType.InterfaceDeclarationHeader);
+        next(); //interface
+        expect(TokenType.Name);
+
+        if (peek().tokenType === TokenType.Extends) {
+            p.children.push(interfaceBaseClause());
+        }
+
+        return end();
+
+    }
+
+    function interfaceBaseClause() {
+
+        let n = start(PhraseType.InterfaceBaseClause);
         next(); //extends
-        n.children.push(nameList());
+        n.children.push(qualifiedNameList(TokenType.OpenBrace));
         return end();
 
     }
 
-    function traitDeclarationStatement() {
+    function traitDeclaration() {
 
-        start(PhraseType.TraitDeclaration);
-        next(); //trait
-        expect(TokenType.Name, ['{']);
-        phrase(classBody, [], [], ['{']);
+        let p = start(PhraseType.TraitDeclaration);
+        p.children.push(traitDeclarationHeader(), classTraitInterfaceDeclarationBody(
+            PhraseType.TraitDeclarationBody, isClassMemberStart, traitMemberDeclarations
+        ));
         return end();
+
+    }
+
+    function traitDeclarationHeader() {
+        start(PhraseType.TraitDeclarationHeader);
+        next(); //trait
+        expect(TokenType.Name);
+        return end();
+
+    }
+
+    function traitMemberDeclarations() {
+
+        return list(
+            PhraseType.TraitMemberDeclarations,
+            classStatement,
+            isClassMemberStart,
+            TokenType.CloseBrace
+        );
+
     }
 
     function functionDefinition() {
@@ -1392,7 +1468,7 @@ export namespace Parser {
 
     }
 
-    function functionDefinitionHeader(){
+    function functionDefinitionHeader() {
 
         let p = start(PhraseType.FunctionDefinitionHeader);
 
@@ -1400,8 +1476,8 @@ export namespace Parser {
         optional(TokenType.Ampersand);
         expect(TokenType.Name);
         expect(TokenType.OpenParenthesis);
-        
-        if(isParameterStart(peek())){
+
+        if (isParameterStart(peek())) {
             p.children.push(delimitedList(
                 PhraseType.ParameterDeclarationList,
                 parameterDeclaration,
@@ -1417,9 +1493,9 @@ export namespace Parser {
 
     }
 
-    function isParameterStart(t:Token){
+    function isParameterStart(t: Token) {
 
-        switch(t.tokenType){
+        switch (t.tokenType) {
             case TokenType.Ampersand:
             case TokenType.Ellipsis:
             case TokenType.VariableName:
@@ -1430,36 +1506,40 @@ export namespace Parser {
 
     }
 
-    function classDeclarationStatement() {
+    function classDeclaration() {
 
-        let n = start(PhraseType.ClassDeclaration);
-        let t = peek();
-
-        if (t.tokenType === TokenType.Abstract || t.tokenType === TokenType.Final) {
-            n.children.push(classModifiers());
-        }
-
-        expect(TokenType.Class, [TokenType.Extends, TokenType.Implements, '{']);
-        expect(TokenType.Name, [TokenType.Extends, TokenType.Implements, '{']);
-
-        if (peek().tokenType === TokenType.Extends) {
-            phrase(extendsClass, [], [TokenType.Implements, '{']);
-        }
-
-        if (peek().tokenType === TokenType.Implements) {
-            phrase(implementsInterfaces, [], ['{']);
-        }
-
-        phrase(classBody, [], [], ['{']);
-        return end();
+        let p = start(PhraseType.ClassDeclaration);
+        p.children.push(classDeclarationHeader(), classTraitInterfaceDeclarationBody(
+            PhraseType.ClassDeclarationBody, isClassMemberStart, classMemberDeclarations
+        ));
+        return p;
 
     }
 
-    function extendsClass() {
-        let n = start(PhraseType.ExtendsClass);
+    function classDeclarationHeader() {
+
+        let p = start(PhraseType.ClassDeclarationHeader);
+        optionalOneOf([TokenType.Abstract, TokenType.Final]);
+        expect(TokenType.Class);
+        expect(TokenType.Name);
+
+        if (peek().tokenType === TokenType.Extends) {
+            p.children.push(classBaseClause());
+        }
+
+        if (peek().tokenType === TokenType.Implements) {
+            p.children.push(classInterfaceClause());
+        }
+
+        return p;
+
+    }
+
+    function classBaseClause() {
+        let p = start(PhraseType.ClassBaseClause);
         next(); //extends
-        n.children.push(nameList());
-        return end();
+        p.children.push(qualifiedName());
+        return p;
     }
 
     function classModifiers() {
@@ -1485,8 +1565,8 @@ export namespace Parser {
 
         let p = start(PhraseType.CompoundStatement);
         expect(TokenType.OpenBrace);
-        
-        if(isStatementStartToken(peek())){
+
+        if (isStatementStart(peek())) {
             p.children.push(statementList(TokenType.CloseBrace));
         }
 
@@ -1513,35 +1593,35 @@ export namespace Parser {
             case TokenType.Class:
             case TokenType.Abstract:
             case TokenType.Final:
-                return classDeclarationStatement();
+                return classDeclaration();
             case TokenType.Trait:
-                return traitDeclarationStatement();
+                return traitDeclaration();
             case TokenType.Interface:
-                return interfaceDeclarationStatement();
-            case '{':
+                return interfaceDeclaration();
+            case TokenType.OpenBrace:
                 return compoundStatement();
             case TokenType.If:
                 return ifStatementList();
             case TokenType.While:
                 return whileStatement();
             case TokenType.Do:
-                return doWhileStatement();
+                return doStatement();
             case TokenType.For:
                 return forStatement();
             case TokenType.Switch:
                 return switchStatement();
             case TokenType.Break:
-                return keywordOptionalExpressionStatement(PhraseType.Break);
+                return breakOrContinueStatement(PhraseType.BreakStatement);
             case TokenType.Continue:
-                return keywordOptionalExpressionStatement(PhraseType.Continue);
+                return breakOrContinueStatement(PhraseType.ContinueStatement);
             case TokenType.Return:
-                return keywordOptionalExpressionStatement(PhraseType.Return);
+                return returnStatement();
             case TokenType.Global:
-                return globalVariableDeclarationStatement();
+                return globalDeclaration();
             case TokenType.Static:
-                return staticVariableDeclarationStatement();
+                return functionStaticDeclaration();
             case TokenType.Echo:
-                return echoStatement();
+                return echoIntrinsic();
             case TokenType.Text:
                 return t;
             case TokenType.Unset:
@@ -1556,13 +1636,13 @@ export namespace Parser {
                 return throwStatement();
             case TokenType.Goto:
                 return gotoStatement();
-            case ';':
-                start(PhraseType.EmptyStatement);
-                next();
+            case TokenType.Semicolon:
+                start(PhraseType.ExpressionStatement);
+                next(); //;
                 return end();
             case TokenType.Name:
-                if (peek(1).tokenType === ':') {
-                    return labelStatement();
+                if (peek(1).tokenType === TokenType.Colon) {
+                    return namedLabelStatement();
                 }
             //fall though
             default:
@@ -1643,7 +1723,7 @@ export namespace Parser {
 
     function catchNameList() {
 
-        let n = start(PhraseType.NameList);
+        let n = start(PhraseType.QualifiedNameList);
         let t: Token;
 
         while (true) {
@@ -1666,33 +1746,45 @@ export namespace Parser {
 
     }
 
+    function declareDirective() {
+
+        let p = start(PhraseType.DeclareDirective);
+        expect(TokenType.Name);
+        expect(TokenType.Equals);
+        expectOneOf([TokenType.IntegerLiteral, TokenType.FloatingLiteral, TokenType.StringLiteral]);
+        return end();
+
+    }
+
     function declareStatement() {
 
-        start(PhraseType.Declare);
-        let recover = recoverStatementStartTokenTypes.slice(0);
-        recover.push(':');
+        let p = start(PhraseType.DeclareStatement);
         next(); //declare
-
-        if (!expect('(')) {
-            return end();
-        }
-
-        phrase(constElements, [PhraseType.ConstElements, ')'], [')']);
-        expect(')', recover);
+        expect(TokenType.OpenParenthesis);
+        p.children.push(declareDirective());
+        expect(TokenType.CloseParenthesis);
 
         let t = peek();
 
-        if (t.tokenType === ':') {
+        if (t.tokenType === TokenType.Colon) {
 
             next();
-            phrase(innerStatementList, [[TokenType.EndDeclare]], [TokenType.EndDeclare, ';']);
-            expect(TokenType.EndDeclare, [';']);
-            expect(';', [';']);
+            p.children.push(statementList(TokenType.EndDeclare));
+            expect(TokenType.EndDeclare);
+            expect(TokenType.Semicolon);
 
-        } else if (isStatementStartToken(t)) {
-            phrase(statement, []);
+        } else if (isStatementStart(t)) {
+
+            p.children.push(statement());
+
+        } else if (t.tokenType === TokenType.Semicolon) {
+
+            next();
+
         } else {
+
             error();
+
         }
 
         return end();
@@ -1779,38 +1871,71 @@ export namespace Parser {
 
     }
 
-    function labelStatement() {
+    function namedLabelStatement() {
 
-        let n = start(PhraseType.Label);
-        //T_STRING, :
-        next();
-        next();
+        let p = start(PhraseType.NamedLabelStatement);
+        next(); //name
+        next(); //:
+        p.children.push(statement());
         return end();
     }
 
     function gotoStatement() {
 
-        let n = start(PhraseType.Goto);
-        next();
-        expect(TokenType.Name, [';']);
-        expect(';', [';']);
+        let n = start(PhraseType.GotoStatement);
+        next(); //goto
+        expect(TokenType.Name);
+        expect(TokenType.Semicolon);
         return end();
 
     }
 
     function throwStatement() {
 
-        let n = start(PhraseType.Throw);
+        let p = start(PhraseType.ThrowStatement);
         next(); //throw
-        phrase(expression, [0], [';']);
-        expect(';', [';']);
+        p.children.push(expression(0));
+        expect(TokenType.Semicolon);
         return end();
+    }
+
+    function foreachCollectionName(){
+        let p = start(PhraseType.ForeachCollectionName);
+        p.children.push(expression(0));
+        return end();
+    }
+
+    function foreachKeyOrValue(){
+        let p = start(PhraseType.ForeachValue);
+        p.children.push(expression(0));
+        if(peek().tokenType === TokenType.FatArrow){
+            next();
+            p.phraseType = PhraseType.ForeachKey;
+        }
+        return p;
+    }
+
+    function foreachValue(){
+        let p = start(PhraseType.ForeachValue);
+        p.children.push(expression(0));
+        return p;
     }
 
     function foreachStatement() {
 
-        let n = start(PhraseType.Foreach);
+        let p = start(PhraseType.Foreach);
         next(); //foreach
+        expect(TokenType.OpenParenthesis);
+        p.children.push(foreachCollectionName());
+        let keyOrValue = foreachKeyOrValue();
+        p.children.push(keyOrValue);
+        
+        if(keyOrValue.phraseType === PhraseType.ForeachKey){
+            p.children.push(foreachValue());
+        }
+        
+        expect(TokenType.CloseParenthesis);
+        
 
         if (!expect('(')) {
             return end();
@@ -1837,7 +1962,7 @@ export namespace Parser {
             phrase(innerStatementList, [[TokenType.EndForeach]], [TokenType.EndForeach, ';']);
             expect(TokenType.EndForeach, [';']);
             expect(';', [';']);
-        } else if (isStatementStartToken(t)) {
+        } else if (isStatementStart(t)) {
             phrase(statement, []);
         } else {
             //error
@@ -1937,312 +2062,194 @@ export namespace Parser {
 
     }
 
-    function echoStatement() {
+    function echoIntrinsic() {
 
-        let n = tempNode(PhraseType.Echo);
-        let t: Token;
-        next();
-        let followOn: (TokenType | string)[] = [',', ';'];
-
-        while (true) {
-
-            recoverPush(followOn);
-            n.children.push(expression());
-            recoverPop();
-            t = peek();
-
-            if (t.tokenType === ',') {
-                next();
-            } else if (t.tokenType === ';') {
-                next();
-                break;
-            } else {
-                //error
-                error(followOn, [';']);
-                expect(';');
-                break;
-            }
-
-        }
-
-        return node(n);
+        let p = start(PhraseType.EchoIntrinsic);
+        next(); //echo
+        p.children.push(delimitedList(
+            PhraseType.ExpressionList,
+            () => { return expression(0); },
+            isExpressionStart,
+            TokenType.Comma
+        ));
+        return end();
 
     }
 
-    function staticVariableDeclarationStatement() {
+    function functionStaticDeclaration() {
 
-        let n = tempNode(PhraseType.StaticVariableList);
-        let t: Token;
-        next();
-        let followOn: (TokenType | string)[] = [',', ';'];
-
-        while (true) {
-
-            recoverPush(followOn);
-            n.children.push(staticVariableDeclaration());
-            recoverPop();
-            t = peek();
-
-            if (t.tokenType === ',') {
-                next();
-            } else if (t.tokenType === ';') {
-                next();
-                break;
-            } else {
-                //error
-                error(followOn, [';']);
-                expect(';');
-                break;
-            }
-
-        }
-
-        return node(n);
+        let p = start(PhraseType.FunctionStaticDeclaration);
+        next(); //static
+        p.children.push(delimitedList(
+            PhraseType.StaticVariableNameList,
+            staticVariableDeclaration,
+            (t: Token) => { return t.tokenType === TokenType.VariableName; },
+            TokenType.Comma,
+            TokenType.Semicolon
+        ));
+        expect(TokenType.Semicolon);
+        return end();
 
     }
 
+    function globalDeclaration() {
 
+        let p = start(PhraseType.GlobalDeclaration);
+        next(); //global
+        p.children.push(delimitedList(
+            PhraseType.VariableNameList,
+            simpleVariable,
+            isSimpleVariableStart,
+            TokenType.Comma,
+            TokenType.Semicolon
+        ));
+        expect(TokenType.Semicolon);
+        return end();
 
-    function globalVariableDeclarationStatement() {
+    }
 
-        let n = tempNode(PhraseType.GlobalVariableList);
-        let t = next();
-        let followOn: (TokenType | string)[] = [',', ';'];
-
-        while (true) {
-
-            recoverPush(followOn);
-            n.children.push(simpleVariable());
-            recoverPop();
-            t = peek();
-
-            if (t.tokenType === ',') {
-                next();
-            } else if (t.tokenType === ';') {
-                next();
-                break;
-            } else {
-                //error
-                error(followOn, [';']);
-                expect(';');
-                break;
-            }
-
+    function isSimpleVariableStart(t: Token) {
+        switch (t.tokenType) {
+            case TokenType.VariableName:
+            case TokenType.Dollar:
+                return true;
+            default:
+                return false;
         }
-
-        return node(n);
-
     }
 
     function staticVariableDeclaration() {
 
-        let n = tempNode(PhraseType.StaticVariable);
+        let p = start(PhraseType.StaticVariableDeclaration);
+        expect(TokenType.VariableName);
 
-        if (peek().tokenType === TokenType.VariableName) {
-            n.children.push(nodeFactory(next()));
-        } else {
-            n.children.push(nodeFactory(null), nodeFactory(null));
-            error([TokenType.VariableName]);
-            return node(n);
+        if (peek().tokenType === TokenType.Equals) {
+            p.children.push(functionStaticInitialiser());
         }
 
-        if (!expect('=')) {
-            n.children.push(nodeFactory(null));
-            return node(n);
-        }
-
-        n.children.push(expression());
-        return node(n);
+        return end();
 
     }
 
-    function keywordOptionalExpressionStatement(nodeType: PhraseType) {
-        let n = tempNode(nodeType);
-        next();
+    function functionStaticInitialiser() {
 
-        if (isExpressionStartToken(peek())) {
-            recoverPush([';']);
-            n.children.push(expression());
-            recoverPop();
-        } else {
-            n.children.push(nodeFactory(null));
-        }
+        let p = start(PhraseType.FunctionStaticInitialiser);
+        next(); //=
+        p.children.push(expression(0));
+        return end();
 
-        if (!expect(';')) {
-            error([';'], [';']);
-            expect(';');
-        }
-
-        return node(n);
     }
 
+    function breakOrContinueStatement(phraseType: PhraseType) {
+        let p = start(phraseType);
+        next(); //break/continue
+        optional(TokenType.IntegerLiteral);
+        expect(TokenType.Semicolon);
+        return end();
+    }
+
+    function returnStatement() {
+        let p = start(PhraseType.ReturnStatement);
+        next(); //return
+
+        if (isExpressionStart(peek())) {
+            p.children.push(expression(0));
+        }
+
+        expect(TokenType.Semicolon);
+        return end();
+    }
+
+    function forExpressionGroup(phraseType: PhraseType, breakOn: TokenType) {
+
+        return delimitedList(
+            phraseType,
+            () => { return expression(0); },
+            isExpressionStart,
+            TokenType.Comma,
+            breakOn
+        );
+
+    }
 
     function forStatement() {
 
-        let n = tempNode(PhraseType.For);
+        let p = start(PhraseType.ForStatement);
         next(); //for
+        expect(TokenType.OpenParenthesis);
 
-        if (!expect('(')) {
-            //error
-            n.children.push(nodeFactory(null), nodeFactory(null),
-                nodeFactory(null), nodeFactory(null));
-            error(['(']);
-            return node(n);
+        if (isExpressionStart(peek())) {
+            p.children.push(forExpressionGroup(PhraseType.ForInitialiser, TokenType.Semicolon));
         }
 
-        for (let k = 0; k < 2; ++k) {
+        expect(TokenType.Semicolon);
 
-            if (isExpressionStartToken(peek())) {
-                recoverPush([';', ')']);
-                n.children.push(forExpressionList(';'));
-                recoverPop();
-            } else {
-                n.children.push(nodeFactory(null));
-            }
-
-            if (!expect(';')) {
-                //error
-                error([';'], [...recoverStatementStartTokenTypes, ':', ')']);
-                break;
-            }
-
+        if (isExpressionStart(peek())) {
+            p.children.push(forExpressionGroup(PhraseType.ForControl, TokenType.Semicolon));
         }
 
-        if (isExpressionStartToken(peek())) {
-            recoverPush([')']);
-            n.children.push(expression());
-            recoverPop();
+        expect(TokenType.Semicolon);
+
+        if (isExpressionStart(peek())) {
+            p.children.push(forExpressionGroup(PhraseType.ForEndOfLoop, TokenType.CloseParenthesis));
+        }
+
+        expect(TokenType.CloseParenthesis);
+
+        let t = peek();
+
+        if (t.tokenType === TokenType.Colon) {
+            next();
+            p.children.push(statementList(TokenType.EndFor));
+            expect(TokenType.EndFor);
+            expect(TokenType.Semicolon);
+        } else if (isStatementStart(peek())) {
+            p.children.push(statement());
         } else {
-            n.children.push(nodeFactory(null));
+            error();
         }
 
-        if (!expect(')')) {
-            //error
-            error([')'], [...recoverStatementStartTokenTypes, ':']);
-            expect(';');
-        }
-
-        if (expect(':')) {
-
-            recoverPush([TokenType.EndFor, ';']);
-            n.children.push(innerStatementList([TokenType.EndFor]));
-            recoverPop();
-
-            if (!next(TokenType.EndFor)) {
-                //error
-                error([TokenType.EndFor], [';']);
-            }
-
-            if (!expect(';')) {
-                //error
-                error([';'], [';']);
-                expect(';');
-            }
-        } else if (isStatementStartToken(peek())) {
-            n.children.push(statement());
-        } else {
-            //error
-            error([]);
-            n.children.push(nodeFactory(null));
-        }
-
-        return node(n);
+        return end();
 
     }
 
-    function forExpressionList(breakOn: TokenType | string) {
+    function doStatement() {
 
-        let n = tempNode(PhraseType.ForExpressionList);
-        let followOn = [',', breakOn];
-        let t: Token;
-
-        while (true) {
-
-            recoverPush(followOn);
-            n.children.push(expression());
-            recoverPop();
-
-            t = peek();
-
-            if (t.tokenType === ',') {
-                next();
-            } else if (t.tokenType == breakOn) {
-                break;
-            } else {
-                //error
-                error(followOn);
-                break;
-            }
-
-        }
-
-        return node(n);
-
-    }
-
-    function doWhileStatement() {
-
-        let n = tempNode(PhraseType.DoWhile);
-        next();
-
-        recoverPush([TokenType.While, ';']);
-        n.children.push(statement());
-        recoverPop();
-
-        if (!next(TokenType.While)) {
-            //error
-            n.children.push(nodeFactory(null));
-            error([TokenType.While], [';']);
-            expect(';');
-            return node(n);
-        }
-
-        recoverPush([';']);
-        n.children.push(encapsulatedExpression('(', ')'));
-        recoverPop();
-
-        if (!expect(';')) {
-            error([';'], [';']);
-            expect(';');
-        }
-
-        return node(n);
+        let p = start(PhraseType.DoStatement);
+        next(); // do
+        p.children.push(statement());
+        expect(TokenType.While);
+        expect(TokenType.OpenParenthesis);
+        p.children.push(expression(0));
+        expect(TokenType.CloseParenthesis);
+        expect(TokenType.Semicolon);
+        return end();
 
     }
 
     function whileStatement() {
 
-        let n = tempNode(PhraseType.While);
-        next();
+        let p = start(PhraseType.WhileStatement);
+        next(); //while
+        expect(TokenType.OpenParenthesis);
+        p.children.push(expression(0));
+        expect(TokenType.CloseParenthesis);
 
-        let recover = recoverStatementStartTokenTypes.slice(0);
-        recover.push(':');
-        recoverPush(recover);
-        n.children.push(encapsulatedExpression('(', ')'));
-        recoverPop();
+        let t = peek();
 
-        if (expect(':')) {
-            recoverPush([TokenType.EndWhile, ';']);
-            n.children.push(innerStatementList([TokenType.EndWhile]));
-            recoverPop();
-
-            if (!next(TokenType.EndWhile)) {
-                //error
-                error([TokenType.EndWhile], [';']);
-            }
-
-            if (!expect(';')) {
-                error([';'], [';']);
-                expect(';');
-            }
-        } else if (isStatementStartToken(peek())) {
-            n.children.push(statement());
+        if (t.tokenType === TokenType.Colon) {
+            next();
+            p.children.push(statementList(TokenType.EndWhile));
+            expect(TokenType.EndWhile);
+            expect(TokenType.Semicolon);
+        } else if (isStatementStart(t)) {
+            p.children.push(statement());
         } else {
             //error
-            error([]);
+            error();
         }
 
-        return node(n);
+        return end();
 
     }
 
@@ -2315,7 +2322,7 @@ export namespace Parser {
             }
 
             n.children.push(innerStatementList([TokenType.EndIf, TokenType.ElseIf, TokenType.Else]));
-        } else if (isStatementStartToken(peek())) {
+        } else if (isStatementStart(peek())) {
             n.children.push(statement());
         } else {
             //error
@@ -2405,7 +2412,7 @@ export namespace Parser {
         return node(n);
     }
 
-    function isExpressionStartToken(t: Token) {
+    function isExpressionStart(t: Token) {
 
         switch (t.tokenType) {
             case TokenType.VariableName:
@@ -2571,20 +2578,15 @@ export namespace Parser {
     }
 
 
-    function nameList() {
+    function qualifiedNameList(breakOn: TokenType) {
 
-        let n = tempNode(PhraseType.NameList);
-
-        while (true) {
-            n.children.push(qualifiedName());
-
-            if (!expect(',')) {
-                break;
-            }
-        }
-
-        return node(n);
-
+        return delimitedList(
+            PhraseType.QualifiedNameList,
+            qualifiedName,
+            isQualifiedNameStart,
+            TokenType.Comma,
+            breakOn
+        );
     }
 
     function newExpression() {
@@ -2864,8 +2866,8 @@ export namespace Parser {
         optional(TokenType.Ampersand);
         optional(TokenType.Ellipsis);
         expect(TokenType.VariableName);
-        
-        if(peek().tokenType === TokenType.Equals){
+
+        if (peek().tokenType === TokenType.Equals) {
             next();
             p.children.push(expression(0));
         }
@@ -3012,7 +3014,7 @@ export namespace Parser {
         n.children.push(lhs);
         next();
 
-        if (isExpressionStartToken(peek())) {
+        if (isExpressionStart(peek())) {
             recoverPush([close]);
             n.children.push(expression());
             recoverPop();
@@ -3072,7 +3074,7 @@ export namespace Parser {
     }
 
     function isArgumentStartToken(t: Token) {
-        return t.tokenType === TokenType.Ellipsis || isExpressionStartToken(t);
+        return t.tokenType === TokenType.Ellipsis || isExpressionStart(t);
     }
 
     function argument() {
@@ -3085,7 +3087,7 @@ export namespace Parser {
             n.value.phraseType = PhraseType.Unary;
             n.children.push(expression());
             return node(n);
-        } else if (isExpressionStartToken(t)) {
+        } else if (isExpressionStart(t)) {
             return expression();
         } else {
             //error
@@ -3114,8 +3116,8 @@ export namespace Parser {
 
     }
 
-    function isQualifiedNameStartToken(t:Token){
-        switch(t.tokenType){
+    function isQualifiedNameStart(t: Token) {
+        switch (t.tokenType) {
             case TokenType.Backslash:
             case TokenType.Name:
             case TokenType.Namespace:
@@ -3177,7 +3179,7 @@ export namespace Parser {
     }
 
     function isArrayPairStartToken(t: Token) {
-        return t.tokenType === '&' || isExpressionStartToken(t);
+        return t.tokenType === '&' || isExpressionStart(t);
     }
 
     function arrayPairList(n: TempNode, breakOn: TokenType | string) {
@@ -3250,7 +3252,7 @@ export namespace Parser {
 
         if (!next(open)) {
             let err = new ParseError(peek(), [open]);
-            if (isExpressionStartToken(peek())) {
+            if (isExpressionStart(peek())) {
                 n.value.errors = [err];
             } else if (peek(1).tokenType === open) {
                 next();
@@ -3380,12 +3382,12 @@ export namespace Parser {
                 TokenType.CloseBrace
             ));
             return p
-        } 
+        }
 
         p.children.push(delimitedList(
             PhraseType.NamespaceUseClauses,
             namespaceUseClauseFunction(qualifiedName),
-            isQualifiedNameStartToken,
+            isQualifiedNameStart,
             TokenType.Comma,
             TokenType.Semicolon));
 
@@ -3394,20 +3396,20 @@ export namespace Parser {
 
     }
 
-    function namespaceUseClauseFunction(qName:Phrase){
+    function namespaceUseClauseFunction(qName: Phrase) {
 
         return () => {
 
             let p = start(PhraseType.NamespaceUseClause);
 
-            if(qName){
+            if (qName) {
                 p.children.push(qName);
                 qName = undefined;
             } else {
                 p.children.push(qualifiedName());
             }
 
-            if(peek().tokenType === TokenType.As){
+            if (peek().tokenType === TokenType.As) {
                 p.children.push(namespaceAliasingClause());
             }
 
@@ -3418,7 +3420,7 @@ export namespace Parser {
     }
 
     function delimitedList(phraseType: PhraseType, elementFunction: () => Phrase,
-        elementStartTokenPredicate: Predicate, delimeter: TokenType, breakOn: TokenType) {
+        elementStartTokenPredicate: Predicate, delimeter: TokenType, breakOn?: TokenType) {
         let p = start(phraseType);
 
         while (true) {
@@ -3428,7 +3430,7 @@ export namespace Parser {
 
             if (t.tokenType === delimeter) {
                 next();
-            } else if (t.tokenType === breakOn) {
+            } else if (breakOn === undefined || t.tokenType === breakOn) {
                 break;
             } else {
                 //error
@@ -3610,7 +3612,7 @@ export namespace Parser {
         }
     }
 
-    function isStatementStartToken(t: Token) {
+    function isStatementStart(t: Token) {
 
         switch (t.tokenType) {
             case TokenType.Namespace:
@@ -3625,7 +3627,7 @@ export namespace Parser {
             case TokenType.Interface:
                 return true;
             default:
-                return isStatementStartToken(t);
+                return isStatementStart(t);
         }
 
     }
@@ -3640,11 +3642,11 @@ export namespace Parser {
             case TokenType.Interface:
                 return true;
             default:
-                return isStatementStartToken(t);
+                return isStatementStart(t);
         }
     }
 
-    function isStatementStartToken(t: Token) {
+    function isStatementStart(t: Token) {
 
         switch (t.tokenType) {
             case '{':
@@ -3670,7 +3672,7 @@ export namespace Parser {
             case ';':
                 return true;
             default:
-                return isExpressionStartToken(t);
+                return isExpressionStart(t);
         }
     }
 
