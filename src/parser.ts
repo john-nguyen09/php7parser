@@ -60,22 +60,30 @@ export const enum PhraseType {
     ForeachKey,
     ForeachValue,
 
+    IfStatement,
+    ElseIfClauses,
+    ElseIfClause,
+    ElseClause,
+
+    DefaultStatement,
+
+
     Error, NamespaceDefinition, NamespaceName, UseDeclaration,
     UseGroup, UseList, HaltCompilerStatement,
     ArrayPair, Name, Call, Unpack, ArgumentList, Dimension, ClassConstant,
     StaticProperty, StaticMethodCall, MethodCall, Property, Closure, EncapsulatedExpression,
-    ParameterList, Isset, Empty, Eval, Include, YieldFrom, Yield, Print, TryGroup,
+    ParameterList, Isset, Empty, Eval, Include, YieldFrom, Yield, Print, TryStatement,
     Backticks, EncapsulatedVariableList, AnonymousClassDeclaration, New, identifier, Variables,
     QualifiedNameList, PropertyDeclaration, PropertyDeclarationList, Scalar, ClassModifiers,
     ClassConstElement, ClassConstantDeclarationList, TypeDeclaration, CompoundStatement, ReservedNonModifier,
     InnerStatementList, MethodDeclaration, UseTraitStatement, TraitAdaptations,
     MethodReference, TraitPrecendence, TraitAlias, Expressions,
-    Variable, ArrayPairList, ClosureUseVariable, ClosureUseList,
-    Clone, Heredoc, DoubleQuotes, EmptyStatement, IfList, If, WhileStatement, DoStatement, ClassInterfaceClause,
+    SimpleVariable, ArrayPairList, ClosureUseVariable, ClosureUseList,
+    Clone, Heredoc, DoubleQuotes, EmptyStatement, If, WhileStatement, DoStatement, ClassInterfaceClause,
     ForExpressionList, ForStatement, BreakStatement, ContinueStatement, ReturnStatement,
-    Unset, ThrowStatement, GotoStatement, NamedLabelStatement, Foreach, Cases, Switch, MemberModifiers,
-    Case, Try, Catch, CatchNameList, Finally, TernaryExpression, BinaryExpression,
-    UnaryExpression, MagicConstant, Catches, FunctionBody, MethodBody, ClassBaseClause, InterfaceBaseClause,
+    Unset, ThrowStatement, GotoStatement, NamedLabelStatement, Foreach, CaseStatements, SwitchStatement, MemberModifiers,
+    CaseStatement, Try, CatchClause, CatchNameList, FinallyClause, TernaryExpression, BinaryExpression,
+    UnaryExpression, MagicConstant, CatchClauses, FunctionBody, MethodBody, ClassBaseClause, InterfaceBaseClause,
     EncapsulatedVariable, ErrorStaticMember, ErrorArgument, ErrorVariable, ErrorExpression, ErrorClassStatement,
     ErrorPropertyName, ErrorTraitAdaptation
 }
@@ -210,51 +218,6 @@ export namespace Parser {
                 return false;
         }
     }
-
-    var recoverTopStatementStartTokenTypes: (TokenType | string)[] = [
-        TokenType.Namespace, TokenType.Use, TokenType.HaltCompiler, TokenType.Const,
-        TokenType.Function, TokenType.Class, TokenType.Abstract, TokenType.Final,
-        TokenType.Trait, TokenType.Interface, TokenType.If, TokenType.While, TokenType.Do,
-        TokenType.For, TokenType.Switch, TokenType.Break, TokenType.Continue, TokenType.Return,
-        TokenType.Global, TokenType.Static, TokenType.Echo, TokenType.Text,
-        TokenType.Unset, TokenType.ForEach, TokenType.Declare, TokenType.Try,
-        TokenType.Throw, TokenType.Goto, ';'
-    ];
-
-    var recoverInnerStatementStartTokenTypes: (TokenType | string)[] = [
-        TokenType.Function, TokenType.Abstract, TokenType.Final, TokenType.Class, TokenType.Trait,
-        TokenType.Interface, TokenType.If, TokenType.While, TokenType.Do,
-        TokenType.For, TokenType.Switch, TokenType.Break, TokenType.Continue, TokenType.Return,
-        TokenType.Global, TokenType.Static, TokenType.Echo, TokenType.Text,
-        TokenType.Unset, TokenType.ForEach, TokenType.Declare, TokenType.Try,
-        TokenType.Throw, TokenType.Goto, ';'
-    ];
-
-    var recoverClassStatementStartTokenTypes: (TokenType | string)[] = [
-        TokenType.Public, TokenType.Protected, TokenType.Private, TokenType.Static,
-        TokenType.Abstract, TokenType.Final, TokenType.Function, TokenType.Var,
-        TokenType.Const, TokenType.Use
-    ];
-
-    var parameterStartTokenTypes: (TokenType | string)[] = [
-        '&', TokenType.Ellipsis, TokenType.VariableName, TokenType.Backslash,
-        TokenType.Name, TokenType.Namespace, '?', TokenType.Array,
-        TokenType.Callable
-    ];
-
-    var recoverStatementStartTokenTypes: (TokenType | string)[] = [
-        TokenType.If, TokenType.While, TokenType.Do, TokenType.For, TokenType.Switch,
-        TokenType.Break, TokenType.Continue, TokenType.Return, '{', ';',
-        TokenType.Global, TokenType.Static, TokenType.Echo, TokenType.Text, TokenType.Unset,
-        TokenType.ForEach, TokenType.Declare, TokenType.Try, TokenType.Throw, TokenType.Goto
-    ];
-
-    var foreachVariableStartTokenTypes: (TokenType | string)[] = [
-        '&', TokenType.List,
-        TokenType.VariableName, '$', '(', TokenType.Array, '[',
-        TokenType.StringLiteral, TokenType.Static,
-        TokenType.Name, TokenType.Namespace, TokenType.Backslash
-    ];
 
     var tokenBuffer: Token[];
     var recoverSetStack: (TokenType | string)[][];
@@ -447,30 +410,6 @@ export namespace Parser {
         }
     }
 
-    function phrase(
-        func: any,
-        args: any[],
-        recoverSet?: (TokenType | string)[],
-        startTokenTypes?: (TokenType | string)[]
-    ) {
-
-        // if recovering from parse error make sure that the parser will recover
-        // at start of this phrase
-        if (isRecovering && startTokenTypes && startTokenTypes.indexOf(peek().tokenType) < 0) {
-            return;
-        }
-
-        let n = phraseStackTop<TempNode>(phraseStack);
-        recoverSetStack.push(recoverSet);
-        let node = func.call(func, ...args);
-        recoverSetStack.pop();
-
-        if (node) {
-            n.children.push(node);
-        }
-
-    }
-
     function error(expected?: (TokenType | string), phraseRecoverSet?: (TokenType | string)[], skipIfRecovered?: (TokenType | string)[]) {
 
         //dont report errors if recovering
@@ -521,7 +460,7 @@ export namespace Parser {
         optional(TokenType.Text);
         expectOneOf([TokenType.OpenTag, TokenType.OpenTagEcho]);
         if (isStatementStart(peek())) {
-            p.children.push(statementList(TokenType.EndOfFile))
+            p.children.push(statementList([TokenType.EndOfFile]))
         }
         optional(TokenType.CloseTag);
         optional(TokenType.Text);
@@ -529,7 +468,7 @@ export namespace Parser {
     }
 
     function list(phraseType: PhraseType, elementFunction: () => Phrase,
-        elementStartPredicate: Predicate, breakOn: TokenType) {
+        elementStartPredicate: Predicate, breakOn?: TokenType[]) {
 
         let p = start(phraseType);
         let t: Token;
@@ -539,10 +478,10 @@ export namespace Parser {
             t = peek();
             if (elementStartPredicate(t)) {
                 p.children.push(elementFunction());
-            } else if (t.tokenType === breakOn) {
+            } else if (!breakOn || breakOn.indexOf(t.tokenType) >= 0) {
                 break;
             } else {
-                error(undefined, recover);
+                error();
             }
 
         }
@@ -551,7 +490,7 @@ export namespace Parser {
 
     }
 
-    function statementList(breakOn: TokenType) {
+    function statementList(breakOn: TokenType[]) {
 
         return list(
             PhraseType.StatementList,
@@ -981,7 +920,7 @@ export namespace Parser {
             if (peek(1).tokenType === '[') {
                 phrase(dollarCurlyOpenEncapsulatedVariable, [], ['}']);
             } else {
-                start(PhraseType.Variable);
+                start(PhraseType.SimpleVariable);
                 next();
                 n.children.push(end());
             }
@@ -1601,7 +1540,7 @@ export namespace Parser {
             case TokenType.OpenBrace:
                 return compoundStatement();
             case TokenType.If:
-                return ifStatementList();
+                return ifStatement();
             case TokenType.While:
                 return whileStatement();
             case TokenType.Do:
@@ -1631,7 +1570,7 @@ export namespace Parser {
             case TokenType.Declare:
                 return declareStatement();
             case TokenType.Try:
-                return tryGroup();
+                return tryStatement();
             case TokenType.Throw:
                 return throwStatement();
             case TokenType.Goto:
@@ -1652,96 +1591,59 @@ export namespace Parser {
 
     }
 
-    function tryGroup() {
+    function isCatchClauseStart(t: Token) {
+        return t.tokenType === TokenType.Catch;
+    }
 
-        let n = start(PhraseType.TryGroup);
-        phrase(tryStmt, [][TokenType.Catch, TokenType.Finally]);
+    function tryStatement() {
 
-        if (peek().tokenType === TokenType.Catch) {
-            phrase(catches, [], [TokenType.Finally]);
+        let p = start(PhraseType.TryStatement);
+        next(); //try
+        p.children.push(compoundStatement());
+
+        let t = peek();
+
+        if (t.tokenType === TokenType.Catch) {
+            p.children.push(list(
+                PhraseType.CatchClauses,
+                catchClause,
+                isCatchClauseStart
+            ));
+        } else if (t.tokenType !== TokenType.Finally) {
+            error();
         }
 
         if (peek().tokenType === TokenType.Finally) {
-            phrase(finallyStatement, []);
+            p.children.push(finallyClause());
         }
 
         return end();
 
     }
 
-    function tryStmt() {
-        let n = start(PhraseType.Try);
-        next(); //try
-        n.children.push(compoundStatement());
-        return end();
-    }
+    function finallyClause() {
 
-    function catches() {
-
-        start(PhraseType.Catches);
-        let recover = [TokenType.Catch];
-
-        while (true) {
-
-            if (peek().tokenType === TokenType.Catch) {
-                phrase(catchStatement, [], recover);
-            } else {
-                break;
-            }
-
-        }
-
+        let p = start(PhraseType.FinallyClause);
+        next(); //finally
+        p.children.push(compoundStatement());
         return end();
 
     }
 
-    function finallyStatement() {
+    function catchClause() {
 
-        let n = start(PhraseType.Finally);
-        next(); //T_FINALLY
-        n.children.push(compoundStatement());
-        return end();
-
-    }
-
-    function catchStatement() {
-
-        start(PhraseType.Catch);
+        let p = start(PhraseType.CatchClause);
         next(); //catch
-
-        if (!expect('(')) {
-            return end();
-        }
-
-        phrase(catchNameList, [], [')', '{']);
-        expect(TokenType.VariableName, [')', '{']);
-        expect(')', [')', '{']);
-        phrase(compoundStatement, [], ['{']);
-        return end();
-
-    }
-
-    function catchNameList() {
-
-        let n = start(PhraseType.QualifiedNameList);
-        let t: Token;
-
-        while (true) {
-
-            n.children.push(qualifiedName());
-            t = peek();
-
-            if (t.tokenType === '|') {
-                next();
-            } else if (t.tokenType === TokenType.VariableName) {
-                break;
-            } else {
-                error();
-                break;
-            }
-
-        }
-
+        expect(TokenType.OpenParenthesis);
+        p.children.push(list(
+            PhraseType.CatchNameList,
+            qualifiedName,
+            isQualifiedNameStart,
+            [TokenType.VariableName]
+        ));
+        expect(TokenType.VariableName);
+        expect(TokenType.OpenParenthesis);
+        p.children.push(compoundStatement());
         return end();
 
     }
@@ -1769,7 +1671,7 @@ export namespace Parser {
         if (t.tokenType === TokenType.Colon) {
 
             next();
-            p.children.push(statementList(TokenType.EndDeclare));
+            p.children.push(statementList([TokenType.EndDeclare]));
             expect(TokenType.EndDeclare);
             expect(TokenType.Semicolon);
 
@@ -1793,50 +1695,50 @@ export namespace Parser {
 
     function switchStatement() {
 
-        start(PhraseType.Switch);
+        let p = start(PhraseType.SwitchStatement);
         next(); //switch
-        let recover = [':', '{', TokenType.Case, TokenType.Default, TokenType.EndSwitch];
-        phrase(encapsulatedExpression, ['(', ')'], recover);
-        expectOneOf(['{', ':'], recover);
+        expect(TokenType.OpenParenthesis);
+        p.children.push(expression(0));
+        expect(TokenType.CloseParenthesis);
 
-        next(';');
-        phrase(cases, [], ['}', TokenType.EndSwitch], [TokenType.Case, TokenType.Default]);
-        let t = peek();
+        let t = expectOneOf([TokenType.Colon, TokenType.OpenBrace]);
 
-        if (t.tokenType === '}') {
-            next();
-        } else if (t.tokenType === TokenType.EndSwitch) {
-            next();
-            expect(';', [';']);
+        if ([TokenType.Case, TokenType.Default].indexOf(peek().tokenType) >= 0) {
+            p.children.push(caseStatements(t.tokenType === TokenType.Colon ?
+                TokenType.EndSwitch : TokenType.CloseBrace));
+        }
+
+        if (t.tokenType === TokenType.Colon) {
+            expect(TokenType.EndSwitch);
+            expect(TokenType.Semicolon);
         } else {
-            error(undefined, ['}', ';'], ['}', ';']);
+            expect(TokenType.CloseBrace);
         }
 
         return end();
 
     }
 
-    function cases() {
+    function caseStatements(breakOn: TokenType) {
 
-        let n = start(PhraseType.Cases);
-        let recover: (TokenType | string)[] = [TokenType.Case, TokenType.Default];
+        let p = start(PhraseType.CaseStatements);
         let t: Token;
-        let breakOn = ['}', TokenType.EndSwitch];
+        let caseBreakOn = [TokenType.Case, TokenType.Default];
+        caseBreakOn.push(breakOn);
 
         while (true) {
 
             t = peek();
 
-            if (t.tokenType === TokenType.Case || t.tokenType === TokenType.Default) {
-                phrase(caseStatement, [], recover);
-            } else if (breakOn.indexOf(t.tokenType) >= 0) {
+            if (t.tokenType === TokenType.Case) {
+                p.children.push(caseStatement(caseBreakOn));
+            } else if (t.tokenType === TokenType.Default) {
+                p.children.push(defaultStatement(caseBreakOn));
+            } else if (breakOn === t.tokenType) {
                 break;
             } else {
-                //error
-                let rec = [TokenType.Case, TokenType.Default, '}', TokenType.EndSwitch];
-                if (rec.indexOf(error(undefined, rec).tokenType) >= 0) {
-                    break;
-                }
+                error();
+                break;
             }
 
         }
@@ -1845,30 +1747,27 @@ export namespace Parser {
 
     }
 
-    function caseStatement() {
+    function caseStatement(breakOn: TokenType[]) {
 
-        let n = start(PhraseType.Case);
-        let t = peek();
-
-        if (t.tokenType === TokenType.Case) {
-            next();
-            phrase(expression, [0], [';', ':']);
-        } else if (t.tokenType === TokenType.Default) {
-            next();
-        } else {
-            //error
-            //should never reach here
-            throw new Error(`Unexpected token ${peek().tokenType}`);
+        let p = start(PhraseType.CaseStatement);
+        next(); //case
+        p.children.push(expression(0));
+        expectOneOf([TokenType.Colon, TokenType.Semicolon]);
+        if (isStatementStart(peek())) {
+            p.children.push(statementList(breakOn));
         }
-
-        expectOneOf([':', ';'], [...recoverInnerStatementStartTokenTypes, ':']);
-
-        if (isInnerStatementStartToken(peek())) {
-            phrase(innerStatementList, [['}', TokenType.EndSwitch, TokenType.Case, TokenType.Default]]);
-        }
-
         return end();
 
+    }
+
+    function defaultStatement(breakOn: TokenType[]) {
+        let p = start(PhraseType.DefaultStatement);
+        next(); //default
+        expectOneOf([TokenType.Colon, TokenType.Semicolon]);
+        if (isStatementStart(peek())) {
+            p.children.push(statementList(breakOn));
+        }
+        return end();
     }
 
     function namedLabelStatement() {
@@ -1899,24 +1798,25 @@ export namespace Parser {
         return end();
     }
 
-    function foreachCollectionName(){
+    function foreachCollectionName() {
         let p = start(PhraseType.ForeachCollectionName);
         p.children.push(expression(0));
         return end();
     }
 
-    function foreachKeyOrValue(){
+    function foreachKeyOrValue() {
         let p = start(PhraseType.ForeachValue);
         p.children.push(expression(0));
-        if(peek().tokenType === TokenType.FatArrow){
+        if (peek().tokenType === TokenType.FatArrow) {
             next();
             p.phraseType = PhraseType.ForeachKey;
         }
         return p;
     }
 
-    function foreachValue(){
+    function foreachValue() {
         let p = start(PhraseType.ForeachValue);
+        optional(TokenType.Ampersand);
         p.children.push(expression(0));
         return p;
     }
@@ -1927,76 +1827,29 @@ export namespace Parser {
         next(); //foreach
         expect(TokenType.OpenParenthesis);
         p.children.push(foreachCollectionName());
-        let keyOrValue = foreachKeyOrValue();
+        let keyOrValue = peek().tokenType === TokenType.Ampersand ? foreachValue() : foreachKeyOrValue();
         p.children.push(keyOrValue);
-        
-        if(keyOrValue.phraseType === PhraseType.ForeachKey){
+
+        if (keyOrValue.phraseType === PhraseType.ForeachKey) {
             p.children.push(foreachValue());
         }
-        
+
         expect(TokenType.CloseParenthesis);
-        
-
-        if (!expect('(')) {
-            return end();
-        }
-
-        let recover = [...recoverStatementStartTokenTypes, ':', ')', TokenType.FatArrow, TokenType.As];
-        phrase(expression, [0], recover);
-        recover.pop();
-        expect(TokenType.As, recover);
-        phrase(foreachVariable, [], recover, foreachVariableStartTokenTypes);
-        recover.pop();
-
-        if (next(TokenType.FatArrow)) {
-            phrase(foreachVariable, [], recover);
-        }
-
-        recover.pop();
-        expect(')', recover);
 
         let t = peek();
 
-        if (t.tokenType === ':') {
+        if (t.tokenType === TokenType.Colon) {
             next();
-            phrase(innerStatementList, [[TokenType.EndForeach]], [TokenType.EndForeach, ';']);
-            expect(TokenType.EndForeach, [';']);
-            expect(';', [';']);
+            p.children.push(statementList(TokenType.EndForeach));
+            expect(TokenType.EndForeach);
+            expect(TokenType.Semicolon);
         } else if (isStatementStart(t)) {
-            phrase(statement, []);
+            p.children.push(statement());
         } else {
-            //error
             error();
         }
 
         return end();
-
-    }
-
-    function foreachVariable() {
-
-        switch (peek().tokenType) {
-
-            case '&':
-                let unary = start(PhraseType.UnaryExpression);
-                next();
-                unary.children.push(variable());
-                return end();
-            case TokenType.List:
-                return listExpression();
-            case '[':
-                return shortArray();
-            default:
-                if (isVariableStartToken(peek())) {
-                    return variable();
-                } else {
-                    //error
-                    start(PhraseType.ErrorVariable);
-                    error();
-                    return end();
-                }
-
-        }
 
     }
 
@@ -2239,7 +2092,7 @@ export namespace Parser {
 
         if (t.tokenType === TokenType.Colon) {
             next();
-            p.children.push(statementList(TokenType.EndWhile));
+            p.children.push(statementList([TokenType.EndWhile]));
             expect(TokenType.EndWhile);
             expect(TokenType.Semicolon);
         } else if (isStatementStart(t)) {
@@ -2253,84 +2106,86 @@ export namespace Parser {
 
     }
 
-    function ifStatementList() {
+    function elseIfClause1() {
 
-        let n = tempNode(PhraseType.IfList);
-        let discoverAlt = { isAlt: false };
-        let followOn = [TokenType.ElseIf, TokenType.Else, TokenType.EndIf];
-        recoverPush(followOn);
-        n.children.push(ifStatement(false, discoverAlt));
-        recoverPop();
-        let t: Token;
-
-        recoverPush(followOn);
-        while (true) {
-
-            t = peek();
-
-            if (t.tokenType === TokenType.ElseIf || t.tokenType === TokenType.Else) {
-                n.children.push(ifStatement(discoverAlt.isAlt));
-            } else {
-                break;
-            }
-
-        }
-
-        recoverPop();
-
-        if (discoverAlt.isAlt) {
-
-            if (!next(TokenType.EndIf)) {
-                //error
-                error([TokenType.EndIf], [';']);
-            }
-
-            if (!expect(';')) {
-                //error
-                error([';'], [';']);
-                expect(';');
-            }
-        }
-
-        return node(n);
-
+        let p = start(PhraseType.ElseIfClause);
+        next(); //elseif
+        expect(TokenType.OpenParenthesis);
+        p.children.push(expression(0));
+        expect(TokenType.CloseParenthesis);
+        p.children.push(statement());
+        return end();
     }
 
-    function ifStatement(isAlt: boolean, discoverAlt: { isAlt: boolean } = null) {
+    function elseIfClause2() {
+        let p = start(PhraseType.ElseIfClause);
+        next(); //elseif
+        expect(TokenType.OpenParenthesis);
+        p.children.push(expression(0));
+        expect(TokenType.CloseParenthesis);
+        expect(TokenType.Colon);
+        p.children.push(statementList([TokenType.EndIf, TokenType.Else]));
+        return end();
+    }
 
-        let n = tempNode(PhraseType.If);
+    function elseClause1() {
+        let p = start(PhraseType.ElseClause);
+        next(); //else
+        p.children.push(statement());
+        return end();
+    }
+
+    function elseClause2() {
+        let p = start(PhraseType.ElseClause);
+        next(); //else
+        expect(TokenType.Colon);
+        p.children.push(statementList([TokenType.EndIf]));
+        return end();
+    }
+
+    function ifStatement() {
+
+        let p = start(PhraseType.IfStatement);
+        next(); //if
+        expect(TokenType.OpenParenthesis);
+        p.children.push(expression(0));
+        expect(TokenType.CloseParenthesis);
+
         let t = peek();
+        let elseIfClauseFunction = elseIfClause1;
+        let elseClauseFunction = elseClause1;
+        let expectEndIf = false;
 
-        if (t.tokenType === TokenType.If || t.tokenType === TokenType.ElseIf) {
-
-            let recover = recoverStatementStartTokenTypes.slice(0);
-            recover.push(':');
-            recoverPush(recover);
-            n.children.push(encapsulatedExpression('(', ')'));
-            recoverPop();
-
-        } else if (t.tokenType === TokenType.Else) {
+        if (t.tokenType === TokenType.Colon) {
             next();
-            n.children.push(nodeFactory(null));
+            p.children.push(statementList([TokenType.ElseIf, TokenType.Else, TokenType.EndIf]));
+            elseIfClauseFunction = elseIfClause2;
+            elseClauseFunction = elseClause2;
+            expectEndIf = true;
+        } else if (isStatementStart(t)) {
+            p.children.push(statement());
         } else {
-            throw new Error(`Unexpected token ${peek().tokenType}`);
+            error();
         }
 
-        if ((isAlt || discoverAlt) && expect(':')) {
-            if (discoverAlt) {
-                discoverAlt.isAlt = true;
-            }
-
-            n.children.push(innerStatementList([TokenType.EndIf, TokenType.ElseIf, TokenType.Else]));
-        } else if (isStatementStart(peek())) {
-            n.children.push(statement());
-        } else {
-            //error
-            n.children.push(nodeFactory(null));
-            error([]);
+        if (peek().tokenType === TokenType.ElseIf) {
+            p.children.push(list(
+                PhraseType.ElseIfClauses,
+                elseIfClauseFunction,
+                (t: Token) => { return t.tokenType === TokenType.ElseIf; }
+            ));
         }
 
-        return node(n);
+        if (peek().tokenType === TokenType.Else) {
+            p.children.push(elseClauseFunction());
+        }
+
+        if (expectEndIf) {
+            expect(TokenType.EndIf);
+            expect(TokenType.Semicolon);
+        }
+
+        return end();
 
     }
 
@@ -2904,7 +2759,7 @@ export namespace Parser {
                     variableAtomNode = node(call);
                     continue;
                 default:
-                    if (count === 1 && variableAtomType !== PhraseType.Variable) {
+                    if (count === 1 && variableAtomType !== PhraseType.SimpleVariable) {
                         //error
                         let errNode = tempNode(PhraseType.ErrorVariable, startToken);
                         errNode.children.push(variableAtomNode);
@@ -3285,7 +3140,7 @@ export namespace Parser {
         switch (peek().tokenType) {
             case TokenType.VariableName:
             case '$':
-                variableAtomType = PhraseType.Variable;
+                variableAtomType = PhraseType.SimpleVariable;
                 return simpleVariable();
             case '(':
                 return encapsulatedExpression('(', ')');
@@ -3322,28 +3177,23 @@ export namespace Parser {
 
     function simpleVariable() {
 
-        let n = tempNode(PhraseType.Variable);
-        let t = peek();
+        let p = start(PhraseType.SimpleVariable);
+        let t = expectOneOf([TokenType.VariableName, TokenType.Dollar]);
 
-        if (t.tokenType === TokenType.VariableName) {
-            n.children.push(nodeFactory(next()));
-        } else if (t.tokenType === '$') {
-            next();
+        if (t.tokenType === TokenType.Dollar) {
             t = peek();
-            if (t.tokenType === '{') {
-                n.children.push(encapsulatedExpression('{', '}'));
-            } else if (t.tokenType === '$' || t.tokenType === TokenType.VariableName) {
-                n.children.push(simpleVariable());
+            if (t.tokenType === TokenType.OpenBrace) {
+                next();
+                p.children.push(expression(0));
+                expect(TokenType.CloseBrace);
+            } else if (t.tokenType === TokenType.Dollar || t.tokenType === TokenType.VariableName) {
+                p.children.push(simpleVariable());
             } else {
-                //error
-                error(['{', '$', TokenType.VariableName]);
+                error();
             }
-        } else {
-            //shouldnt get here
-            throw new Error(`Unexpected token ${t.tokenType}`);
         }
 
-        return node(n);
+        return end();
 
     }
 
