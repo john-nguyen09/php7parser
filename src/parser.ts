@@ -82,6 +82,8 @@ export const enum PhraseType {
 
     TraitUseSpecification,
 
+    AnonymousClassDeclarationHeader,
+
     Error, NamespaceDefinition, NamespaceName, UseDeclaration,
     UseGroup, UseList, HaltCompilerStatement,
     ArrayPair, Name, Call, Unpack, ArgumentList, Dimension, ClassConstant,
@@ -1014,22 +1016,32 @@ export namespace Parser {
 
     function anonymousClassDeclaration() {
 
-        start(PhraseType.AnonymousClassDeclaration);
+        let p = start(PhraseType.AnonymousClassDeclaration);
+        p.children.push(anonymousClassDeclarationHeader(), 
+        classTraitInterfaceDeclarationBody(
+            PhraseType.ClassDeclarationBody, isClassMemberStart, classMemberDeclarations
+        ));
+        return end();
+
+    }
+
+    function anonymousClassDeclarationHeader(){
+
+        let p = start(PhraseType.AnonymousClassDeclarationHeader);
         next(); //class
 
-        if (peek().tokenType === '(') {
-            phrase(argumentList, [], [TokenType.Extends, TokenType.Implements, '{']);
+        if (peek().tokenType === TokenType.OpenParenthesis) {
+            p.children.push(argumentList());
         }
 
         if (peek().tokenType === TokenType.Extends) {
-            phrase(classBaseClause, [], [TokenType.Implements, '{']);
+            p.children.push(classBaseClause());
         }
 
         if (peek().tokenType === TokenType.Implements) {
-            phrase(classInterfaceClause, [], ['{']);
+            p.children.push(classInterfaceClause());
         }
 
-        phrase(classMemberDeclarations, [], [], ['{']);
         return end();
 
     }
@@ -1260,7 +1272,7 @@ export namespace Parser {
                 parameterDeclaration,
                 isParameterStart,
                 TokenType.Comma,
-                TokenType.CloseParenthesis
+                [TokenType.CloseParenthesis]
             ));
         }
 
@@ -1359,7 +1371,7 @@ export namespace Parser {
 
         let n = start(PhraseType.InterfaceBaseClause);
         next(); //extends
-        n.children.push(qualifiedNameList(TokenType.OpenBrace));
+        n.children.push(qualifiedNameList([TokenType.OpenBrace]));
         return end();
 
     }
@@ -1416,7 +1428,7 @@ export namespace Parser {
                 parameterDeclaration,
                 isParameterStart,
                 TokenType.Comma,
-                TokenType.CloseParenthesis
+                [TokenType.CloseParenthesis]
             ));
         }
 
@@ -1883,7 +1895,7 @@ export namespace Parser {
 
     }
 
-    function variableList(breakOn?: TokenType) {
+    function variableList(breakOn?: TokenType[]) {
         return delimitedList(
             PhraseType.VariableList,
             variable,
@@ -1898,7 +1910,7 @@ export namespace Parser {
         let p = start(PhraseType.UnsetIntrinsic);
         next(); //unset
         expect(TokenType.OpenParenthesis);
-        p.children.push(variableList(TokenType.CloseParenthesis));
+        p.children.push(variableList([TokenType.CloseParenthesis]));
         expect(TokenType.CloseParenthesis);
         expect(TokenType.Semicolon);
         return end();
@@ -1924,6 +1936,10 @@ export namespace Parser {
 
     }
 
+    function isStaticVariableDclarationStart(t:Token){
+        return t.tokenType === TokenType.VariableName;
+    }
+
     function functionStaticDeclaration() {
 
         let p = start(PhraseType.FunctionStaticDeclaration);
@@ -1931,9 +1947,9 @@ export namespace Parser {
         p.children.push(delimitedList(
             PhraseType.StaticVariableNameList,
             staticVariableDeclaration,
-            (t: Token) => { return t.tokenType === TokenType.VariableName; },
+            isStaticVariableDclarationStart,
             TokenType.Comma,
-            TokenType.Semicolon
+            [TokenType.Semicolon]
         ));
         expect(TokenType.Semicolon);
         return end();
@@ -1949,7 +1965,7 @@ export namespace Parser {
             simpleVariable,
             isSimpleVariableStart,
             TokenType.Comma,
-            TokenType.Semicolon
+            [TokenType.Semicolon]
         ));
         expect(TokenType.Semicolon);
         return end();
@@ -2008,11 +2024,11 @@ export namespace Parser {
         return end();
     }
 
-    function forExpressionGroup(phraseType: PhraseType, breakOn: TokenType) {
+    function forExpressionGroup(phraseType: PhraseType, breakOn: TokenType[]) {
 
         return delimitedList(
             phraseType,
-            () => { return expression(0); },
+            expressionInitial,
             isExpressionStart,
             TokenType.Comma,
             breakOn
@@ -2027,19 +2043,19 @@ export namespace Parser {
         expect(TokenType.OpenParenthesis);
 
         if (isExpressionStart(peek())) {
-            p.children.push(forExpressionGroup(PhraseType.ForInitialiser, TokenType.Semicolon));
+            p.children.push(forExpressionGroup(PhraseType.ForInitialiser, [TokenType.Semicolon]));
         }
 
         expect(TokenType.Semicolon);
 
         if (isExpressionStart(peek())) {
-            p.children.push(forExpressionGroup(PhraseType.ForControl, TokenType.Semicolon));
+            p.children.push(forExpressionGroup(PhraseType.ForControl, [TokenType.Semicolon]));
         }
 
         expect(TokenType.Semicolon);
 
         if (isExpressionStart(peek())) {
-            p.children.push(forExpressionGroup(PhraseType.ForEndOfLoop, TokenType.CloseParenthesis));
+            p.children.push(forExpressionGroup(PhraseType.ForEndOfLoop, [TokenType.CloseParenthesis]));
         }
 
         expect(TokenType.CloseParenthesis);
@@ -2048,7 +2064,7 @@ export namespace Parser {
 
         if (t.tokenType === TokenType.Colon) {
             next();
-            p.children.push(statementList(TokenType.EndFor));
+            p.children.push(statementList([TokenType.EndFor]));
             expect(TokenType.EndFor);
             expect(TokenType.Semicolon);
         } else if (isStatementStart(peek())) {
@@ -2216,10 +2232,7 @@ export namespace Parser {
                 p.children.push(qualifiedName());
                 break;
             default:
-                //error
-                error(p,
-                    [TokenType.Callable, TokenType.Array, TokenType.Name, TokenType.Namespace, TokenType.Backslash]
-                );
+                error();
                 break;
         }
 
@@ -2236,7 +2249,7 @@ export namespace Parser {
             classConstElement,
             isClassConstElementStartToken,
             TokenType.Comma,
-            TokenType.Semicolon
+            [TokenType.Semicolon]
         ));
         expect(TokenType.Semicolon);
         return p;
@@ -2247,22 +2260,22 @@ export namespace Parser {
 
         switch (t.tokenType) {
             case TokenType.VariableName:
-            case '$':
+            case TokenType.Dollar:
             case TokenType.Array:
-            case '[':
+            case TokenType.OpenBracket:
             case TokenType.StringLiteral:
             case TokenType.Backslash:
             case TokenType.Name:
             case TokenType.Namespace:
-            case '(':
+            case TokenType.OpenParenthesis:
             case TokenType.Static:
             case TokenType.PlusPlus:
             case TokenType.MinusMinus:
-            case '+':
-            case '-':
-            case '!':
-            case '~':
-            case '@':
+            case TokenType.Plus:
+            case TokenType.Minus:
+            case TokenType.Exclamation:
+            case TokenType.Tilde:
+            case TokenType.AtSymbol:
             case TokenType.IntegerCast:
             case TokenType.FloatCast:
             case TokenType.StringCast:
@@ -2277,15 +2290,15 @@ export namespace Parser {
             case TokenType.IntegerLiteral:
             case TokenType.LineConstant:
             case TokenType.FileConstant:
-            case TokenType.T_DIR:
+            case TokenType.DirectoryConstant:
             case TokenType.TraitConstant:
             case TokenType.MethodConstant:
             case TokenType.FunctionConstant:
             case TokenType.NamespaceConstant:
             case TokenType.ClassConstant:
             case TokenType.StartHeredoc:
-            case '"':
-            case '`':
+            case TokenType.DoubleQuote:
+            case TokenType.Backtick:
             case TokenType.Print:
             case TokenType.Yield:
             case TokenType.YieldFrom:
@@ -2327,7 +2340,7 @@ export namespace Parser {
             propertyElement,
             isPropertyElementStart,
             TokenType.Comma,
-            TokenType.Semicolon
+            [TokenType.Semicolon]
         ));
         expect(TokenType.Semicolon);
         return end();
