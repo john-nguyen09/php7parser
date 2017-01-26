@@ -295,45 +295,24 @@ export namespace Parser {
         }
     }
 
-    function isAssignmentOp(t: Token) {
-        switch (t.tokenType) {
-            case TokenType.Equals:
-            case TokenType.PlusEquals:
-            case TokenType.MinusEquals:
-            case TokenType.AsteriskEquals:
-            case TokenType.AsteriskAsteriskEquals:
-            case TokenType.ForwardslashEquals:
-            case TokenType.DotEquals:
-            case TokenType.PercentEquals:
-            case TokenType.AmpersandEquals:
-            case TokenType.BarEquals:
-            case TokenType.CaretEquals:
-            case TokenType.LessThanLessThanEquals:
-            case TokenType.GreaterThanGreaterThanEquals:
-                return true;
-            default:
-                return false;
-        }
-    }
-
     var tokenBuffer: Token[];
-    var pos: number;
     var phraseStack: Phrase[];
     var isRecovering = false;
 
     export function parseScript(text: string): Phrase {
 
         Lexer.setInput(text);
-
-        tokens = tokenArray;
-        pos = -1;
         phraseStack = [];
+        tokenBuffer = [];
 
-        if (!tokenArray.length) {
-            return null;
+        let p = start(PhraseType.Script);
+        optional(TokenType.Text);
+
+        if(optionalOneOf([TokenType.OpenTag, TokenType.OpenTagEcho])){
+            p.children.push(statementList([TokenType.EndOfFile]));
         }
 
-        return statementList(TokenType.EndOfFile);
+        return end();
 
     }
 
@@ -682,7 +661,7 @@ export namespace Parser {
             }
 
             next(); //operator
-            
+
             if (binaryPhraseType === PhraseType.ConditionalExpression) {
                 conditionalExpression(p, precedence);
             } else if (binaryPhraseType === PhraseType.SimpleAssignmentExpression &&
@@ -845,9 +824,9 @@ export namespace Parser {
             case TokenType.StartHeredoc:
                 return heredocStringLiteral();
             case TokenType.DoubleQuote:
-                return quotedEncapsulatedVariableList(PhraseType.DoubleQuotes, '"');
+                return quotedEncapsulatedVariableList(PhraseType.DoubleQuotes, TokenType.DoubleQuote);
             case TokenType.Backtick:
-                return quotedEncapsulatedVariableList(PhraseType.Backticks, '`');
+                return quotedEncapsulatedVariableList(PhraseType.Backticks, TokenType.Backtick);
             case TokenType.Print:
                 return keywordExpression(PhraseType.PrintIntrinsic);
             case TokenType.Yield:
@@ -934,12 +913,12 @@ export namespace Parser {
 
     }
 
-    function quotedEncapsulatedVariableList(type: PhraseType, closeTokenType: TokenType) {
+    function quotedEncapsulatedVariableList(phraseType: PhraseType, closeTokenType: TokenType) {
 
-        start(type);
+        let p = start(phraseType);
         next(); //open encaps
-        phrase(encapsulatedVariableList, [closeTokenType], [closeTokenType]);
-        expect(closeTokenType, [closeTokenType]);
+        p.children.push(encapsulatedVariableList(closeTokenType));
+        expect(closeTokenType);
         return end();
 
     }
@@ -973,11 +952,10 @@ export namespace Parser {
 
         switch (peek().tokenType) {
             case TokenType.EncapsulatedAndWhitespace:
-                next();
-                break;
+                return next(false);
             case TokenType.VariableName:
                 let t = peek(1);
-                if (t.tokenType === '[') {
+                if (t.tokenType === TokenType.OpenBracket) {
                     return encapsulatedDimension();
                 } else if (t.tokenType === TokenType.Arrow) {
                     return encapsulatedProperty();
@@ -989,79 +967,76 @@ export namespace Parser {
             case TokenType.CurlyOpen:
                 return curlyOpenEncapsulatedVariable();
             default:
-                //error
-                //should not get here
-                throw new Error(`Unexpected token ${peek().tokenType}`);
+                throwUnexpectedTokenError(peek());
         }
 
     }
 
     function curlyOpenEncapsulatedVariable() {
 
-        start(PhraseType.EncapsulatedVariable);
+        let p = start(PhraseType.EncapsulatedVariable);
         next(); //{
-        phrase(variable, [], ['}']);
-        expect('}', ['}']);
+        p.children.push(variable(variableAtom()));
+        expect(TokenType.CloseBrace);
         return end();
 
     }
 
     function dollarCurlyOpenEncapsulatedVariable() {
 
-        let n = start(PhraseType.EncapsulatedVariable);
+        let p = start(PhraseType.EncapsulatedVariable);
         next(); //${
         let t = peek();
 
         if (t.tokenType === TokenType.VariableName) {
 
-            if (peek(1).tokenType === '[') {
-                phrase(dollarCurlyOpenEncapsulatedVariable, [], ['}']);
+            if (peek(1).tokenType === TokenType.OpenBracket) {
+                p.children.push(dollarCurlyEncapsulatedDimension());
             } else {
                 start(PhraseType.SimpleVariable);
                 next();
-                n.children.push(end());
+                p.children.push(end());
             }
 
         } else if (isExpressionStart(t)) {
-            phrase(expression, [0], ['}']);
+            p.children.push(expression(0));
         } else {
-            //error
-            error(undefined, ['}']);
+            error();
         }
 
-        expect('}', ['}']);
+        expect(TokenType.CloseBrace);
         return end();
     }
 
     function dollarCurlyEncapsulatedDimension() {
-        start(PhraseType.SubscriptExpression);
-        next(); //T_STRING_VARNAME
+        let p = start(PhraseType.SubscriptExpression);
+        next(); //VariableName
         next(); // [
-        phrase(expression, [0], [']']);
-        expect(']', [']']);
+        p.children.push(expression(0));
+        expect(TokenType.CloseBracket);
         return end();
     }
 
     function encapsulatedDimension() {
 
-        let n = start(PhraseType.SubscriptExpression);
+        let p = start(PhraseType.SubscriptExpression);
 
-        n.children.push(simpleVariable()); //T_VARIABLE
+        p.children.push(simpleVariable()); //T_VARIABLE
         next(); //[
 
         switch (peek().tokenType) {
             case TokenType.Name:
-            case TokenType.T_NUM_STRING:
+            case TokenType.IntegerLiteral:
                 next();
                 break;
             case TokenType.VariableName:
-                phrase(simpleVariable, [], [']']);
+                p.children.push(simpleVariable());
                 break;
-            case '-':
-                start(PhraseType.UnaryExpression);
+            case TokenType.Minus:
+                start(PhraseType.UnaryOpExpression);
                 next(); //-
-                expect(TokenType.T_NUM_STRING, [']']);
-                n.children.push(end());
+                expect(TokenType.IntegerLiteral);
+                p.children.push(end());
                 break;
             default:
                 //error
@@ -1069,22 +1044,22 @@ export namespace Parser {
                 break;
         }
 
-        expect(']', [']']);
+        expect(TokenType.CloseBracket);
         return end();
 
     }
 
     function encapsulatedProperty() {
-        start(PhraseType.PropertyAccessExpression);
-        phrase(simpleVariable, []); //T_VARIABLE
-        next(); //T_OBJECT_OPERATOR
+        let p = start(PhraseType.PropertyAccessExpression);
+        p.children.push(simpleVariable());
+        next(); //->
         expect(TokenType.Name);
         return end();
     }
 
     function heredocStringLiteral() {
 
-        start(PhraseType.Heredoc);
+        let p = start(PhraseType.Heredoc);
         next(); //StartHeredoc
         p.children.push(encapsulatedVariableList(TokenType.EndHeredoc));
         expect(TokenType.EndHeredoc);
