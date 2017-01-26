@@ -115,6 +115,22 @@ export const enum PhraseType {
     RequireExpression,
     RequireOnceExpression,
 
+    InstanceofTypeDesignator,
+    AssignmentExpression,
+    InstanceOfExpression,
+    AdditiveExpression,
+    MultiplicativeExpression,
+    ShiftExpression,
+    RelationalExpression,
+    EqualityExpression,
+    SimpleAssignmentExpression,
+    ByRefAssignmentExpression,
+    CoalesceExpression,
+    CompoundAssignmentExpression,
+    LogicalExpression,
+    BitwiseExpression,
+    ExponentiationExpression,
+
     Error, NamespaceDefinition, NamespaceName, UseDeclaration,
     UseGroup, UseList, HaltCompilerStatement,
     ArrayElement, Name, FunctionCallExpression, Unpack, ArgumentExpressionList, SubscriptExpression, ClassConstantAccessExpression,
@@ -129,7 +145,7 @@ export const enum PhraseType {
     CloneExpression, Heredoc, DoubleQuotes, EmptyStatement, If, WhileStatement, DoStatement, ClassInterfaceClause,
     ForExpressionList, ForStatement, BreakStatement, ContinueStatement, ReturnStatement,
     UnsetIntrinsic, ThrowStatement, GotoStatement, NamedLabelStatement, Foreach, CaseStatements, SwitchStatement, MemberModifierList,
-    CaseStatement, Try, CatchClause, CatchNameList, FinallyClause, TernaryExpression, BinaryExpression,
+    CaseStatement, Try, CatchClause, CatchNameList, FinallyClause, ConditionalExpression, BinaryExpression,
     UnaryExpression, MagicConstant, CatchClauses, FunctionBody, MethodDeclarationBody, ClassBaseClause, InterfaceBaseClause,
     EncapsulatedVariable, ErrorScopedAccessExpression, ErrorArgument, ErrorVariable, ErrorExpression, ErrorClassMemberDeclaration,
     ErrorPropertyName, ErrorTraitAdaptation, ErrorVariableAtom, ErrorClassTypeDesignatorAtom
@@ -216,53 +232,72 @@ export namespace Parser {
         return opPrecedenceAndAssociativtyMap[t.text];
     }
 
-    function isBinaryOp(t: Token) {
-        return isVariableOnlyBinaryOp(t) || isVariableAndExpressionBinaryOp(t);
-    }
-
-    function isVariableAndExpressionBinaryOp(t: Token) {
+    function binaryOpToPhraseType(t: Token) {
         switch (t.tokenType) {
-            case '|':
-            case '&':
-            case '^':
-            case '.':
-            case '+':
-            case '-':
-            case '*':
-            case '/':
-            case '%':
+            case TokenType.Question:
+                return PhraseType.ConditionalExpression;
+            case TokenType.Dot:
+            case TokenType.Plus:
+            case TokenType.Minus:
+                return PhraseType.AdditiveExpression;
+            case TokenType.Bar:
+            case TokenType.Ampersand:
+            case TokenType.Caret:
+                return PhraseType.BitwiseExpression;
+            case TokenType.Asterisk:
+            case TokenType.ForwardSlash:
+            case TokenType.Percent:
+                return PhraseType.MultiplicativeExpression;
             case TokenType.AsteriskAsterisk:
+                return PhraseType.ExponentiationExpression;
             case TokenType.LessThanLessThan:
             case TokenType.GreaterThanGreaterThan:
+                return PhraseType.ShiftExpression;
             case TokenType.AmpersandAmpersand:
             case TokenType.BarBar:
             case TokenType.And:
             case TokenType.Or:
             case TokenType.Xor:
+                return PhraseType.LogicalExpression;
             case TokenType.EqualsEqualsEquals:
             case TokenType.ExclamationEqualsEquals:
             case TokenType.EqualsEquals:
             case TokenType.ExclamationEquals:
-            case '<':
+                return PhraseType.EqualityExpression;
+            case TokenType.LessThan:
             case TokenType.LessThanEquals:
-            case '>':
+            case TokenType.GreaterThan:
             case TokenType.GreaterThanEquals:
             case TokenType.Spaceship:
+                return PhraseType.RelationalExpression;
             case TokenType.QuestionQuestion:
-                return true;
+                return PhraseType.CoalesceExpression;
+            case TokenType.Equals:
+                return PhraseType.SimpleAssignmentExpression;
+            case TokenType.PlusEquals:
+            case TokenType.MinusEquals:
+            case TokenType.AsteriskEquals:
+            case TokenType.AsteriskAsteriskEquals:
+            case TokenType.ForwardslashEquals:
+            case TokenType.DotEquals:
+            case TokenType.PercentEquals:
+            case TokenType.AmpersandEquals:
+            case TokenType.BarEquals:
+            case TokenType.CaretEquals:
+            case TokenType.LessThanLessThanEquals:
+            case TokenType.GreaterThanGreaterThanEquals:
+                return PhraseType.CompoundAssignmentExpression;
+            case TokenType.InstanceOf:
+                return PhraseType.InstanceOfExpression;
             default:
-                return false;
+                return PhraseType.Unknown;
 
         }
     }
 
-    function isAssignBinaryOp(t: Token) {
-        return t.tokenType === '=';
-    }
-
-    function isVariableOnlyBinaryOp(t: Token) {
+    function isAssignmentOp(t: Token) {
         switch (t.tokenType) {
-            case '=':
+            case TokenType.Equals:
             case TokenType.PlusEquals:
             case TokenType.MinusEquals:
             case TokenType.AsteriskEquals:
@@ -282,13 +317,9 @@ export namespace Parser {
     }
 
     var tokenBuffer: Token[];
-    var recoverSetStack: (TokenType | string)[][];
-    var isBinaryOpPredicate: Predicate;
-    var variableAtomType: PhraseType;
     var pos: number;
     var phraseStack: Phrase[];
     var isRecovering = false;
-
 
     export function parseScript(text: string): Phrase {
 
@@ -623,43 +654,49 @@ export namespace Parser {
         let precedence: number;
         let associativity: Associativity;
         let op: Token;
-        isBinaryOpPredicate = isVariableAndExpressionBinaryOp;
         let lhs = expressionAtom();
         let p: Phrase;
+        let rhs: Phrase | Token;
+        let binaryPhraseType: PhraseType;
 
         while (true) {
 
             op = peek();
+            binaryPhraseType = binaryOpToPhraseType(op);
 
-            if (!isBinaryOpPredicate(op)) {
+            if (binaryPhraseType === PhraseType.Unknown) {
                 break;
             }
 
-            p = start(PhraseType.BinaryExpression);
-            p.children.push(lhs);
-
-            [precedence, associativity] = opPrecedenceAndAssociativtyMap[op.text];
+            [precedence, associativity] = precedenceAssociativityTuple(op);
 
             if (precedence < minPrecedence) {
                 break;
             }
+
+            p = start(binaryPhraseType);
+            p.children.push(lhs);
 
             if (associativity === Associativity.Left) {
                 ++precedence;
             }
 
             next(); //operator
-            if (op.tokenType === '?') {
-                lhs = ternaryExpression(p, precedence);
+            
+            if (binaryPhraseType === PhraseType.ConditionalExpression) {
+                conditionalExpression(p, precedence);
+            } else if (binaryPhraseType === PhraseType.SimpleAssignmentExpression &&
+                peek().tokenType === TokenType.Ampersand) {
+                next(); //&
+                p.phraseType = PhraseType.ByRefAssignmentExpression;
+                p.children.push(expression(precedence));
+            } else if (binaryPhraseType === PhraseType.InstanceOfExpression) {
+                p.children.push(typeDesignator(PhraseType.InstanceofTypeDesignator));
             } else {
-                let rhs: any;
-                if (op.tokenType === '=' && peek().tokenType === '&') {
-                    p.children.push(unaryExpression());
-                } else {
-                    p.children.push(op.tokenType === TokenType.InstanceOf ? newVariable() : expression(precedence));
-                }
-                lhs = end();
+                p.children.push(expression(precedence));
             }
+
+            lhs = end();
 
         }
 
@@ -667,21 +704,15 @@ export namespace Parser {
 
     }
 
-    function ternaryExpression(n: TempNode, precedence: number) {
+    function conditionalExpression(p: Phrase, precedence: number) {
 
-        n.phrase.phraseType = PhraseType.TernaryExpression;
-
-        if (!next(':')) {
-            phrase(expression, [precedence], [':']);
-
-            if (!expect(':')) {
-                return end();
-            }
-
+        if (optional(TokenType.Colon)) {
+            p.children.push(expression(precedence));
+        } else {
+            p.children.push(expression(precedence));
+            expect(TokenType.Colon);
+            p.children.push(expression(precedence));
         }
-
-        phrase(expression, [precedence]);
-        return end();
 
     }
 
@@ -903,7 +934,7 @@ export namespace Parser {
 
     }
 
-    function quotedEncapsulatedVariableList(type: PhraseType, closeTokenType: TokenType | string) {
+    function quotedEncapsulatedVariableList(type: PhraseType, closeTokenType: TokenType) {
 
         start(type);
         next(); //open encaps
@@ -2468,7 +2499,7 @@ export namespace Parser {
             return end();
         }
 
-        p.children.push(classTypeDesignator());
+        p.children.push(typeDesignator(PhraseType.ClassTypeDesignator));
 
         if (optional(TokenType.OpenParenthesis)) {
 
@@ -2483,9 +2514,9 @@ export namespace Parser {
 
     }
 
-    function classTypeDesignator() {
+    function typeDesignator(phraseType: PhraseType) {
 
-        let p = start(PhraseType.ClassTypeDesignator);
+        let p = start(phraseType);
         let part = classTypeDesignatorAtom();
 
         while (true) {
