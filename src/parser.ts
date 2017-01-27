@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Token, Lexer, TokenType } from './lexer';
+import { Token, Lexer, TokenType, LexerMode } from './lexer';
 
 export const enum PhraseType {
     Unknown,
@@ -156,7 +156,12 @@ export const enum PhraseType {
 export interface Phrase {
     phraseType: PhraseType;
     children: (Phrase | Token)[];
-    errors?: Token[];
+    errors?: ParseError[];
+}
+
+export interface ParseError {
+    firstUnexpectedToken: Token;
+    lastUnexpectedToken: Token;
 }
 
 export namespace Parser {
@@ -299,23 +304,28 @@ export namespace Parser {
 
     var tokenBuffer: Token[];
     var phraseStack: Phrase[];
-    var isRecovering = false;
+    var errorPhrase: Phrase = null;
 
     export function parseScript(text: string): Phrase {
 
-        Lexer.setInput(text);
-        phraseStack = [];
-        tokenBuffer = [];
+        init(text);
 
         let p = start(PhraseType.Script);
         optional(TokenType.Text);
 
-        if(optionalOneOf([TokenType.OpenTag, TokenType.OpenTagEcho])){
+        if (optionalOneOf([TokenType.OpenTag, TokenType.OpenTagEcho])) {
             p.children.push(statementList([TokenType.EndOfFile]));
         }
 
         return end();
 
+    }
+
+    function init(text: string, lexerModeStack?: LexerMode[]) {
+        Lexer.setInput(text, lexerModeStack);
+        phraseStack = [];
+        tokenBuffer = [];
+        errorPhrase = null;
     }
 
     function start(phraseType?: PhraseType) {
@@ -338,12 +348,12 @@ export namespace Parser {
     function hidden() {
 
         let p = phraseStackTop();
-        let t:Token;
+        let t: Token;
 
-        while(true){
+        while (true) {
 
             t = tokenBuffer.length ? tokenBuffer.shift() : Lexer.lex();
-            if(t.tokenType < TokenType.Comment){
+            if (t.tokenType < TokenType.Comment) {
                 tokenBuffer.unshift(t);
                 break;
             } else {
@@ -358,10 +368,9 @@ export namespace Parser {
 
         if (tokenType !== peek().tokenType) {
             return null;
-        } else {
-            isRecovering = false;
         }
 
+        errorPhrase = null;
         return next();
 
     }
@@ -376,7 +385,7 @@ export namespace Parser {
 
     }
 
-    function next(doNotPush?:boolean): Token {
+    function next(doNotPush?: boolean): Token {
 
         let t = tokenBuffer.length ? tokenBuffer.shift() : Lexer.lex();
 
@@ -388,7 +397,7 @@ export namespace Parser {
             //hidden token
             phraseStackTop().children.push(t);
             return this.next();
-        } else if(!doNotPush){
+        } else if (!doNotPush) {
             phraseStackTop().children.push(t);
         }
 
@@ -396,26 +405,40 @@ export namespace Parser {
 
     }
 
-    function expect(tokenType: TokenType, phraseRecoverSet?: TokenType[]) {
+    function expect(tokenType: TokenType) {
 
         if (peek().tokenType === tokenType) {
-            isRecovering = false;
+            errorPhrase = null;
             return next();
         }
         else {
-            error(tokenType, phraseRecoverSet, [tokenType]);
+            error();
+            //test skipping a single token to resync
+            if (peek(1).tokenType === tokenType) {
+                let predicate = (x: Token) => { return x.tokenType === tokenType; };
+                skip(predicate);
+                errorPhrase = null;
+                return next(); //tokenType
+            }
             return null;
         }
 
     }
 
-    function expectOneOf(tokenTypes: TokenType[], phraseRecoverSet?: TokenType[]) {
+    function expectOneOf(tokenTypes: TokenType[]) {
 
         if (tokenTypes.indexOf(peek().tokenType) >= 0) {
-            isRecovering = false;
+            errorPhrase = null;
             return next();
         } else {
-            error(undefined, phraseRecoverSet, tokenTypes);
+            error();
+            //test skipping single token to resync
+            if (tokenTypes.indexOf(peek(1).tokenType) >= 0) {
+                let predicate = (x: Token) => { return tokenTypes.indexOf(x.tokenType) >= 0; };
+                skip(predicate);
+                errorPhrase = null;
+                return next(); //tokenType
+            }
             return null;
         }
 
@@ -436,7 +459,7 @@ export namespace Parser {
 
             t = tokenBuffer[bufferPos];
 
-            if(t.tokenType < TokenType.Comment){
+            if (t.tokenType < TokenType.Comment) {
                 //not a hidden token
                 --k;
             }
@@ -450,94 +473,49 @@ export namespace Parser {
         return t;
     }
 
-    function skip(until: (TokenType | string)[]) {
+    /**
+     * skipped tokens get pushed to error phrase children
+     */
+    function skip(predicate: Predicate) {
 
         let t: Token;
-        let skipped: Token[] = [];
+        let lastSkipped: Token;
 
         while (true) {
-            t = peek();
-            if (until.indexOf(t.tokenType) >= 0 || t.tokenType === TokenType.EndOfFile) {
+            t = tokenBuffer.length ? tokenBuffer.shift() : Lexer.lex();
+
+            if (predicate(t) || t.tokenType === TokenType.EndOfFile) {
+                tokenBuffer.unshift(t);
+                errorPhrase.errors[errorPhrase.errors.length - 1].lastUnexpectedToken = lastSkipped;
                 break;
             } else {
-                ++pos;
-                skipped.push(t);
-            }
-        }
-
-        return skipped;
-    }
-
-    function discard() {
-
-        let discarded: Token[] = [];
-        let t: Token;
-
-        while (true) {
-
-            if (pos < tokens.length - 1) {
-                t = tokens[++pos];
-                discarded.push(t);
-                if (!isHidden(t)) {
-                    break;
+                if (t.tokenType < TokenType.Comment) {
+                    lastSkipped = t;
                 }
-            } else {
-                break;
+                errorPhrase.children.push(t);
             }
         }
 
-        return discarded;
     }
 
-    function isHidden(t: Token) {
-        switch (t.tokenType) {
-            case TokenType.DocumentComment:
-            case TokenType.Whitespace:
-            case TokenType.Comment:
-                return true;
-            default:
-                return false;
-        }
-    }
+    function error() {
 
-    function error(expected?: (TokenType | string), phraseRecoverSet?: (TokenType | string)[], skipIfRecovered?: (TokenType | string)[]) {
-
-        //dont report errors if recovering
-        if (isRecovering) {
-            return peek();
+        //dont report errors if recovering from another
+        if (errorPhrase) {
+            return;
         }
 
-        let tempNode = phraseStackTop<TempNode>(phraseStack);
-        let unexpected = peek();
-        let n = recoverSetStack.length;
-        let syncTokens = phraseRecoverSet ? phraseRecoverSet.slice(0) : [];
-
-        while (n--) {
-            Array.prototype.push.apply(syncTokens, recoverSetStack[n]);
+        errorPhrase = phraseStackTop();
+        
+        if (!errorPhrase.errors) {
+            errorPhrase.errors = [];
         }
 
-        let skipped = skip(syncTokens);
-        if (skipIfRecovered && skipIfRecovered.indexOf(peek().tokenType) >= 0) {
-            Array.prototype.push.apply(skipped, discard());
-        }
-
-        if (!tempNode.phrase.errors) {
-            tempNode.phrase.errors = [];
-        }
-
-        let err: ParseError = { unexpected: unexpected };
-
-        if (expected) {
-            err.expected = expected;
-        }
-
-        if (skipped.length) {
-            err.skipped = skipped;
-        }
-
-        tempNode.phrase.errors.push(err);
-        isRecovering = true;
-        return peek();
+        errorPhrase.errors.push({
+            firstUnexpectedToken: peek(),
+            lastUnexpectedToken: null
+        });
+        
     }
 
     function phraseStackTop() {
@@ -556,7 +534,7 @@ export namespace Parser {
         return end();
     }
 
-    function list(phraseType: PhraseType, elementFunction: () => Phrase,
+    function list(phraseType: PhraseType, elementFunction: () => Phrase | Token,
         elementStartPredicate: Predicate, breakOn?: TokenType[]) {
 
         let p = start(phraseType);
