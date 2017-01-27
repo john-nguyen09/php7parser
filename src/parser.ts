@@ -131,6 +131,8 @@ export const enum PhraseType {
     BitwiseExpression,
     ExponentiationExpression,
 
+    Literal,
+
     Error, NamespaceDefinition, NamespaceName, UseDeclaration,
     UseGroup, UseList, HaltCompilerStatement,
     ArrayElement, Name, FunctionCallExpression, Unpack, ArgumentExpressionList, SubscriptExpression, ClassConstantAccessExpression,
@@ -365,7 +367,7 @@ export namespace Parser {
 
     }
 
-    function next(): Token {
+    function next(doNotPush?:boolean): Token {
 
         let t = tokenBuffer.length ? tokenBuffer.shift() : Lexer.lex();
 
@@ -373,9 +375,11 @@ export namespace Parser {
             return t;
         }
 
-        phraseStackTop().children.push(t);
         if (isHidden(t)) {
+            phraseStackTop().children.push(t);
             return this.next();
+        } else if(!doNotPush){
+            phraseStackTop().children.push(t);
         }
 
         return t;
@@ -773,7 +777,7 @@ export namespace Parser {
                 if (isDereferenceOperator(peek(1))) {
                     return variableOrExpression();
                 } else {
-                    return next(false);
+                    return next(true);
                 }
             case TokenType.VariableName:
             case TokenType.Dollar:
@@ -811,7 +815,7 @@ export namespace Parser {
                 return objectCreationExpression();
             case TokenType.FloatingLiteral:
             case TokenType.IntegerLiteral:
-                return next(false);
+                return next(true);
             case TokenType.LineConstant:
             case TokenType.FileConstant:
             case TokenType.DirectoryConstant:
@@ -952,7 +956,7 @@ export namespace Parser {
 
         switch (peek().tokenType) {
             case TokenType.EncapsulatedAndWhitespace:
-                return next(false);
+                return next(true);
             case TokenType.VariableName:
                 let t = peek(1);
                 if (t.tokenType === TokenType.OpenBracket) {
@@ -3045,7 +3049,7 @@ export namespace Parser {
             case TokenType.OpenBracket:
                 return shortArrayCreationExpression();
             case TokenType.StringLiteral:
-                return next(false);
+                return next(true);
             case TokenType.Static:
                 return relativeScope();
             case TokenType.Name:
@@ -3086,10 +3090,6 @@ export namespace Parser {
 
         return end();
 
-    }
-
-    function isBinaryOpToken(t: Token) {
-        return opPrecedenceAndAssociativtyMap.hasOwnProperty(t.text) && (opPrecedenceAndAssociativtyMap[t.text][2] & OpType.Binary) === OpType.Binary;
     }
 
     function haltCompilerStatement() {
