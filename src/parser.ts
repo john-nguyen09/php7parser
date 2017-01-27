@@ -337,12 +337,21 @@ export namespace Parser {
 
     function hidden() {
 
-        let node = phraseStackTop();
+        let p = phraseStackTop();
+        let t:Token;
 
-        while (pos < tokens.length - 1 && isHidden(tokens[pos + 1])) {
-            ++pos;
-            node.children.push(nodeFactory(tokens[pos]));
+        while(true){
+
+            t = tokenBuffer.length ? tokenBuffer.shift() : Lexer.lex();
+            if(t.tokenType < TokenType.Comment){
+                tokenBuffer.unshift(t);
+                break;
+            } else {
+                p.children.push(t);
+            }
+
         }
+
     }
 
     function optional(tokenType: TokenType) {
@@ -375,7 +384,8 @@ export namespace Parser {
             return t;
         }
 
-        if (isHidden(t)) {
+        if (t.tokenType >= TokenType.Comment) {
+            //hidden token
             phraseStackTop().children.push(t);
             return this.next();
         } else if(!doNotPush){
@@ -426,8 +436,12 @@ export namespace Parser {
 
             t = tokenBuffer[bufferPos];
 
-            if (t.tokenType === TokenType.EndOfFile ||
-                (!isHidden(t) && --k === 0)) {
+            if(t.tokenType < TokenType.Comment){
+                //not a hidden token
+                --k;
+            }
+
+            if (t.tokenType === TokenType.EndOfFile || k === 0) {
                 break;
             }
 
@@ -539,7 +553,7 @@ export namespace Parser {
             p.children.push(statementList([TokenType.EndOfFile]));
         }
         hidden(); //whitespace at end of file
-        return p;
+        return end();
     }
 
     function list(phraseType: PhraseType, elementFunction: () => Phrase,
@@ -561,7 +575,7 @@ export namespace Parser {
 
         }
 
-        return p;
+        return end();
 
     }
 
@@ -587,7 +601,7 @@ export namespace Parser {
             [TokenType.Semicolon]
         ));
         expect(TokenType.Semicolon);
-        return p;
+        return end();
 
     }
 
@@ -618,7 +632,7 @@ export namespace Parser {
             }
         }
 
-        return p;
+        return end();
 
     }
 
@@ -628,7 +642,7 @@ export namespace Parser {
         expect(TokenType.Name);
         expect(TokenType.Equals);
         p.children.push(expression(0));
-        return p;
+        return end();
 
     }
 
@@ -1108,7 +1122,7 @@ export namespace Parser {
         let p = start(PhraseType.ClassInterfaceClause);
         next(); //implements
         p.children.push(qualifiedNameList([TokenType.OpenBrace]));
-        return p;
+        return end();
 
     }
 
@@ -1339,7 +1353,7 @@ export namespace Parser {
             p.children.push(returnType());
         }
 
-        return p;
+        return end();
 
     }
 
@@ -1466,7 +1480,7 @@ export namespace Parser {
 
         let p = start(PhraseType.FunctionDeclaration);
         p.children.push(functionDeclarationHeader(), compoundStatement());
-        return p;
+        return end();
 
     }
 
@@ -1495,7 +1509,7 @@ export namespace Parser {
             p.children.push(returnType());
         }
 
-        return p;
+        return end();
 
     }
 
@@ -1518,7 +1532,7 @@ export namespace Parser {
         p.children.push(classDeclarationHeader(), classTraitInterfaceDeclarationBody(
             PhraseType.ClassDeclarationBody, isClassMemberStart, classMemberDeclarations
         ));
-        return p;
+        return end();
 
     }
 
@@ -1537,7 +1551,7 @@ export namespace Parser {
             p.children.push(classInterfaceClause());
         }
 
-        return p;
+        return end();
 
     }
 
@@ -1545,7 +1559,7 @@ export namespace Parser {
         let p = start(PhraseType.ClassBaseClause);
         next(); //extends
         p.children.push(qualifiedName());
-        return p;
+        return end();
     }
 
     function classModifiers() {
@@ -1577,7 +1591,7 @@ export namespace Parser {
         }
 
         expect(TokenType.CloseBrace);
-        return p;
+        return end();
 
     }
 
@@ -1890,14 +1904,14 @@ export namespace Parser {
             next();
             p.phraseType = PhraseType.ForeachKey;
         }
-        return p;
+        return end();
     }
 
     function foreachValue() {
         let p = start(PhraseType.ForeachValue);
         optional(TokenType.Ampersand);
         p.children.push(expression(0));
-        return p;
+        return end();
     }
 
     function foreachStatement() {
@@ -2297,7 +2311,7 @@ export namespace Parser {
                 break;
         }
 
-        return p;
+        return end();
 
     }
 
@@ -2313,7 +2327,7 @@ export namespace Parser {
             [TokenType.Semicolon]
         ));
         expect(TokenType.Semicolon);
-        return p;
+        return end();
 
     }
 
@@ -2384,7 +2398,7 @@ export namespace Parser {
         p.children.push(identifier());
         expect(TokenType.Equals);
         p.children.push(expression(0));
-        return p;
+        return end();
 
     }
 
@@ -2689,7 +2703,7 @@ export namespace Parser {
             p.children.push(expression(0));
         }
 
-        return p;
+        return end();
 
     }
 
@@ -2906,7 +2920,7 @@ export namespace Parser {
         }
 
         p.children.push(namespaceName());
-        return p;
+        return end();
 
     }
 
@@ -3099,7 +3113,7 @@ export namespace Parser {
         expect(TokenType.OpenParenthesis);
         expect(TokenType.CloseParenthesis);
         expect(TokenType.Semicolon);
-        return p;
+        return end();
 
     }
 
@@ -3133,7 +3147,7 @@ export namespace Parser {
             [TokenType.Semicolon]));
 
         expect(TokenType.Semicolon);
-        return p;
+        return end();
 
     }
 
@@ -3154,7 +3168,7 @@ export namespace Parser {
                 p.children.push(namespaceAliasingClause());
             }
 
-            return p;
+            return end();
 
         };
 
@@ -3181,7 +3195,7 @@ export namespace Parser {
 
         }
 
-        return p;
+        return end();
     }
 
     function isNamespaceUseGroupClauseStartToken(t: Token) {
@@ -3205,7 +3219,7 @@ export namespace Parser {
             p.children.push(namespaceAliasingClause());
         }
 
-        return p;
+        return end();
 
     }
 
@@ -3214,7 +3228,7 @@ export namespace Parser {
         let p = start(PhraseType.NamespaceAliasingClause);
         next(); //as
         expect(TokenType.Name);
-        return p;
+        return end();
 
     }
 
@@ -3227,7 +3241,7 @@ export namespace Parser {
 
             p.children.push(namespaceName());
             if (expectOneOf([TokenType.Semicolon, TokenType.OpenBrace]).tokenType !== TokenType.OpenBrace) {
-                return p;
+                return end();
             }
 
         } else {
@@ -3236,7 +3250,7 @@ export namespace Parser {
 
         p.children.push(statementList([TokenType.CloseBrace]));
         expect(TokenType.CloseBrace);
-        return p;
+        return end();
 
     }
 
@@ -3257,7 +3271,7 @@ export namespace Parser {
 
         }
 
-        return p;
+        return end();
 
     }
 

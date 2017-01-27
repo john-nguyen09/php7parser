@@ -9,11 +9,6 @@ export const enum TokenType {
     Unknown,
     EndOfFile,
 
-    //Comments and whitespace
-    Comment,
-    DocumentComment,
-    Whitespace,
-
     //Keywords
     Abstract,
     Array,
@@ -179,7 +174,12 @@ export const enum TokenType {
     OpenTag,
     OpenTagEcho,
     StartHeredoc,
-    CloseTag
+    CloseTag,
+
+    //Comments and whitespace
+    Comment,
+    DocumentComment,
+    Whitespace
 }
 
 export const enum LexerMode {
