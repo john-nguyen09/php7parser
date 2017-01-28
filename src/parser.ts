@@ -8,149 +8,186 @@ import { Token, Lexer, TokenType, LexerMode } from './lexer';
 
 export const enum PhraseType {
     Unknown,
-    Script,
-    StatementList,
-    ConstDeclaration,
-    ConstElements,
-    ConstElement,
-    NamespaceUseDeclaration,
-    NamespaceUseGroupClauses,
-    NamespaceUseGroupClause,
-    NamespaceUseClauses,
-    NamespaceUseClause,
-    NamespaceAliasingClause,
-    QualifiedName,
-    RelativeQualifiedName,
-    FullyQualifiedName,
-    FunctionDeclaration,
-    FunctionDeclarationHeader,
-    ParameterDeclarationList,
-    ParameterDeclaration,
-    ClassDeclaration,
-    ClassDeclarationHeader,
-    ClassDeclarationBody,
-    ClassMemberDeclarations,
-    TraitDeclaration,
-    TraitDeclarationHeader,
-    TraitDeclarationBody,
-    TraitMemberDeclarations,
-    InterfaceDeclaration,
-    InterfaceDeclarationHeader,
-    InterfaceDeclarationBody,
-    InterfaceMemberDeclarations,
-    EchoIntrinsic,
-    ExpressionList,
-    GlobalDeclaration,
-    VariableNameList,
-    FunctionStaticDeclaration,
-    StaticVariableNameList,
-    StaticVariableDeclaration,
-    FunctionStaticInitialiser,
-    DeclareStatement,
-    DeclareDirective,
-    ExpressionStatement,
-
-    ForInitialiser,
-    ForControl,
-    ForEndOfLoop,
-    ForExpressionGroup,
-
-    ForeachCollectionName,
-    ForeachKey,
-    ForeachValue,
-
-    IfStatement,
-    ElseIfClauses,
-    ElseIfClause,
-    ElseClause,
-
-    DefaultStatement,
-
-    PropertyDeclaration,
-    PropertyElementList,
-    PropertyElement,
-    PropertyInitialiser,
-
-    InlineText,
-    NullStatement,
-
-    MethodDeclarationHeader,
-    ReturnType,
-    ClassConstElement,
-    ClassConstDeclaration,
-    ClassConstElements,
-
-    TraitUseSpecification,
-
+    AdditiveExpression,
+    AnonymousClassDeclaration,
     AnonymousClassDeclarationHeader,
-
-    PostfixIncrementExpression,
-    PostfixDecrementExpression,
-    PrefixIncrementExpression,
-    PrefixDecrementExpression,
-
-    ArrayCreationExpression,
-    ArrayKey,
-    ArrayValue,
-
-    RelativeScope,
-    VariadicUnpacking,
-
-    ConstantAccessExpression,
+    AnonymousFunctionCreationExpression,
     AnonymousFunctionHeader,
     AnonymousFunctionUseClause,
-
-    UnaryOpExpression,
-    CastExpression,
-    ErrorControlExpression,
-
-    ListIntrinsic,
-    ClassTypeDesignator,
-
-    MemberName,
-    ScopedMemberName,
-
-    IncludeExpression,
-    IncludeOnceExpression,
-    RequireExpression,
-    RequireOnceExpression,
-
-    InstanceofTypeDesignator,
+    AnonymousFunctionUseVariable,
+    ArgumentExpressionList,
+    ArrayCreationExpression,
+    ArrayElement,
+    ArrayInitialiserList,
+    ArrayKey,
+    ArrayValue,
     AssignmentExpression,
-    InstanceOfExpression,
-    AdditiveExpression,
-    MultiplicativeExpression,
-    ShiftExpression,
-    RelationalExpression,
-    EqualityExpression,
-    SimpleAssignmentExpression,
+    BitwiseExpression,
+    BreakStatement,
     ByRefAssignmentExpression,
+    CaseStatement,
+    CaseStatementList,
+    CastExpression,
+    CatchClause,
+    CatchClauseList,
+    CatchNameList,
+    ClassBaseClause,
+    ClassConstantAccessExpression,
+    ClassConstDeclaration,
+    ClassConstElement,
+    ClassConstElementList,
+    ClassDeclaration,
+    ClassDeclarationBody,
+    ClassDeclarationHeader,
+    ClassInterfaceClause,
+    ClassMemberDeclarationList,
+    ClassModifiers,
+    ClassTypeDesignator,
+    CloneExpression,
+    ClosureUseList,
     CoalesceExpression,
     CompoundAssignmentExpression,
-    LogicalExpression,
-    BitwiseExpression,
+    CompoundStatement,
+    ConditionalExpression,
+    ConstantAccessExpression,
+    ConstDeclaration,
+    ConstElement,
+    ConstElementList,
+    ContinueStatement,
+    DeclareDirective,
+    DeclareStatement,
+    DefaultStatement,
+    DoStatement,
+    DoubleQuotedStringLiteral,
+    EchoIntrinsic,
+    ElseClause,
+    ElseIfClause,
+    ElseIfClauseList,
+    EmptyIntrinsic,
+    EncapsulatedExpression,
+    EncapsulatedVariable,
+    EncapsulatedVariableList,
+    EqualityExpression,
+    ErrorClassMemberDeclaration,
+    ErrorClassTypeDesignatorAtom,
+    ErrorControlExpression,
+    ErrorExpression,
+    ErrorScopedAccessExpression,
+    ErrorTraitAdaptation,
+    ErrorVariable,
+    ErrorVariableAtom,
+    EvalIntrinsic,
     ExponentiationExpression,
-
-    Literal,
-
-    Error, NamespaceDefinition, NamespaceName, UseDeclaration,
-    UseGroup, UseList, HaltCompilerStatement,
-    ArrayElement, Name, FunctionCallExpression, Unpack, ArgumentExpressionList, SubscriptExpression, ClassConstantAccessExpression,
-    ScopedPropertyAccessExpression, ScopedCallExpression, MethodCallExpression, PropertyAccessExpression, AnonymousFunctionCreationExpression, EncapsulatedExpression,
-    ParameterList, IssetIntrinsic, EmptyIntrinsic, EvalIntrinsic, Include, YieldFrom, YieldExpression, PrintIntrinsic, TryStatement,
-    Backticks, EncapsulatedVariableList, AnonymousClassDeclaration, ObjectCreationExpression, Identifier, VariableList,
-    QualifiedNameList, Scalar, ClassModifiers,
-    TypeDeclaration, CompoundStatement, ReservedNonModifier,
-    InnerStatementList, MethodDeclaration, TraitUseClause, TraitAdaptationList,
-    MethodReference, TraitPrecendence, TraitAlias, Expressions,
-    SimpleVariable, ArrayInitialiserList, AnonymousFunctionUseVariable, ClosureUseList,
-    CloneExpression, Heredoc, DoubleQuotes, EmptyStatement, If, WhileStatement, DoStatement, ClassInterfaceClause,
-    ForExpressionList, ForStatement, BreakStatement, ContinueStatement, ReturnStatement,
-    UnsetIntrinsic, ThrowStatement, GotoStatement, NamedLabelStatement, Foreach, CaseStatements, SwitchStatement, MemberModifierList,
-    CaseStatement, Try, CatchClause, CatchNameList, FinallyClause, ConditionalExpression, BinaryExpression,
-    UnaryExpression, MagicConstant, CatchClauses, FunctionBody, MethodDeclarationBody, ClassBaseClause, InterfaceBaseClause,
-    EncapsulatedVariable, ErrorScopedAccessExpression, ErrorArgument, ErrorVariable, ErrorExpression, ErrorClassMemberDeclaration,
-    ErrorPropertyName, ErrorTraitAdaptation, ErrorVariableAtom, ErrorClassTypeDesignatorAtom
+    ExpressionList,
+    ExpressionStatement,
+    FinallyClause,
+    ForControl,
+    ForeachCollection,
+    ForeachKey,
+    ForeachStatement,
+    ForeachValue,
+    ForEndOfLoop,
+    ForExpressionGroup,
+    ForInitialiser,
+    ForStatement,
+    FullyQualifiedName,
+    FunctionCallExpression,
+    FunctionDeclaration,
+    FunctionDeclarationHeader,
+    FunctionStaticDeclaration,
+    FunctionStaticInitialiser,
+    GlobalDeclaration,
+    GotoStatement,
+    HaltCompilerStatement,
+    HeredocStringLiteral,
+    Identifier,
+    IfStatement,
+    IncludeExpression,
+    IncludeOnceExpression,
+    InlineText,
+    InstanceOfExpression,
+    InstanceofTypeDesignator,
+    InterfaceBaseClause,
+    InterfaceDeclaration,
+    InterfaceDeclarationBody,
+    InterfaceDeclarationHeader,
+    InterfaceMemberDeclarationList,
+    IssetIntrinsic,
+    ListIntrinsic,
+    LogicalExpression,
+    MemberModifierList,
+    MemberName,
+    MethodCallExpression,
+    MethodDeclaration,
+    MethodDeclarationBody,
+    MethodDeclarationHeader,
+    MethodReference,
+    MultiplicativeExpression,
+    NamedLabelStatement,
+    NamespaceAliasingClause,
+    NamespaceDefinition,
+    NamespaceName,
+    NamespaceUseClause,
+    NamespaceUseClauseList,
+    NamespaceUseDeclaration,
+    NamespaceUseGroupClause,
+    NamespaceUseGroupClauseList,
+    NullStatement,
+    ObjectCreationExpression,
+    ParameterDeclaration,
+    ParameterDeclarationList,
+    ParameterList,
+    PostfixDecrementExpression,
+    PostfixIncrementExpression,
+    PrefixDecrementExpression,
+    PrefixIncrementExpression,
+    PrintIntrinsic,
+    PropertyAccessExpression,
+    PropertyDeclaration,
+    PropertyElement,
+    PropertyElementList,
+    PropertyInitialiser,
+    QualifiedName,
+    QualifiedNameList,
+    RelationalExpression,
+    RelativeQualifiedName,
+    RelativeScope,
+    RequireExpression,
+    RequireOnceExpression,
+    ReturnStatement,
+    ReturnType,
+    Script,
+    ScopedCallExpression,
+    ScopedMemberName,
+    ScopedPropertyAccessExpression,
+    ShellCommandExpression,
+    ShiftExpression,
+    SimpleAssignmentExpression,
+    SimpleVariable,
+    StatementList,
+    StaticVariableDeclaration,
+    StaticVariableNameList,
+    SubscriptExpression,
+    SwitchStatement,
+    ThrowStatement,
+    TraitAdaptationList,
+    TraitAlias,
+    TraitDeclaration,
+    TraitDeclarationBody,
+    TraitDeclarationHeader,
+    TraitMemberDeclarationList,
+    TraitPrecendence,
+    TraitUseClause,
+    TraitUseSpecification,
+    TryStatement,
+    TypeDeclaration,
+    UnaryOpExpression,
+    UnsetIntrinsic,
+    VariableList,
+    VariableNameList,
+    VariadicUnpacking,
+    WhileStatement,
+    YieldExpression,
 }
 
 export interface Phrase {
@@ -176,6 +213,7 @@ export namespace Parser {
         Right
     }
 
+    //TODO use TokenType as index
     const opPrecedenceAndAssociativtyMap:
         { [index: string]: [number, number] } = {
             '**': [48, Associativity.Right],
@@ -238,6 +276,51 @@ export namespace Parser {
     function precedenceAssociativityTuple(t: Token) {
         return opPrecedenceAndAssociativtyMap[t.text];
     }
+
+    const statementListRecoverSet = [
+        TokenType.Use,
+        TokenType.HaltCompiler,
+        TokenType.Const,
+        TokenType.Function,
+        TokenType.Class,
+        TokenType.Abstract,
+        TokenType.Final,
+        TokenType.Trait,
+        TokenType.Interface,
+        TokenType.OpenBrace,
+        TokenType.If,
+        TokenType.While,
+        TokenType.Do,
+        TokenType.For,
+        TokenType.Switch,
+        TokenType.Break,
+        TokenType.Continue,
+        TokenType.Return,
+        TokenType.Global,
+        TokenType.Static,
+        TokenType.Echo,
+        TokenType.Unset,
+        TokenType.ForEach,
+        TokenType.Declare,
+        TokenType.Try,
+        TokenType.Throw,
+        TokenType.Goto,
+        TokenType.Semicolon,
+        TokenType.CloseTag,
+    ];
+
+    const classMemberDeclarationListRecoverSet = [
+        TokenType.Public,
+        TokenType.Protected,
+        TokenType.Private,
+        TokenType.Static,
+        TokenType.Abstract,
+        TokenType.Final,
+        TokenType.Function,
+        TokenType.Var,
+        TokenType.Const,
+        TokenType.Use
+    ];
 
     function binaryOpToPhraseType(t: Token) {
         switch (t.tokenType) {
@@ -304,7 +387,8 @@ export namespace Parser {
 
     var tokenBuffer: Token[];
     var phraseStack: Phrase[];
-    var errorPhrase: Phrase = null;
+    var errorPhrase: Phrase;
+    var recoverSetStack: TokenType[][];
 
     export function parseScript(text: string): Phrase {
 
@@ -325,6 +409,7 @@ export namespace Parser {
         Lexer.setInput(text, lexerModeStack);
         phraseStack = [];
         tokenBuffer = [];
+        recoverSetStack = [];
         errorPhrase = null;
     }
 
@@ -366,18 +451,19 @@ export namespace Parser {
 
     function optional(tokenType: TokenType) {
 
-        if (tokenType !== peek().tokenType) {
+        if (tokenType === peek().tokenType) {
+            errorPhrase = null;
+            return next();
+        } else {
             return null;
         }
-
-        errorPhrase = null;
-        return next();
 
     }
 
     function optionalOneOf(tokenTypes: TokenType[]) {
 
         if (tokenTypes.indexOf(peek().tokenType) >= 0) {
+            errorPhrase = null;
             return next();
         } else {
             return null;
@@ -410,10 +496,12 @@ export namespace Parser {
         if (peek().tokenType === tokenType) {
             errorPhrase = null;
             return next();
-        }
-        else {
+        } else if (tokenType === TokenType.Semicolon && peek().tokenType === TokenType.CloseTag) {
+            //implicit end statement
+            return peek();
+        } else {
             error();
-            //test skipping a single token to resync
+            //test skipping a single token to sync
             if (peek(1).tokenType === tokenType) {
                 let predicate = (x: Token) => { return x.tokenType === tokenType; };
                 skip(predicate);
@@ -430,9 +518,12 @@ export namespace Parser {
         if (tokenTypes.indexOf(peek().tokenType) >= 0) {
             errorPhrase = null;
             return next();
+        } else if (tokenTypes.indexOf(TokenType.Semicolon) >= 0 && peek().tokenType === TokenType.CloseTag) {
+            //implicit end statement
+            return peek();
         } else {
             error();
-            //test skipping single token to resync
+            //test skipping single token to sync
             if (tokenTypes.indexOf(peek(1).tokenType) >= 0) {
                 let predicate = (x: Token) => { return tokenTypes.indexOf(x.tokenType) >= 0; };
                 skip(predicate);
@@ -506,16 +597,17 @@ export namespace Parser {
         }
 
         errorPhrase = phraseStackTop();
-        
+
         if (!errorPhrase.errors) {
             errorPhrase.errors = [];
         }
 
+        let t = peek();
         errorPhrase.errors.push({
-            firstUnexpectedToken: peek(),
-            lastUnexpectedToken: null
+            firstUnexpectedToken: t,
+            lastUnexpectedToken: t
         });
-        
+
     }
 
     function phraseStackTop() {
@@ -535,26 +627,62 @@ export namespace Parser {
     }
 
     function list(phraseType: PhraseType, elementFunction: () => Phrase | Token,
-        elementStartPredicate: Predicate, breakOn?: TokenType[]) {
+        elementStartPredicate: Predicate, breakOn?: TokenType[], recoverSet?: TokenType[]) {
 
         let p = start(phraseType);
         let t: Token;
+        let recoveryAttempted = false;
+        let listRecoverSet = recoverSet ? recoverSet.slice(0) : [];
+
+        if (breakOn) {
+            Array.prototype.push.apply(listRecoverSet, breakOn);
+        }
+
+        recoverSetStack.push(listRecoverSet);
 
         while (true) {
 
             t = peek();
             if (elementStartPredicate(t)) {
+                recoveryAttempted = false;
                 p.children.push(elementFunction());
-            } else if (!breakOn || breakOn.indexOf(t.tokenType) >= 0) {
+            } else if (!breakOn || breakOn.indexOf(t.tokenType) >= 0 || recoveryAttempted) {
                 break;
             } else {
                 error();
+                defaultSyncStrategy();
+                recoveryAttempted = true;
             }
 
         }
 
+        recoverSetStack.pop();
+
         return end();
 
+    }
+
+    function defaultSyncStrategy() {
+
+        let mergedRecoverTokenTypeArray: TokenType[] = [];
+
+        for (let n = recoverSetStack.length - 1; n >= 0; --n) {
+            Array.prototype.push.apply(mergedRecoverTokenTypeArray, recoverSetStack[n]);
+        }
+
+        let mergedRecoverTokenTypeSet = new Set(mergedRecoverTokenTypeArray);
+        let predicate: Predicate = (x) => { return mergedRecoverTokenTypeSet.has(x.tokenType); };
+        skip(predicate);
+
+    }
+
+    function isListPhrase(phraseType: PhraseType) {
+        switch (phraseType) {
+            case PhraseType.StatementList:
+                return true;
+            default:
+                false;
+        }
     }
 
     function statementList(breakOn: TokenType[]) {
@@ -572,7 +700,7 @@ export namespace Parser {
         let p = start(PhraseType.ConstDeclaration);
         next(); //const
         p.children.push(delimitedList(
-            PhraseType.ConstElements,
+            PhraseType.ConstElementList,
             constElement,
             isConstElementStartToken,
             TokenType.Comma,
@@ -594,7 +722,7 @@ export namespace Parser {
     function constElements() {
 
         let t: Token;
-        let p = start(PhraseType.ConstElements);
+        let p = start(PhraseType.ConstElementList);
 
         while (true) {
 
@@ -807,7 +935,6 @@ export namespace Parser {
                 return objectCreationExpression();
             case TokenType.FloatingLiteral:
             case TokenType.IntegerLiteral:
-                return next(true);
             case TokenType.LineConstant:
             case TokenType.FileConstant:
             case TokenType.DirectoryConstant:
@@ -816,13 +943,13 @@ export namespace Parser {
             case TokenType.FunctionConstant:
             case TokenType.NamespaceConstant:
             case TokenType.ClassConstant:
-                return magicConstant();
+                return next(true);
             case TokenType.StartHeredoc:
                 return heredocStringLiteral();
             case TokenType.DoubleQuote:
-                return quotedEncapsulatedVariableList(PhraseType.DoubleQuotes, TokenType.DoubleQuote);
+                return quotedEncapsulatedVariableList(PhraseType.DoubleQuotedStringLiteral, TokenType.DoubleQuote);
             case TokenType.Backtick:
-                return quotedEncapsulatedVariableList(PhraseType.Backticks, TokenType.Backtick);
+                return quotedEncapsulatedVariableList(PhraseType.ShellCommandExpression, TokenType.Backtick);
             case TokenType.Print:
                 return keywordExpression(PhraseType.PrintIntrinsic);
             case TokenType.Yield:
@@ -852,12 +979,6 @@ export namespace Parser {
                 return end();
         }
 
-    }
-
-    function magicConstant() {
-        let magic = start(PhraseType.MagicConstant);
-        next();
-        return end();
     }
 
     function issetIntrinsic() {
@@ -1055,7 +1176,7 @@ export namespace Parser {
 
     function heredocStringLiteral() {
 
-        let p = start(PhraseType.Heredoc);
+        let p = start(PhraseType.HeredocStringLiteral);
         next(); //StartHeredoc
         p.children.push(encapsulatedVariableList(TokenType.EndHeredoc));
         expect(TokenType.EndHeredoc);
@@ -1068,7 +1189,7 @@ export namespace Parser {
         let p = start(PhraseType.AnonymousClassDeclaration);
         p.children.push(anonymousClassDeclarationHeader(),
             classTraitInterfaceDeclarationBody(
-                PhraseType.ClassDeclarationBody, isClassMemberStart, classMemberDeclarations
+                PhraseType.ClassDeclarationBody, isClassMemberStart, classMemberDeclarationList
             ));
         return end();
 
@@ -1104,10 +1225,10 @@ export namespace Parser {
 
     }
 
-    function classMemberDeclarations() {
+    function classMemberDeclarationList() {
 
         return list(
-            PhraseType.ClassMemberDeclarations,
+            PhraseType.ClassMemberDeclarationList,
             classMemberDeclaration,
             isClassMemberStart,
             [TokenType.CloseBrace]
@@ -1393,7 +1514,7 @@ export namespace Parser {
     function interfaceMemberDeclarations() {
 
         return list(
-            PhraseType.InterfaceMemberDeclarations,
+            PhraseType.InterfaceMemberDeclarationList,
             classMemberDeclaration,
             isClassMemberStart,
             [TokenType.CloseBrace]
@@ -1446,7 +1567,7 @@ export namespace Parser {
     function traitMemberDeclarations() {
 
         return list(
-            PhraseType.TraitMemberDeclarations,
+            PhraseType.TraitMemberDeclarationList,
             classMemberDeclaration,
             isClassMemberStart,
             [TokenType.CloseBrace]
@@ -1508,7 +1629,7 @@ export namespace Parser {
 
         let p = start(PhraseType.ClassDeclaration);
         p.children.push(classDeclarationHeader(), classTraitInterfaceDeclarationBody(
-            PhraseType.ClassDeclarationBody, isClassMemberStart, classMemberDeclarations
+            PhraseType.ClassDeclarationBody, isClassMemberStart, classMemberDeclarationList
         ));
         return end();
 
@@ -1676,7 +1797,7 @@ export namespace Parser {
 
         if (t.tokenType === TokenType.Catch) {
             p.children.push(list(
-                PhraseType.CatchClauses,
+                PhraseType.CatchClauseList,
                 catchClause,
                 isCatchClauseStart
             ));
@@ -1792,7 +1913,7 @@ export namespace Parser {
 
     function caseStatements(breakOn: TokenType) {
 
-        let p = start(PhraseType.CaseStatements);
+        let p = start(PhraseType.CaseStatementList);
         let t: Token;
         let caseBreakOn = [TokenType.Case, TokenType.Default];
         caseBreakOn.push(breakOn);
@@ -1869,8 +1990,8 @@ export namespace Parser {
         return end();
     }
 
-    function foreachCollectionName() {
-        let p = start(PhraseType.ForeachCollectionName);
+    function foreachCollection() {
+        let p = start(PhraseType.ForeachCollection);
         p.children.push(expression(0));
         return end();
     }
@@ -1894,10 +2015,10 @@ export namespace Parser {
 
     function foreachStatement() {
 
-        let p = start(PhraseType.Foreach);
+        let p = start(PhraseType.ForeachStatement);
         next(); //foreach
         expect(TokenType.OpenParenthesis);
-        p.children.push(foreachCollectionName());
+        p.children.push(foreachCollection());
         let keyOrValue = peek().tokenType === TokenType.Ampersand ? foreachValue() : foreachKeyOrValue();
         p.children.push(keyOrValue);
 
@@ -2234,7 +2355,7 @@ export namespace Parser {
 
         if (peek().tokenType === TokenType.ElseIf) {
             p.children.push(list(
-                PhraseType.ElseIfClauses,
+                PhraseType.ElseIfClauseList,
                 elseIfClauseFunction,
                 (t: Token) => { return t.tokenType === TokenType.ElseIf; }
             ));
@@ -2298,7 +2419,7 @@ export namespace Parser {
         p.phraseType = PhraseType.ClassConstDeclaration;
         next(); //const
         p.children.push(delimitedList(
-            PhraseType.ClassConstElements,
+            PhraseType.ClassConstElementList,
             classConstElement,
             isClassConstElementStartToken,
             TokenType.Comma,
@@ -3108,7 +3229,7 @@ export namespace Parser {
             expect(TokenType.Backslash);
             expect(TokenType.OpenBrace);
             p.children.push(delimitedList(
-                PhraseType.NamespaceUseGroupClauses,
+                PhraseType.NamespaceUseGroupClauseList,
                 namespaceUseGroupClause,
                 isNamespaceUseGroupClauseStartToken,
                 TokenType.Comma,
@@ -3118,7 +3239,7 @@ export namespace Parser {
         }
 
         p.children.push(delimitedList(
-            PhraseType.NamespaceUseClauses,
+            PhraseType.NamespaceUseClauseList,
             namespaceUseClauseFunction(qualifiedNameNode),
             isQualifiedNameStart,
             TokenType.Comma,
@@ -3376,9 +3497,6 @@ export namespace Parser {
             case TokenType.Name:
             case TokenType.Semicolon:
             case TokenType.CloseTag:
-            case TokenType.Text:
-            case TokenType.OpenTag:
-            case TokenType.OpenTagEcho:
                 return true;
             default:
                 return isExpressionStart(t);
