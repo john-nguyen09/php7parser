@@ -409,6 +409,7 @@ export namespace Lexer {
             [/^\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, TokenType.VariableName],
             [/^\]/, action31],
             [/^\[/, action35],
+            [/^-/, TokenType.Minus],
             [/^[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, TokenType.Name],
             [/^[^]/, action32]
         ],
