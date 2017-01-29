@@ -323,14 +323,6 @@ export namespace Parser {
         TokenType.Use
     ];
 
-    const elseIfClauseListRecoverSet = [
-        TokenType.ElseIf
-    ];
-
-    const catchClauseListRecoverSet = [
-        TokenType.Catch
-    ];
-
     const encapsulatedVariableListRecoverSet = [
         TokenType.EncapsulatedAndWhitespace,
         TokenType.DollarCurlyOpen,
@@ -712,7 +704,8 @@ export namespace Parser {
             PhraseType.StatementList,
             statement,
             isStatementStart,
-            breakOn);
+            breakOn,
+            statementListRecoverSet);
 
     }
 
@@ -1067,7 +1060,8 @@ export namespace Parser {
             PhraseType.EncapsulatedVariableList,
             encapsulatedVariable,
             isEncapsulatedVariableStart,
-            [breakOn]
+            [breakOn],
+            encapsulatedVariableListRecoverSet
         );
 
     }
@@ -1252,7 +1246,8 @@ export namespace Parser {
             PhraseType.ClassMemberDeclarationList,
             classMemberDeclaration,
             isClassMemberStart,
-            [TokenType.CloseBrace]
+            [TokenType.CloseBrace],
+            classMemberDeclarationListRecoverSet
         );
 
     }
@@ -1353,7 +1348,8 @@ export namespace Parser {
             PhraseType.TraitAdaptationList,
             traitAdaptation,
             isTraitAdaptationStart,
-            [TokenType.CloseBrace]
+            [TokenType.CloseBrace],
+
         );
 
     }
@@ -1538,7 +1534,8 @@ export namespace Parser {
             PhraseType.InterfaceMemberDeclarationList,
             classMemberDeclaration,
             isClassMemberStart,
-            [TokenType.CloseBrace]
+            [TokenType.CloseBrace],
+            classMemberDeclarationListRecoverSet
         );
 
 
@@ -1591,7 +1588,8 @@ export namespace Parser {
             PhraseType.TraitMemberDeclarationList,
             classMemberDeclaration,
             isClassMemberStart,
-            [TokenType.CloseBrace]
+            [TokenType.CloseBrace],
+            classMemberDeclarationListRecoverSet
         );
 
     }
@@ -2350,6 +2348,10 @@ export namespace Parser {
         return end();
     }
 
+    function isElseIfClauseStart(t:Token){
+        return t.tokenType === TokenType.ElseIf;
+    }
+
     function ifStatement() {
 
         let p = start(PhraseType.IfStatement);
@@ -2379,7 +2381,7 @@ export namespace Parser {
             p.children.push(list(
                 PhraseType.ElseIfClauseList,
                 elseIfClauseFunction,
-                (t: Token) => { return t.tokenType === TokenType.ElseIf; }
+                isElseIfClauseStart
             ));
         }
 
@@ -3296,26 +3298,42 @@ export namespace Parser {
     }
 
     function delimitedList(phraseType: PhraseType, elementFunction: () => Phrase | Token,
-        elementStartTokenPredicate: Predicate, delimeter: TokenType, breakOn?: TokenType[]) {
+        elementStartPredicate: Predicate, delimiter: TokenType, breakOn?: TokenType[]) {
         let p = start(phraseType);
         let t: Token;
+
+        let delimitedListRecoverSet = breakOn ? breakOn.slice(0) : [];
+        delimitedListRecoverSet.push(delimiter);
+        recoverSetStack.push(delimitedListRecoverSet);
 
         while (true) {
 
             p.children.push(elementFunction());
             t = peek();
 
-            if (t.tokenType === delimeter) {
+            if (t.tokenType === delimiter) {
                 next();
             } else if (!breakOn || breakOn.indexOf(t.tokenType) >= 0) {
                 break;
             } else {
                 error();
+                //check for missing delimeter
+                if(elementStartPredicate(t)){
+                    continue;
+                } else if(breakOn){
+                    //skip until breakOn or delimiter token or whatever else is in recover set
+                    defaultSyncStrategy();
+                    if(peek().tokenType === delimiter){
+                        continue;
+                    }
+                }
+
                 break;
             }
 
         }
 
+        recoverSetStack.pop();
         return end();
     }
 
