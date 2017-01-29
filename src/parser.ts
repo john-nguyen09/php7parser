@@ -214,6 +214,7 @@ export namespace Parser {
     }
 
     //TODO use TokenType as index
+    //https://github.com/Microsoft/TypeScript/issues/13042
     const opPrecedenceAndAssociativtyMap:
         { [index: string]: [number, number] } = {
             '**': [48, Associativity.Right],
@@ -321,6 +322,20 @@ export namespace Parser {
         TokenType.Const,
         TokenType.Use
     ];
+
+    const elseIfClauseListRecoverSet = [
+        TokenType.ElseIf
+    ];
+
+    const catchClauseListRecoverSet = [
+        TokenType.Catch
+    ];
+
+    const encapsulatedVariableListRecoverSet = [
+        TokenType.EncapsulatedAndWhitespace,
+        TokenType.DollarCurlyOpen,
+        TokenType.CurlyOpen
+    ]
 
     function binaryOpToPhraseType(t: Token) {
         switch (t.tokenType) {
@@ -650,7 +665,13 @@ export namespace Parser {
                 break;
             } else {
                 error();
-                defaultSyncStrategy();
+                //attempt to sync with token stream
+                t = peek(1);
+                if (elementStartPredicate(t) || breakOn.indexOf(t.tokenType) >= 0) {
+                    skip((x) => { return x === t });
+                } else {
+                    defaultSyncStrategy();
+                }
                 recoveryAttempted = true;
             }
 
@@ -1827,10 +1848,11 @@ export namespace Parser {
         let p = start(PhraseType.CatchClause);
         next(); //catch
         expect(TokenType.OpenParenthesis);
-        p.children.push(list(
+        p.children.push(delimitedList(
             PhraseType.CatchNameList,
             qualifiedName,
             isQualifiedNameStart,
+            TokenType.Bar,
             [TokenType.VariableName]
         ));
         expect(TokenType.VariableName);
@@ -3235,7 +3257,7 @@ export namespace Parser {
                 TokenType.Comma,
                 [TokenType.CloseBrace]
             ));
-            return p
+            return end();
         }
 
         p.children.push(delimitedList(
