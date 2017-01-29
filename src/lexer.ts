@@ -508,9 +508,10 @@ export namespace Lexer {
         }
 
         let match: RegExpMatchArray;
-        let actionIndex: number;
+        let actionIndex = -1;
         let action: TokenType | LexerAction;
         let lexerMode: LexerMode;
+        lexeme = '';
 
         let token: Token = {
             tokenType: 0,
@@ -528,19 +529,22 @@ export namespace Lexer {
         lexerMode = modeStack[modeStack.length - 1];
         match = input.match(patterns[lexerMode]);
 
-        //skip first element -- the matched string
-        for (let n = 1; n < match.length; ++n) {
+        //first element is skipped as it is the matched string
+        let n = 0;
+        while(++n < match.length){
             if (match[n]) {
                 actionIndex = n - 1;
                 break;
-            } else {
-                throw new Error('Failed to find action index');
             }
+        }
+
+        if(actionIndex < 0){
+            throw new Error('Failed to find action index');
         }
 
         more(match[0].length);
         action = table[lexerMode][actionIndex][1];
-        
+
         if (typeof action === 'function') {
             token.tokenType = action();
             if (token.tokenType === -1) {
@@ -551,6 +555,7 @@ export namespace Lexer {
             advancePosition(false);
         }
 
+        token.text = lexeme;
         return token;
 
     }

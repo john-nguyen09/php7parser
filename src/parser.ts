@@ -397,18 +397,10 @@ export namespace Parser {
     var errorPhrase: Phrase;
     var recoverSetStack: TokenType[][];
 
-    export function parseScript(text: string): Phrase {
+    export function parse(text: string): Phrase {
 
         init(text);
-
-        let p = start(PhraseType.Script);
-        optional(TokenType.Text);
-
-        if (optionalOneOf([TokenType.OpenTag, TokenType.OpenTagEcho])) {
-            p.children.push(statementList([TokenType.EndOfFile]));
-        }
-
-        return end();
+        return statementList([TokenType.EndOfFile]);
 
     }
 
@@ -489,7 +481,7 @@ export namespace Parser {
         if (t.tokenType >= TokenType.Comment) {
             //hidden token
             phraseStackTop().children.push(t);
-            return this.next();
+            return next();
         } else if (!doNotPush) {
             phraseStackTop().children.push(t);
         }
@@ -619,18 +611,6 @@ export namespace Parser {
 
     function phraseStackTop() {
         return phraseStack.length ? phraseStack[phraseStack.length - 1] : null;
-    }
-
-    function script() {
-
-        let p = start(PhraseType.Script);
-        optional(TokenType.Text);
-        expectOneOf([TokenType.OpenTag, TokenType.OpenTagEcho]);
-        if (isStatementStart(peek())) {
-            p.children.push(statementList([TokenType.EndOfFile]));
-        }
-        hidden(); //whitespace at end of file
-        return end();
     }
 
     function list(phraseType: PhraseType, elementFunction: () => Phrase | Token,
@@ -1759,6 +1739,9 @@ export namespace Parser {
             case TokenType.Static:
                 return functionStaticDeclaration();
             case TokenType.CloseTag:
+            case TokenType.Text:
+            case TokenType.OpenTag:
+            case TokenType.OpenTagEcho:
                 return inlineText();
             case TokenType.ForEach:
                 return foreachStatement();
@@ -1796,7 +1779,7 @@ export namespace Parser {
 
     function inlineText() {
         let p = start(PhraseType.InlineText);
-        expect(TokenType.CloseTag);
+        optional(TokenType.CloseTag);
         optional(TokenType.Text);
         optionalOneOf([TokenType.OpenTag, TokenType.OpenTagEcho]);
         return end();
@@ -3537,6 +3520,9 @@ export namespace Parser {
             case TokenType.Name:
             case TokenType.Semicolon:
             case TokenType.CloseTag:
+            case TokenType.Text:
+            case TokenType.OpenTag:
+            case TokenType.OpenTagEcho:
                 return true;
             default:
                 return isExpressionStart(t);
