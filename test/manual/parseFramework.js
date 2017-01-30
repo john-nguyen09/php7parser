@@ -58,6 +58,7 @@ function parseRecurse(dir) {
                         let hrTime = process.hrtime();
                         let tree = php.Parser.parse(dataString);
                         let hrTimeDiff = process.hrtime(hrTime);
+                        console.log(process.memoryUsage());
                         elapsed += Math.round(hrTimeDiff[1] / 1000000) + hrTimeDiff[0] * 1000;
                         hasErrorRecurse(tree);
                         ++done;
