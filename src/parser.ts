@@ -77,6 +77,7 @@ export const enum PhraseType {
     ErrorVariable,
     ErrorVariableAtom,
     EvalIntrinsic,
+    ExitIntrinsic,
     ExponentiationExpression,
     ExpressionList,
     ExpressionStatement,
@@ -136,7 +137,6 @@ export const enum PhraseType {
     ObjectCreationExpression,
     ParameterDeclaration,
     ParameterDeclarationList,
-    ParameterList,
     PostfixDecrementExpression,
     PostfixIncrementExpression,
     PrefixDecrementExpression,
@@ -213,69 +213,120 @@ export namespace Parser {
         Right
     }
 
-    //TODO use TokenType as index
-    //https://github.com/Microsoft/TypeScript/issues/13042
-    const opPrecedenceAndAssociativtyMap:
-        { [index: string]: [number, number] } = {
-            '**': [48, Associativity.Right],
-            '++': [47, Associativity.Right],
-            '--': [47, Associativity.Right],
-            '~': [47, Associativity.Right],
-            '(int)': [47, Associativity.Right],
-            '(float)': [47, Associativity.Right],
-            '(string)': [47, Associativity.Right],
-            '(array)': [47, Associativity.Right],
-            '(object)': [47, Associativity.Right],
-            '(bool)': [47, Associativity.Right],
-            '@': [47, Associativity.Right],
-            'instanceof': [46, Associativity.None],
-            '!': [45, Associativity.Right],
-            '*': [44, Associativity.Left],
-            '/': [44, Associativity.Left],
-            '%': [44, Associativity.Left],
-            '+': [43, Associativity.Left],
-            '-': [43, Associativity.Left],
-            '.': [43, Associativity.Left],
-            '<<': [42, Associativity.Left],
-            '>>': [42, Associativity.Left],
-            '<': [41, Associativity.None],
-            '>': [41, Associativity.None],
-            '<=': [41, Associativity.None],
-            '>=': [41, Associativity.None],
-            '==': [40, Associativity.None],
-            '===': [40, Associativity.None],
-            '!=': [40, Associativity.None],
-            '!==': [40, Associativity.None],
-            '<>': [40, Associativity.None],
-            '<=>': [40, Associativity.None],
-            '&': [39, Associativity.Left],
-            '^': [38, Associativity.Left],
-            '|': [37, Associativity.Left],
-            '&&': [36, Associativity.Left],
-            '||': [35, Associativity.Left],
-            '??': [34, Associativity.Right],
-            '?': [33, Associativity.Left], //?: ternary
-            ':': [33, Associativity.Left], //?: ternary
-            '=': [32, Associativity.Right],
-            '.=': [32, Associativity.Right],
-            '+=': [32, Associativity.Right],
-            '-=': [32, Associativity.Right],
-            '*=': [32, Associativity.Right],
-            '/=': [32, Associativity.Right],
-            '%=': [32, Associativity.Right],
-            '**=': [32, Associativity.Right],
-            '&=': [32, Associativity.Right],
-            '|=': [32, Associativity.Right],
-            '^=': [32, Associativity.Right],
-            '<<=': [32, Associativity.Right],
-            '>>=': [32, Associativity.Right],
-            'and': [31, Associativity.Left],
-            'xor': [30, Associativity.Left],
-            'or': [29, Associativity.Left],
-        };
-
     function precedenceAssociativityTuple(t: Token) {
-        return opPrecedenceAndAssociativtyMap[t.text];
+        switch (t.tokenType) {
+            case TokenType.AsteriskAsterisk:
+                return [48, Associativity.Right];
+            case TokenType.PlusPlus:
+                return [47, Associativity.Right];
+            case TokenType.MinusMinus:
+                return [47, Associativity.Right];
+            case TokenType.Tilde:
+                return [47, Associativity.Right];
+            case TokenType.IntegerCast:
+                return [47, Associativity.Right];
+            case TokenType.FloatCast:
+                return [47, Associativity.Right];
+            case TokenType.StringCast:
+                return [47, Associativity.Right];
+            case TokenType.ArrayCast:
+                return [47, Associativity.Right];
+            case TokenType.ObjectCast:
+                return [47, Associativity.Right];
+            case TokenType.BooleanCast:
+                return [47, Associativity.Right];
+            case TokenType.AtSymbol:
+                return [47, Associativity.Right];
+            case TokenType.InstanceOf:
+                return [46, Associativity.None];
+            case TokenType.Exclamation:
+                return [45, Associativity.Right];
+            case TokenType.Asterisk:
+                return [44, Associativity.Left];
+            case TokenType.ForwardSlash:
+                return [44, Associativity.Left];
+            case TokenType.Percent:
+                return [44, Associativity.Left];
+            case TokenType.Plus:
+                return [43, Associativity.Left];
+            case TokenType.Minus:
+                return [43, Associativity.Left];
+            case TokenType.Dot:
+                return [43, Associativity.Left];
+            case TokenType.LessThanLessThan:
+                return [42, Associativity.Left];
+            case TokenType.GreaterThanGreaterThan:
+                return [42, Associativity.Left];
+            case TokenType.LessThan:
+                return [41, Associativity.None];
+            case TokenType.GreaterThan:
+                return [41, Associativity.None];
+            case TokenType.LessThanEquals:
+                return [41, Associativity.None];
+            case TokenType.GreaterThanEquals:
+                return [41, Associativity.None];
+            case TokenType.EqualsEquals:
+                return [40, Associativity.None];
+            case TokenType.EqualsEqualsEquals:
+                return [40, Associativity.None];
+            case TokenType.ExclamationEquals:
+                return [40, Associativity.None];
+            case TokenType.ExclamationEqualsEquals:
+                return [40, Associativity.None];
+            case TokenType.Spaceship:
+                return [40, Associativity.None];
+            case TokenType.Ampersand:
+                return [39, Associativity.Left];
+            case TokenType.Caret:
+                return [38, Associativity.Left];
+            case TokenType.Bar:
+                return [37, Associativity.Left];
+            case TokenType.AmpersandAmpersand:
+                return [36, Associativity.Left];
+            case TokenType.BarBar:
+                return [35, Associativity.Left];
+            case TokenType.QuestionQuestion:
+                return [34, Associativity.Right];
+            case TokenType.Question:
+                return [33, Associativity.Left]; //?: ternary
+            case TokenType.Semicolon:
+                return [33, Associativity.Left]; //?: ternary
+            case TokenType.Equals:
+                return [32, Associativity.Right];
+            case TokenType.DotEquals:
+                return [32, Associativity.Right];
+            case TokenType.PlusEquals:
+                return [32, Associativity.Right];
+            case TokenType.MinusEquals:
+                return [32, Associativity.Right];
+            case TokenType.AsteriskEquals:
+                return [32, Associativity.Right];
+            case TokenType.ForwardslashEquals:
+                return [32, Associativity.Right];
+            case TokenType.PercentEquals:
+                return [32, Associativity.Right];
+            case TokenType.AsteriskAsteriskEquals:
+                return [32, Associativity.Right];
+            case TokenType.AmpersandEquals:
+                return [32, Associativity.Right];
+            case TokenType.BarEquals:
+                return [32, Associativity.Right];
+            case TokenType.CaretEquals:
+                return [32, Associativity.Right];
+            case TokenType.LessThanLessThanEquals:
+                return [32, Associativity.Right];
+            case TokenType.GreaterThanGreaterThanEquals:
+                return [32, Associativity.Right];
+            case TokenType.And:
+                return [31, Associativity.Left];
+            case TokenType.Xor:
+                return [30, Associativity.Left];
+            case TokenType.Or:
+                return [29, Associativity.Left];
+            default:
+                throwUnexpectedTokenError(t);
+
+        }
     }
 
     const statementListRecoverSet = [
@@ -540,7 +591,7 @@ export namespace Parser {
         let bufferPos = -1;
         let t: Token;
 
-        while (k) {
+        while (true) {
 
             ++bufferPos;
             if (bufferPos === tokenBuffer.length) {
@@ -630,6 +681,7 @@ export namespace Parser {
         while (true) {
 
             t = peek();
+
             if (elementStartPredicate(t)) {
                 recoveryAttempted = false;
                 p.children.push(elementFunction());
@@ -964,6 +1016,8 @@ export namespace Parser {
                 return keywordEncapsulatedExpression(PhraseType.EvalIntrinsic);
             case TokenType.Empty:
                 return keywordEncapsulatedExpression(PhraseType.EmptyIntrinsic);
+            case TokenType.Exit:
+                return exitIntrinsic();
             case TokenType.Isset:
                 return issetIntrinsic();
             default:
@@ -973,6 +1027,18 @@ export namespace Parser {
                 return end();
         }
 
+    }
+
+    function exitIntrinsic() {
+        let p = start(PhraseType.ExitIntrinsic);
+        next(); //exit or die
+        if (optional(TokenType.OpenParenthesis)) {
+            if (isExpressionStart(peek())) {
+                p.children.push(expression(0));
+            }
+            expect(TokenType.CloseParenthesis);
+        }
+        return end();
     }
 
     function issetIntrinsic() {
@@ -1195,8 +1261,12 @@ export namespace Parser {
         let p = start(PhraseType.AnonymousClassDeclarationHeader);
         next(); //class
 
-        if (peek().tokenType === TokenType.OpenParenthesis) {
-            p.children.push(argumentList());
+        if (optional(TokenType.OpenParenthesis)) {
+
+            if (isArgumentStart(peek())) {
+                p.children.push(argumentList());
+            }
+            expect(TokenType.CloseParenthesis);
         }
 
         if (peek().tokenType === TokenType.Extends) {
@@ -1262,14 +1332,15 @@ export namespace Parser {
             case TokenType.Static:
             case TokenType.Abstract:
             case TokenType.Final:
+                let modifiers = memberModifierList();
                 t = peek();
                 if (t.tokenType === TokenType.VariableName) {
-                    p.children.push(memberModifierList());
+                    p.children.push(modifiers);
                     return propertyDeclaration(p);
                 } else if (t.tokenType === TokenType.Function) {
-                    return methodDeclaration(p, memberModifierList());
+                    return methodDeclaration(p, modifiers);
                 } else if (t.tokenType === TokenType.Const) {
-                    p.children.push(memberModifierList());
+                    p.children.push(modifiers);
                     return classConstDeclaration(p);
                 } else {
                     //error
@@ -1301,7 +1372,7 @@ export namespace Parser {
         let p = start(PhraseType.TraitUseClause);
         next(); //use
         p.children.push(qualifiedNameList([TokenType.Semicolon, TokenType.OpenBrace]));
-        p.children.push(traitAdaptationList());
+        p.children.push(traitUseSpecification());
         return end();
 
     }
@@ -1311,7 +1382,7 @@ export namespace Parser {
         let p = start(PhraseType.TraitUseSpecification);
         let t = expectOneOf([TokenType.Semicolon, TokenType.OpenBrace]);
 
-        if (t.tokenType === TokenType.CloseBrace) {
+        if (t.tokenType === TokenType.OpenBrace) {
             if (isTraitAdaptationStart(peek())) {
                 p.children.push(traitAdaptationList());
             }
@@ -1494,12 +1565,12 @@ export namespace Parser {
 
     }
 
-    function classTraitInterfaceDeclarationBody(phraseType: PhraseType, isElementStartPredicate: Predicate, listFunction: () => Phrase) {
+    function classTraitInterfaceDeclarationBody(phraseType: PhraseType, elementStartPredicate: Predicate, listFunction: () => Phrase | Token) {
 
         let p = start(phraseType);
         expect(TokenType.OpenBrace);
 
-        if (isElementStartPredicate(peek())) {
+        if (elementStartPredicate(peek())) {
             p.children.push(listFunction());
         }
 
@@ -1737,7 +1808,13 @@ export namespace Parser {
             case TokenType.Global:
                 return globalDeclaration();
             case TokenType.Static:
-                return functionStaticDeclaration();
+                if (peek(1).tokenType === TokenType.VariableName &&
+                    [TokenType.Semicolon, TokenType.Comma,
+                    TokenType.CloseTag, TokenType.Equals].indexOf(peek(2).tokenType) >= 0) {
+                    return functionStaticDeclaration();
+                } else {
+                    return expressionStatement();
+                }
             case TokenType.CloseTag:
             case TokenType.Text:
             case TokenType.OpenTag:
@@ -1837,7 +1914,7 @@ export namespace Parser {
             [TokenType.VariableName]
         ));
         expect(TokenType.VariableName);
-        expect(TokenType.OpenParenthesis);
+        expect(TokenType.CloseParenthesis);
         p.children.push(compoundStatement());
         return end();
 
@@ -2022,6 +2099,7 @@ export namespace Parser {
         next(); //foreach
         expect(TokenType.OpenParenthesis);
         p.children.push(foreachCollection());
+        expect(TokenType.As);
         let keyOrValue = peek().tokenType === TokenType.Ampersand ? foreachValue() : foreachKeyOrValue();
         p.children.push(keyOrValue);
 
@@ -2331,7 +2409,7 @@ export namespace Parser {
         return end();
     }
 
-    function isElseIfClauseStart(t:Token){
+    function isElseIfClauseStart(t: Token) {
         return t.tokenType === TokenType.ElseIf;
     }
 
@@ -2491,6 +2569,7 @@ export namespace Parser {
             case TokenType.Eval:
             case TokenType.Empty:
             case TokenType.Isset:
+            case TokenType.Exit:
                 return true;
             default:
                 return false;
@@ -2552,7 +2631,7 @@ export namespace Parser {
 
     function memberModifierList() {
 
-        let n = start(PhraseType.MemberModifierList);
+        start(PhraseType.MemberModifierList);
 
         while (isMemberModifier(peek())) {
             next();
@@ -2721,8 +2800,14 @@ export namespace Parser {
         optional(TokenType.Ampersand);
         expect(TokenType.OpenParenthesis);
 
-        if (isArgumentStart(peek())) {
-            p.children.push(argumentList());
+        if (isParameterStart(peek())) {
+            p.children.push(delimitedList(
+                PhraseType.ParameterDeclarationList,
+                parameterDeclaration,
+                isParameterStart,
+                TokenType.Comma,
+                [TokenType.CloseParenthesis]
+            ));
         }
 
         expect(TokenType.CloseParenthesis);
@@ -2871,7 +2956,9 @@ export namespace Parser {
         p.children.push(scopedMemberName(p));
 
         if (optional(TokenType.OpenParenthesis)) {
-            p.children.push(argumentList());
+            if (isArgumentStart(peek())) {
+                p.children.push(argumentList());
+            }
             p.phraseType = PhraseType.ScopedCallExpression;
             expect(TokenType.CloseParenthesis);
             return end();
@@ -2880,6 +2967,8 @@ export namespace Parser {
             error();
             return end();
         }
+
+        return end();
 
     }
 
@@ -2935,7 +3024,9 @@ export namespace Parser {
         p.children.push(memberName());
 
         if (optional(TokenType.OpenParenthesis)) {
-            p.children.push(argumentList());
+            if (isArgumentStart(peek())) {
+                p.children.push(argumentList());
+            }
             p.phraseType = PhraseType.MethodCallExpression;
             expect(TokenType.CloseParenthesis);
         }
@@ -3045,7 +3136,9 @@ export namespace Parser {
 
         let p = start(PhraseType.ArrayCreationExpression);
         next(); //[
-        p.children.push(arrayInitialiserList(TokenType.CloseBracket));
+        if (isArrayElementStart(peek())) {
+            p.children.push(arrayInitialiserList(TokenType.CloseBracket));
+        }
         expect(TokenType.CloseBracket);
         return end();
 
@@ -3077,14 +3170,13 @@ export namespace Parser {
 
         while (true) {
 
-            p.children.push(arrayElement());
             t = peek();
 
-            if (t.tokenType === TokenType.Comma) {
+            //arrays can have empty elements
+            if (isArrayElementStart(t)) {
+                p.children.push(arrayElement());
+            } else if (t.tokenType === TokenType.Comma) {
                 next();
-                if (peek().tokenType === breakOn) {
-                    break;
-                }
             } else if (t.tokenType === breakOn) {
                 break;
             } else {
@@ -3231,7 +3323,7 @@ export namespace Parser {
         let qualifiedNameNode = qualifiedName();
         let t = peek();
 
-        if (t.tokenType === TokenType.Backslash || TokenType.OpenBrace) {
+        if (t.tokenType === TokenType.Backslash || t.tokenType === TokenType.OpenBrace) {
             p.children.push(qualifiedNameNode);
             expect(TokenType.Backslash);
             expect(TokenType.OpenBrace);
@@ -3301,12 +3393,12 @@ export namespace Parser {
             } else {
                 error();
                 //check for missing delimeter
-                if(elementStartPredicate(t)){
+                if (elementStartPredicate(t)) {
                     continue;
-                } else if(breakOn){
+                } else if (breakOn) {
                     //skip until breakOn or delimiter token or whatever else is in recover set
                     defaultSyncStrategy();
-                    if(peek().tokenType === delimiter){
+                    if (peek().tokenType === delimiter) {
                         continue;
                     }
                 }

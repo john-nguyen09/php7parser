@@ -12,7 +12,6 @@ export const enum TokenType {
     //Keywords
     Abstract,
     Array,
-    ArrayCast,
     As,
     Break,
     Callable,
@@ -175,6 +174,7 @@ export const enum TokenType {
     OpenTagEcho,
     StartHeredoc,
     CloseTag,
+    ArrayCast,
 
     //Comments and whitespace
     Comment,
@@ -1057,6 +1057,8 @@ export namespace Lexer {
     function charTokenType(c: string) {
 
         switch (c) {
+            case '.':
+                return TokenType.Dot;
             case '\\':
                 return TokenType.Backslash;
             case '/':

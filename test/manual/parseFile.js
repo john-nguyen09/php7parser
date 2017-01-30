@@ -9,6 +9,7 @@ var tree;
 
 if (process.argv.length !== 3) {
     console.log('Usage: node parseFile.js PATH_TO_FILE');
+    return;
 }
 
 filepath = process.argv[2];

@@ -1,24 +1,34 @@
 /*
-* Manual test of large project parsing
-* node test.js.manual pathToCodeRootDir
+* Manual test of framework parsing
+* node parseFramework.js PATH_TO_CODE_ROOT_DIR
 */
-var assert = require('chai').assert;
 var fs = require('fs');
 var path = require('path');
-var php7parser = require('../lib/php7parser');
+var php = require('../../lib/php7parser');
 
-var ast;
-var parser = new php7parser.Parser(new php7parser.Lexer(), php7parser.defaultAstNodeOps);
 var count = 0;
 var done = 0;
+var elapsed = 0;
 
 if(process.argv.length !== 3){
-    console.log('Usage: node test.js.manual PATH_TO_CODE_ROOT_DIR');
+    console.log('Usage: node parseFramework.js PATH_TO_CODE_ROOT_DIR');
+    return;
 }
 
 var pathToCodeRootDir = process.argv[2];
 
-console.time('parsed in');
+function hasErrorRecurse(node){
+    if(node.errors){
+        throw new Error(JSON.stringify(node, null, 4));
+    }
+
+    if(node.children){
+        for(let n = 0; n < node.children.length; ++n){
+            hasErrorRecurse(node.children[n]);
+        }
+    }
+}
+
 function parseRecurse(dir) {
     
     fs.readdir(dir, function (err, list) {
@@ -43,18 +53,17 @@ function parseRecurse(dir) {
                         if (err) {
                             throw err;
                         }
-
-                        ast = parser.parse(data.toString());
-                        if (ast) {
-                            console.log('SUCCESS: ' + filepath);
-                        } else {
-                            console.log('FAIL: ' + filepath);
-                            throw parser.errors[0].message;
-                        }
+                        console.log('parsing ' + filepath);
+                        let dataString = data.toString();
+                        let hrTime = process.hrtime();
+                        let tree = php.Parser.parse(dataString);
+                        let hrTimeDiff = process.hrtime(hrTime);
+                        elapsed += Math.round(hrTimeDiff[1] / 1000000) + hrTimeDiff[0] * 1000;
+                        hasErrorRecurse(tree);
                         ++done;
                         if(count === done){
                             console.log(count + ' files parsed');
-                            console.timeEnd('parsed in');
+                            console.log('elapsed: ' + elapsed + ' ms');
                         }
                     });
                 }
