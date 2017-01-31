@@ -660,7 +660,7 @@ export namespace Lexer {
         }
 
         //find comment end */
-        let pos = input.search(/\*\//);
+        let pos = input.indexOf('*/');
 
         if (pos === -1) {
             //todo WARN unterminated comment

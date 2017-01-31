@@ -55,6 +55,7 @@ function parseRecurse(dir) {
                         }
                         console.log('parsing ' + filepath);
                         let dataString = data.toString();
+                        console.log(process.memoryUsage());
                         let hrTime = process.hrtime();
                         let tree = php.Parser.parse(dataString);
                         let hrTimeDiff = process.hrtime(hrTime);
