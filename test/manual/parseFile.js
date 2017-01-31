@@ -19,9 +19,25 @@ fs.readFile(filepath, function (err, data) {
         throw err;
     }
 
-    console.time('elapsed');
-    tree = php.Parser.parse(data.toString());
-    console.timeEnd('elapsed');
+    let dataString = data.toString();
+    let hrtime = process.hrtime();
+    tree = php.Parser.parse(dataString);
+    let hrtimeDiff = process.hrtime(hrtime);
     console.log(JSON.stringify(tree, null, 4));
+    console.log(hrtimeDiff);
+    
+});
+
+fs.readFile(filepath, function (err, data) {
+    if (err) {
+        throw err;
+    }
+
+    let dataString = data.toString();
+    let hrtime = process.hrtime();
+    tree = php.Parser.parse(dataString);
+    let hrtimeDiff = process.hrtime(hrtime);
+    console.log('Repeat parse');
+    console.log(hrtimeDiff);
     
 });

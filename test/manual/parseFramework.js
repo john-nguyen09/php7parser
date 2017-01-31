@@ -59,12 +59,12 @@ function parseRecurse(dir) {
                         let tree = php.Parser.parse(dataString);
                         let hrTimeDiff = process.hrtime(hrTime);
                         console.log(process.memoryUsage());
-                        elapsed += Math.round(hrTimeDiff[1] / 1000000) + hrTimeDiff[0] * 1000;
+                        elapsed += hrTimeDiff[1] + hrTimeDiff[0] * 1000000000;
                         hasErrorRecurse(tree);
                         ++done;
                         if(count === done){
                             console.log(count + ' files parsed');
-                            console.log('elapsed: ' + elapsed + ' ms');
+                            console.log('elapsed: ' + Math.round(elapsed / 1000000) + ' ms');
                         }
                     });
                 }
