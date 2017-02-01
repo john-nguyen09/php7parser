@@ -219,7 +219,7 @@ export namespace Lexer {
             [/^function(?=\b)/, TokenType.Function],
             [/^const(?=\b)/, TokenType.Const],
             [/^return(?=\b)/, TokenType.Return],
-            [/^yield[ \n\r\t]+from/, action5],
+            [/^yield[ \n\r\t]+from/, TokenType.YieldFrom],
             [/^yield(?=\b)/, TokenType.Yield],
             [/^try(?=\b)/, TokenType.Try],
             [/^catch(?=\b)/, TokenType.Catch],
@@ -255,7 +255,7 @@ export namespace Lexer {
             [/^extends(?=\b)/, TokenType.Extends],
             [/^implements(?=\b)/, TokenType.Implements],
             [/^->/, action6],
-            [/^[ \n\r\t]+/, action7],
+            [/^[ \n\r\t]+/, TokenType.Whitespace],
             [/^::/, TokenType.ColonColon],
             [/^\\/, TokenType.Backslash],
             [/^\.\.\./, TokenType.Ellipsis],
@@ -346,11 +346,11 @@ export namespace Lexer {
             [/^\\?"/, action14],
             [/^`/, action16],
             [/^[;:,.\[\]()|^&+\-\/*=%!~$<>?@]/, action35],
-            [/^[^]/, action17],
+            [/^[^]/, TokenType.Unknown],
         ],
         //LOOKING_FOR_PROPERTY
         [
-            [/^[ \n\r\t]+/, action7],
+            [/^[ \n\r\t]+/, TokenType.Whitespace],
             [/^->/, TokenType.Arrow],
             [/^[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/, action18],
             [/^[^]/, action19]
@@ -443,11 +443,14 @@ export namespace Lexer {
         patterns.push(concatRegExpArray(table[n].map((v, i, a) => { return v[0]; })));
     }
 
-    export function setInput(text: string, lexerModeStack?: LexerMode[]) {
+    export function setInput(text: string, lexerModeStack?: LexerMode[], lastPosition?:number) {
         clear();
         input = text;
         if (lexerModeStack) {
             modeStack = lexerModeStack;
+        }
+        if(lastPosition){
+            position = lastPosition;
         }
     }
 
@@ -550,10 +553,13 @@ export namespace Lexer {
         return TokenType.Text;
     }
 
+    /*
+    scripting yield from
     function action5() {
         position += lexemeLength;
         return TokenType.YieldFrom;
     }
+    */
 
     function action6() {
         position += lexemeLength;
@@ -562,10 +568,13 @@ export namespace Lexer {
         return TokenType.Arrow;
     }
 
+    /*
+    scripting whitespace
     function action7() {
         position += lexemeLength;
         return TokenType.Whitespace;
     }
+    */
 
     function action8() {
         position += lexemeLength;
@@ -729,11 +738,13 @@ export namespace Lexer {
         return TokenType.Backtick;
     }
 
+    /*
     function action17() {
         //Unexpected character
         position += lexemeLength;
         return TokenType.Unknown;
     }
+    */
 
     function action18() {
         modeStack = modeStack.slice(0, -1);
