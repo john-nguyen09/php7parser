@@ -197,8 +197,8 @@ export interface Phrase {
 }
 
 export interface ParseError {
-    firstUnexpectedToken: Token;
-    lastUnexpectedToken: Token;
+    startErrorToken: Token;
+    endErrorToken: Token;
 }
 
 export namespace Parser {
@@ -627,7 +627,7 @@ export namespace Parser {
 
             if (predicate(t) || t.tokenType === TokenType.EndOfFile) {
                 tokenBuffer.unshift(t);
-                errorPhrase.errors[errorPhrase.errors.length - 1].lastUnexpectedToken = lastSkipped;
+                errorPhrase.errors[errorPhrase.errors.length - 1].endErrorToken = lastSkipped;
                 break;
             } else {
                 if (t.tokenType < TokenType.Comment) {
@@ -654,8 +654,8 @@ export namespace Parser {
 
         let t = peek();
         errorPhrase.errors.push({
-            firstUnexpectedToken: t,
-            lastUnexpectedToken: t
+            startErrorToken: t,
+            endErrorToken: t
         });
 
     }
