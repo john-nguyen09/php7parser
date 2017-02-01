@@ -204,13 +204,6 @@ export interface Token {
 
 export namespace Lexer {
 
-    var input: string;
-    var lexemeLength: number;
-    var modeStack: LexerMode[];
-    var position: number;
-    var hereDocLabel: string;
-    var doubleQuoteScannedLength: number;
-
     const table: [RegExp, (TokenType | LexerAction)][][] = [
         //INITIAL
         [
@@ -417,6 +410,17 @@ export namespace Lexer {
         ]
     ];
 
+    var input: string;
+    var lexemeLength: number;
+    var modeStack: LexerMode[];
+    var position: number;
+    var hereDocLabel: string;
+    var doubleQuoteScannedLength: number;
+    var match: RegExpMatchArray;
+    var actionIndex:number;
+    var action: TokenType | LexerAction;
+    var lexerMode: LexerMode;
+
     function clear() {
         input = null;
         hereDocLabel = null;
@@ -457,10 +461,7 @@ export namespace Lexer {
             };
         }
 
-        let match: RegExpMatchArray;
-        let actionIndex = -1;
-        let action: TokenType | LexerAction;
-        let lexerMode: LexerMode;
+        actionIndex = -1;
         lexemeLength = 0;
 
         let token: Token = {
