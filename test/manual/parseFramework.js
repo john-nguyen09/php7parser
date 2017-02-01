@@ -61,12 +61,12 @@ function parseRecurse(dir) {
                         let hrTimeDiff = process.hrtime(hrTime);
                         console.log(hrTimeDiff);
                         console.log(process.memoryUsage());
-                        elapsed += Math.round(hrTimeDiff[1] / 1000) + hrTimeDiff[0] * 1000000;
+                        elapsed += hrTimeDiff[1];
                         hasErrorRecurse(tree);
                         ++done;
                         if(count === done){
                             console.log(count + ' files parsed');
-                            console.log('elapsed: ' + Math.round(elapsed / 1000) + ' ms');
+                            console.log('elapsed: ' + Math.round(elapsed / 1000000) + ' ms');
                         }
                     });
                 }

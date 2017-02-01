@@ -198,16 +198,16 @@ export const enum LexerMode {
 export interface Token {
     tokenType: TokenType,
     position: number,
-    length:number
+    length: number
     modeStack: LexerMode[],
 }
 
 export namespace Lexer {
 
     var input: string;
-    var lexeme: string;
+    var lexemeLength: number;
     var modeStack: LexerMode[];
-    var position:number;
+    var position: number;
     var hereDocLabel: string;
     var doubleQuoteScannedLength: number;
 
@@ -418,19 +418,12 @@ export namespace Lexer {
     ];
 
     function clear() {
-        input = lexeme = hereDocLabel = doubleQuoteScannedLength = null;
+        input = null;
+        hereDocLabel = null;
+        doubleQuoteScannedLength = null;
+        lexemeLength = 0;
         modeStack = [LexerMode.Initial];
         position = -1;
-    }
-
-    function less(n: number = 0) {
-        input = lexeme.slice(n) + input;
-        lexeme = lexeme.substr(0, n);
-    }
-
-    function more(n: number) {
-        lexeme += input.substr(0, n);
-        input = input.slice(n);
     }
 
     function concatRegExpArray(regExpArray: RegExp[]): RegExp {
@@ -459,7 +452,7 @@ export namespace Lexer {
             return {
                 tokenType: TokenType.EndOfFile,
                 position: position,
-                length:0,
+                length: 0,
                 modeStack: modeStack
             };
         }
@@ -468,12 +461,12 @@ export namespace Lexer {
         let actionIndex = -1;
         let action: TokenType | LexerAction;
         let lexerMode: LexerMode;
-        lexeme = '';
+        lexemeLength = 0;
 
         let token: Token = {
             tokenType: 0,
             position: position + 1,
-            length:0,
+            length: 0,
             modeStack: modeStack
         };
 
@@ -482,18 +475,18 @@ export namespace Lexer {
 
         //first element is skipped as it is the matched string
         let n = 0;
-        while(++n < match.length){
+        while (++n < match.length) {
             if (match[n]) {
                 actionIndex = n - 1;
                 break;
             }
         }
 
-        if(actionIndex < 0){
+        if (actionIndex < 0) {
             throw new Error('Failed to find action index');
         }
 
-        more(match[0].length);
+        lexemeLength = match[0].length;
         action = table[lexerMode][actionIndex][1];
 
         if (typeof action === 'function') {
@@ -503,10 +496,11 @@ export namespace Lexer {
             }
         } else {
             token.tokenType = action;
-            position += lexeme.length;;
+            position += lexemeLength;
         }
 
-        token.length = lexeme.length;
+        input = input.slice(lexemeLength);
+        token.length = lexemeLength;
         return token;
 
     }
@@ -521,64 +515,64 @@ export namespace Lexer {
     }
 
     function action1() {
-        position += lexeme.length;;
+        position += lexemeLength;
         modeStack = [LexerMode.Scripting];
         return TokenType.OpenTagEcho;
     }
 
     function action2() {
-        position += lexeme.length;;
+        position += lexemeLength;
         modeStack = [LexerMode.Scripting];
         return TokenType.OpenTag;
     }
 
     function action3() {
-        position += lexeme.length;;
+        position += lexemeLength;
         modeStack = [LexerMode.Scripting];
         return TokenType.OpenTag;
     }
 
     function action4() {
         //read until open tag or end
-        if (input.length) {
+        if (input.length > lexemeLength) {
             let pos = input.search(/<\?=|<\?php(?:[ \t]|(?:\r\n|\n|\r))|<\?/);
             if (pos === -1) {
-                more(input.length);
+                lexemeLength = input.length;
             } else {
-                more(pos);
+                lexemeLength = pos;
             }
         }
 
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.Text;
     }
 
     function action5() {
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.YieldFrom;
     }
 
     function action6() {
-        position += lexeme.length;;
+        position += lexemeLength;
         modeStack = modeStack.slice(0);
         modeStack.push(LexerMode.LookingForProperty);
         return TokenType.Arrow;
     }
 
     function action7() {
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.Whitespace;
     }
 
     function action8() {
-        position += lexeme.length;;
+        position += lexemeLength;
         modeStack = modeStack.slice(0);
         modeStack.push(LexerMode.Scripting);
         return TokenType.OpenBrace;
     }
 
     function action9() {
-        position += lexeme.length;;
+        position += lexemeLength;
         if (modeStack.length > 1) {
             modeStack = modeStack.slice(0, -1);
         }
@@ -591,36 +585,36 @@ export namespace Lexer {
         let match: RegExpMatchArray = input.match(/(?:\r\n|\n|\r)+|\?>/);
 
         if (!match) {
-            more(input.length);
+            lexemeLength = input.length;
         } else if (match[0] === '?>') {
-            more(match.index);
+            lexemeLength = match.index;
         } else {
             //newline
-            more(match.index + match[0].length);
+            lexemeLength = match.index + match[0].length;
         }
 
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.Comment;
     }
 
     function action11() {
 
         let isDocComment = false;
-        if (lexeme.length > 2) {
+        if (lexemeLength > 2) {
             isDocComment = true;
         }
 
         //find comment end */
-        let pos = input.search(/\*\//);
+        let pos = input.indexOf('*/', lexemeLength);
 
         if (pos === -1) {
             //todo WARN unterminated comment
-            more(input.length);
+            lexemeLength = input.length;
         } else {
-            more(pos + 2);
+            lexemeLength = pos + 2;
         }
 
-        position += lexeme.length;;
+        position += lexemeLength;
 
         if (isDocComment) {
             return TokenType.DocumentComment;
@@ -632,14 +626,14 @@ export namespace Lexer {
 
     function action12() {
         modeStack = [LexerMode.Initial];
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.CloseTag;
     }
 
     function action13() {
 
         //find first unescaped '
-        let n = 0;
+        let n = lexemeLength;
         while (true) {
             if (n < input.length) {
                 if (input[n] === '\'') {
@@ -649,13 +643,13 @@ export namespace Lexer {
                     ++n;
                 }
             } else {
-                position += lexeme.length;;
+                position += lexemeLength;
                 return TokenType.EncapsulatedAndWhitespace;
             }
         }
 
-        more(n);
-        position += lexeme.length;;
+        lexemeLength = n;
+        position += lexemeLength;
         return TokenType.StringLiteral;
     }
 
@@ -663,15 +657,15 @@ export namespace Lexer {
 
         //consume until unescaped "
         //if ${LABEL_START}, ${, {$ found or no match return " and consume none 
-        let n = 0;
+        let n = lexemeLength;
         let char: string;
 
         while (n < input.length) {
             char = input[n++];
             switch (char) {
                 case '"':
-                    more(n);
-                    position += lexeme.length;;
+                    lexemeLength = n;
+                    position += lexemeLength;
                     return TokenType.StringLiteral;
                 case '$':
                     if (n < input.length && (isLabelStart(input[n]) || input[n] === '{')) {
@@ -696,8 +690,8 @@ export namespace Lexer {
             break;
         }
 
-        position += lexeme.length;;
-        doubleQuoteScannedLength = n;
+        position += lexemeLength;
+        doubleQuoteScannedLength = n - lexemeLength; //less DoubleQuote length
         modeStack = [LexerMode.DoubleQuotes];
         return TokenType.DoubleQuote;
 
@@ -705,6 +699,7 @@ export namespace Lexer {
 
     function action15() {
 
+        let lexeme = input.substr(0, lexemeLength);
         let match = lexeme.match(/[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/);
         hereDocLabel = match[0];
         let c = lexeme[match.index - 1];
@@ -716,34 +711,35 @@ export namespace Lexer {
         }
 
         //check for end on next line
-        if (input.search(new RegExp('^' + hereDocLabel + ';?(?:\r\n|\n|\r)')) !== -1) {
+        if (input.substr(lexemeLength, hereDocLabel.length + 3)
+            .search(new RegExp('^' + hereDocLabel + ';?(?:\r\n|\n|\r)')) >= 0) {
             modeStack = [LexerMode.EndHereDoc];
         }
 
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.StartHeredoc;
     }
 
     function action16() {
-        position += lexeme.length;;
+        position += lexemeLength;
         modeStack = [LexerMode.Backtick];
         return TokenType.Backtick;
     }
 
     function action17() {
         //Unexpected character
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.Unknown;
     }
 
     function action18() {
         modeStack = modeStack.slice(0, -1);
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.Name;
     }
 
     function action19() {
-        less();
+        lexemeLength = 0;
         modeStack = modeStack.slice(0, -1);
         return -1;
     }
@@ -751,38 +747,38 @@ export namespace Lexer {
     function action20() {
         modeStack = modeStack.slice(0);
         modeStack.push(LexerMode.LookingForVarName);
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.DollarCurlyOpen;
     }
 
     function action21() {
-        less(lexeme.length - 3);
+        lexemeLength -= 3;
         modeStack = modeStack.slice(0);
         modeStack.push(LexerMode.LookingForProperty);
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.VariableName;
     }
 
     function action22() {
-        less(lexeme.length - 1);
+        --lexemeLength;
         modeStack = modeStack.slice(0);
         modeStack.push(LexerMode.VarOffset);
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.VariableName;
     }
 
     function action23() {
-        less(1);
+        lexemeLength = 1;
         modeStack = modeStack.slice(0);
         modeStack.push(LexerMode.Scripting);
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.CurlyOpen;
     }
 
 
     function action24() {
         modeStack = [LexerMode.Scripting];
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.DoubleQuote;
     }
 
@@ -791,11 +787,11 @@ export namespace Lexer {
         if (doubleQuoteScannedLength) {
             //already know match index below
             //subtract 1 for the character already shifted
-            more(doubleQuoteScannedLength - 1);
+            lexemeLength = doubleQuoteScannedLength;
             doubleQuoteScannedLength = 0;
         } else {
-            let n = 0;
-            if (lexeme[0] === '\\' && input.length) {
+            let n = lexemeLength;
+            if (input[0] === '\\' && n < input.length) {
                 ++n;
             }
 
@@ -828,10 +824,10 @@ export namespace Lexer {
                 break;
             }
 
-            more(n);
+            lexemeLength = n;
         }
 
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.EncapsulatedAndWhitespace;
 
     }
@@ -843,21 +839,21 @@ export namespace Lexer {
         let nNewlineChars: number;
 
         if (!match) {
-            more(input.length);
+            lexemeLength = input.length;
         } else {
             nNewlineChars = match[0].substr(0, 2) === '\r\n' ? 2 : 1;
-            more(match.index + nNewlineChars);
+            lexemeLength = match.index + nNewlineChars;
             modeStack = [LexerMode.EndHereDoc];
         }
 
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.EncapsulatedAndWhitespace;
 
     }
 
     function action27() {
 
-        let n = 0;
+        let n = lexemeLength;
         let char: string;
         while (n < input.length) {
             char = input[n++];
@@ -878,8 +874,8 @@ export namespace Lexer {
 
                         if (k < input.length && (input[k] === '\n' || input[k] === '\r')) {
                             modeStack = [LexerMode.EndHereDoc];
-                            more(n);
-                            position += lexeme.length;;
+                            lexemeLength = n;
+                            position += lexemeLength;
                             return TokenType.EncapsulatedAndWhitespace;
                         }
                     }
@@ -907,32 +903,32 @@ export namespace Lexer {
             break;
         }
 
-        more(n);
-        position += lexeme.length;;
+        lexemeLength = n;
+        position += lexemeLength;
         return TokenType.EncapsulatedAndWhitespace;
 
     }
 
     function action28() {
-        more(hereDocLabel.length - 1);
+        lexemeLength = hereDocLabel.length;
         hereDocLabel = null;
         modeStack = [LexerMode.Scripting];
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.EndHeredoc;
     }
 
     function action29() {
         modeStack = [LexerMode.Scripting];
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.Backtick;
     }
 
     function action30() {
 
-        let n = 0;
+        let n = lexemeLength;
         let char: string;
 
-        if (lexeme[0] === '\\' && n < input.length) {
+        if (input[0] === '\\' && n < input.length) {
             ++n;
         }
 
@@ -964,45 +960,42 @@ export namespace Lexer {
             break;
         }
 
-        more(n);
-        position += lexeme.length;;
+        lexemeLength = n;
+        position += lexemeLength;
         return TokenType.EncapsulatedAndWhitespace;
     }
 
     function action31() {
         modeStack = modeStack.slice(0, -1);
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.CloseBracket;
     }
 
     function action32() {
         //unexpected char
-        if (lexeme === '\r' && input && input[0] === '\n') {
-            more(1);
-        }
         modeStack = modeStack.slice(0, -1);
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.Unknown;
     }
 
     function action33() {
-        less(lexeme.length - 1);
+        --lexemeLength;
         modeStack = modeStack.slice(0, -1);
         modeStack.push(LexerMode.Scripting);
-        position += lexeme.length;;
+        position += lexemeLength;
         return TokenType.VariableName;
     }
 
     function action34() {
-        less();
+        lexemeLength = 0;
         modeStack = modeStack.slice(0, -1);
         modeStack.push(LexerMode.Scripting);
         return -1;
     }
 
     function action35() {
-        position += lexeme.length;;
-        return charTokenType(lexeme);
+        position += lexemeLength;
+        return charTokenType(input[0]);
     }
 
     function charTokenType(c: string) {
