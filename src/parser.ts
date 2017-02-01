@@ -833,7 +833,7 @@ export namespace Parser {
             next(); //operator
 
             if (binaryPhraseType === PhraseType.ConditionalExpression) {
-                conditionalExpression(p, precedence);
+                conditionalExpression(p);
             } else if (binaryPhraseType === PhraseType.SimpleAssignmentExpression &&
                 peek().tokenType === TokenType.Ampersand) {
                 next(); //&
@@ -853,14 +853,14 @@ export namespace Parser {
 
     }
 
-    function conditionalExpression(p: Phrase, precedence: number) {
+    function conditionalExpression(p: Phrase) {
 
         if (optional(TokenType.Colon)) {
-            p.children.push(expression(precedence));
+            p.children.push(expression(0));
         } else {
-            p.children.push(expression(precedence));
+            p.children.push(expression(0));
             expect(TokenType.Colon);
-            p.children.push(expression(precedence));
+            p.children.push(expression(0));
         }
 
     }
@@ -2390,7 +2390,7 @@ export namespace Parser {
         p.children.push(expression(0));
         expect(TokenType.CloseParenthesis);
         expect(TokenType.Colon);
-        p.children.push(statementList([TokenType.EndIf, TokenType.Else]));
+        p.children.push(statementList([TokenType.EndIf, TokenType.Else, TokenType.ElseIf]));
         return end();
     }
 

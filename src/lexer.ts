@@ -435,7 +435,7 @@ export namespace Lexer {
         let src = regExpArray.map((v, i, a) => {
             return '(' + v.source + ')';
         }).join('|');
-        return new RegExp(src);
+        return new RegExp(src, 'i');
     }
 
     var patterns: RegExp[] = [];
