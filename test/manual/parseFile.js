@@ -25,6 +25,7 @@ fs.readFile(filepath, function (err, data) {
     let hrtimeDiff = process.hrtime(hrtime);
     console.log(JSON.stringify(tree, null, 4));
     console.log(hrtimeDiff);
+     console.log(process.memoryUsage());
     
 });
 
@@ -39,5 +40,6 @@ fs.readFile(filepath, function (err, data) {
     let hrtimeDiff = process.hrtime(hrtime);
     console.log('Repeat parse');
     console.log(hrtimeDiff);
+    console.log(process.memoryUsage());
     
 });

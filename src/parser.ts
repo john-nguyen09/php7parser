@@ -1364,7 +1364,7 @@ export namespace Parser {
     }
 
     function throwUnexpectedTokenError(t: Token) {
-        throw new Error(`Unexpected token: ${t.text}`);
+        throw new Error(`Unexpected token: ${t.tokenType}`);
     }
 
     function traitUseClause() {
@@ -2739,10 +2739,6 @@ export namespace Parser {
             case TokenType.Dollar:
                 return simpleVariable();
             case TokenType.Name:
-                if (isRelativeScopeName(t) && peek(1).tokenType !== TokenType.Backslash) {
-                    return relativeScope();
-                }
-            //fall through
             case TokenType.Namespace:
             case TokenType.Backslash:
                 return qualifiedName();
@@ -3243,10 +3239,6 @@ export namespace Parser {
         return end();
     }
 
-    function isRelativeScopeName(t: Token) {
-        return t.text === 'self' || t.text === 'parent';
-    }
-
     function variableAtom(): Phrase | Token {
 
         let t = peek();
@@ -3265,11 +3257,6 @@ export namespace Parser {
             case TokenType.Static:
                 return relativeScope();
             case TokenType.Name:
-                if (isRelativeScopeName(t) &&
-                    peek(1).tokenType !== TokenType.Backslash) {
-                    return relativeScope();
-                }
-            //fall through
             case TokenType.Namespace:
             case TokenType.Backslash:
                 return qualifiedName();
