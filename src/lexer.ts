@@ -417,6 +417,7 @@ export namespace Lexer {
     var hereDocLabel: string;
     var doubleQuoteScannedLength: number;
     var match: RegExpMatchArray;
+    var matchLength:number;
     var actionIndex:number;
     var action: TokenType | LexerAction;
     var lexerMode: LexerMode;
@@ -476,7 +477,8 @@ export namespace Lexer {
 
         //first element is skipped as it is the matched string
         let n = 0;
-        while (++n < match.length) {
+        matchLength = match.length;
+        while (++n < matchLength) {
             if (match[n]) {
                 actionIndex = n - 1;
                 break;
