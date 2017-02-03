@@ -3298,6 +3298,12 @@ export namespace Parser {
         expect(TokenType.OpenParenthesis);
         expect(TokenType.CloseParenthesis);
         expect(TokenType.Semicolon);
+
+        //all data is ignored after encountering __halt_compiler
+        while(peek().tokenType !== TokenType.EndOfFile){
+            next();
+        }
+
         return end();
 
     }
