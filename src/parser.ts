@@ -3313,11 +3313,12 @@ export namespace Parser {
         let p = start(PhraseType.NamespaceUseDeclaration);
         next(); //use
         optionalOneOf([TokenType.Function, TokenType.Const]);
-        let qualifiedNameNode = qualifiedName();
+        optional(TokenType.ForwardSlash);
+        let nsNameNode = namespaceName();
         let t = peek();
 
         if (t.tokenType === TokenType.Backslash || t.tokenType === TokenType.OpenBrace) {
-            p.children.push(qualifiedNameNode);
+            p.children.push(nsNameNode);
             expect(TokenType.Backslash);
             expect(TokenType.OpenBrace);
             p.children.push(delimitedList(
@@ -3332,7 +3333,7 @@ export namespace Parser {
 
         p.children.push(delimitedList(
             PhraseType.NamespaceUseClauseList,
-            namespaceUseClauseFunction(qualifiedNameNode),
+            namespaceUseClauseFunction(nsNameNode),
             isQualifiedNameStart,
             TokenType.Comma,
             [TokenType.Semicolon]));
@@ -3342,17 +3343,17 @@ export namespace Parser {
 
     }
 
-    function namespaceUseClauseFunction(qName: Phrase) {
+    function namespaceUseClauseFunction(nsName: Phrase) {
 
         return () => {
 
             let p = start(PhraseType.NamespaceUseClause);
 
-            if (qName) {
-                p.children.push(qName);
-                qName = undefined;
+            if (nsName) {
+                p.children.push(nsName);
+                nsName = undefined;
             } else {
-                p.children.push(qualifiedName());
+                p.children.push(namespaceName());
             }
 
             if (peek().tokenType === TokenType.As) {
