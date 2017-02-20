@@ -21,7 +21,6 @@ export const enum PhraseType {
     ArrayInitialiserList,
     ArrayKey,
     ArrayValue,
-    AssignmentExpression,
     BitwiseExpression,
     BreakStatement,
     ByRefAssignmentExpression,
@@ -48,7 +47,7 @@ export const enum PhraseType {
     CoalesceExpression,
     CompoundAssignmentExpression,
     CompoundStatement,
-    ConditionalExpression,
+    TernaryExpression,
     ConstantAccessExpression,
     ConstDeclaration,
     ConstElement,
@@ -156,7 +155,6 @@ export const enum PhraseType {
     RequireOnceExpression,
     ReturnStatement,
     ReturnType,
-    Script,
     ScopedCallExpression,
     ScopedMemberName,
     ScopedPropertyAccessExpression,
@@ -166,7 +164,7 @@ export const enum PhraseType {
     SimpleVariable,
     StatementList,
     StaticVariableDeclaration,
-    StaticVariableNameList,
+    StaticVariableDeclarationList,
     SubscriptExpression,
     SwitchStatement,
     ThrowStatement,
@@ -188,12 +186,43 @@ export const enum PhraseType {
     VariadicUnpacking,
     WhileStatement,
     YieldExpression,
+    YieldFromExpression
 }
 
 export interface Phrase {
     phraseType: PhraseType;
     children: (Phrase | Token)[];
     errors?: ParseError[];
+}
+
+export interface BinaryExpressionPhrase extends Phrase {
+    left: Phrase | Token,
+    operator: Token,
+    right: Phrase | Token
+}
+
+export interface TernaryExpressionPhrase extends Phrase {
+    testExpression: Phrase | Token;
+    trueExpression: Phrase | Token;
+    falseExpression: Phrase | Token;
+}
+
+export interface ListPhrase extends Phrase {
+    elements: (Phrase | Token)[];
+}
+
+export interface ConstDeclarationPhrase extends Phrase {
+    list: ListPhrase;
+}
+
+export interface ClassConstDeclarationPhrase extends Phrase {
+    modifiers: ListPhrase;
+    list: ListPhrase;
+}
+
+export interface ConstElementPhrase extends Phrase {
+    name: Token | Phrase;
+    value: Token | Phrase;
 }
 
 export interface ParseError {
@@ -383,7 +412,7 @@ export namespace Parser {
     function binaryOpToPhraseType(t: Token) {
         switch (t.tokenType) {
             case TokenType.Question:
-                return PhraseType.ConditionalExpression;
+                return PhraseType.TernaryExpression;
             case TokenType.Dot:
             case TokenType.Plus:
             case TokenType.Minus:
@@ -463,15 +492,37 @@ export namespace Parser {
         errorPhrase = null;
     }
 
-    function start(phraseType?: PhraseType) {
+    function startBinaryExprPhrase(phraseType: PhraseType) {
+        return start(<BinaryExpressionPhrase>{
+            phraseType: phraseType,
+            left: null,
+            operator: null,
+            right: null,
+            children: [],
+        }) as BinaryExpressionPhrase;
+    }
+
+    function startTernaryExprPhrase(phraseType: PhraseType) {
+        return start(<TernaryExpressionPhrase>{
+            phraseType: phraseType,
+            testExpression: null,
+            trueExpression: null,
+            falseExpression: null,
+            children: []
+        }) as TernaryExpressionPhrase;
+    }
+
+    function startListPhrase(phraseType: PhraseType) {
+        return start(<ListPhrase>{
+            phraseType: phraseType,
+            elements: [],
+            children: []
+        }) as ListPhrase;
+    }
+
+    function start(phrase: Phrase) {
         //parent node gets hidden tokens between children
         hidden();
-
-        let phrase: Phrase = {
-            phraseType: phraseType,
-            children: []
-        };
-
         phraseStack.push(phrase);
         return phrase;
     }
@@ -667,10 +718,11 @@ export namespace Parser {
     function list(phraseType: PhraseType, elementFunction: () => Phrase | Token,
         elementStartPredicate: Predicate, breakOn?: TokenType[], recoverSet?: TokenType[]) {
 
-        let p = start(phraseType);
+        let p = startListPhrase(phraseType);
         let t: Token;
         let recoveryAttempted = false;
         let listRecoverSet = recoverSet ? recoverSet.slice(0) : [];
+        let element: Phrase | Token;
 
         if (breakOn) {
             Array.prototype.push.apply(listRecoverSet, breakOn);
@@ -684,7 +736,9 @@ export namespace Parser {
 
             if (elementStartPredicate(t)) {
                 recoveryAttempted = false;
-                p.children.push(elementFunction());
+                element = elementFunction();
+                p.children.push(element);
+                p.elements.push(element);
             } else if (!breakOn || breakOn.indexOf(t.tokenType) >= 0 || recoveryAttempted) {
                 break;
             } else {
@@ -765,29 +819,6 @@ export namespace Parser {
         return t.tokenType === TokenType.Name;
     }
 
-    function constElements() {
-
-        let t: Token;
-        let p = start(PhraseType.ConstElementList);
-
-        while (true) {
-
-            p.children.push(constElement());
-            t = peek();
-            if (t.tokenType === TokenType.Comma) {
-                next();
-            } else if (t.tokenType === TokenType.Semicolon) {
-                break;
-            } else {
-                error();
-                break;
-            }
-        }
-
-        return end();
-
-    }
-
     function constElement() {
 
         let p = start(PhraseType.ConstElement);
@@ -804,7 +835,7 @@ export namespace Parser {
         let associativity: Associativity;
         let op: Token;
         let lhs = expressionAtom();
-        let p: Phrase;
+        let p: BinaryExpressionPhrase | TernaryExpressionPhrase;
         let rhs: Phrase | Token;
         let binaryPhraseType: PhraseType;
 
@@ -823,26 +854,33 @@ export namespace Parser {
                 break;
             }
 
-            p = start(binaryPhraseType);
-            p.children.push(lhs);
-
             if (associativity === Associativity.Left) {
                 ++precedence;
             }
 
-            next(); //operator
 
-            if (binaryPhraseType === PhraseType.ConditionalExpression) {
+            if (binaryPhraseType === PhraseType.TernaryExpression) {
+                p = startTernaryExprPhrase(binaryPhraseType);
+                p.children.push((<TernaryExpressionPhrase>p).testExpression = lhs);
+                next(); //operator
                 conditionalExpression(p);
-            } else if (binaryPhraseType === PhraseType.SimpleAssignmentExpression &&
+                lhs = end();
+                continue;
+            }
+
+            p = startBinaryExprPhrase(binaryPhraseType);
+            p.children.push((<BinaryExpressionPhrase>p).left = lhs);
+            p.operator = next();
+
+            if (binaryPhraseType === PhraseType.SimpleAssignmentExpression &&
                 peek().tokenType === TokenType.Ampersand) {
                 next(); //&
                 p.phraseType = PhraseType.ByRefAssignmentExpression;
-                p.children.push(expression(precedence));
+                p.children.push(p.right = expression(precedence));
             } else if (binaryPhraseType === PhraseType.InstanceOfExpression) {
-                p.children.push(typeDesignator(PhraseType.InstanceofTypeDesignator));
+                p.children.push(p.right = typeDesignator(PhraseType.InstanceofTypeDesignator));
             } else {
-                p.children.push(expression(precedence));
+                p.children.push(p.right = expression(precedence));
             }
 
             lhs = end();
@@ -1001,7 +1039,7 @@ export namespace Parser {
             case TokenType.Yield:
                 return yieldExpression();
             case TokenType.YieldFrom:
-                return keywordExpression(PhraseType.YieldExpression);
+                return keywordExpression(PhraseType.YieldFromExpression);
             case TokenType.Function:
                 return anonymousFunctionCreationExpression();
             case TokenType.Include:
@@ -2200,7 +2238,7 @@ export namespace Parser {
         let p = start(PhraseType.FunctionStaticDeclaration);
         next(); //static
         p.children.push(delimitedList(
-            PhraseType.StaticVariableNameList,
+            PhraseType.StaticVariableDeclarationList,
             staticVariableDeclaration,
             isStaticVariableDclarationStart,
             TokenType.Comma,
@@ -3300,7 +3338,7 @@ export namespace Parser {
         expect(TokenType.Semicolon);
 
         //all data is ignored after encountering __halt_compiler
-        while(peek().tokenType !== TokenType.EndOfFile){
+        while (peek().tokenType !== TokenType.EndOfFile) {
             next();
         }
 
