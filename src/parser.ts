@@ -5,9 +5,10 @@
 'use strict';
 
 import { Token, Lexer, TokenType, LexerMode } from './lexer';
-
-export const enum PhraseType {
-    Unknown,
+import {
+    ParseError,
+    Phrase,
+    PhraseType,
     AdditiveExpression,
     AnonymousClassDeclaration,
     AnonymousClassDeclarationHeader,
@@ -87,7 +88,6 @@ export const enum PhraseType {
     ForeachStatement,
     ForeachValue,
     ForEndOfLoop,
-    ForExpressionGroup,
     ForInitialiser,
     ForStatement,
     FullyQualifiedName,
@@ -186,49 +186,11 @@ export const enum PhraseType {
     VariadicUnpacking,
     WhileStatement,
     YieldExpression,
-    YieldFromExpression
-}
-
-export interface Phrase {
-    phraseType: PhraseType;
-    children: (Phrase | Token)[];
-    errors?: ParseError[];
-}
-
-export interface BinaryExpressionPhrase extends Phrase {
-    left: Phrase | Token,
-    operator: Token,
-    right: Phrase | Token
-}
-
-export interface TernaryExpressionPhrase extends Phrase {
-    testExpression: Phrase | Token;
-    trueExpression: Phrase | Token;
-    falseExpression: Phrase | Token;
-}
-
-export interface ListPhrase extends Phrase {
-    elements: (Phrase | Token)[];
-}
-
-export interface ConstDeclarationPhrase extends Phrase {
-    list: ListPhrase;
-}
-
-export interface ClassConstDeclarationPhrase extends Phrase {
-    modifiers: ListPhrase;
-    list: ListPhrase;
-}
-
-export interface ConstElementPhrase extends Phrase {
-    name: Token | Phrase;
-    value: Token | Phrase;
-}
-
-export interface ParseError {
-    startErrorToken: Token;
-    endErrorToken: Token;
-}
+    YieldFromExpression,
+    UnaryExpression,
+    BinaryExpression,
+    ScriptInclusion
+} from './phrase';
 
 export namespace Parser {
 
@@ -520,7 +482,7 @@ export namespace Parser {
         }) as ListPhrase;
     }
 
-    function start(phrase: Phrase) {
+    function start<T extends Phrase>(phrase: T) {
         //parent node gets hidden tokens between children
         hidden();
         phraseStack.push(phrase);
@@ -797,9 +759,13 @@ export namespace Parser {
 
     function constDeclaration() {
 
-        let p = start(PhraseType.ConstDeclaration);
+        let p = start<ConstDeclaration>({
+            phraseType: PhraseType.ConstDeclaration,
+            constElementList: null,
+            children: []
+        });
         next(); //const
-        p.children.push(delimitedList(
+        p.children.push(p.constElementList = delimitedList(
             PhraseType.ConstElementList,
             constElement,
             isConstElementStartToken,
@@ -821,10 +787,15 @@ export namespace Parser {
 
     function constElement() {
 
-        let p = start(PhraseType.ConstElement);
-        expect(TokenType.Name);
+        let p = start<ConstElement>({
+            phraseType: PhraseType.ConstElement,
+            name: null,
+            value: null,
+            children: []
+        });
+        p.name = expect(TokenType.Name);
         expect(TokenType.Equals);
-        p.children.push(expression(0));
+        p.children.push(p.value = expression(0));
         return end();
 
     }
@@ -863,7 +834,7 @@ export namespace Parser {
                 p = startTernaryExprPhrase(binaryPhraseType);
                 p.children.push((<TernaryExpressionPhrase>p).testExpression = lhs);
                 next(); //operator
-                conditionalExpression(p);
+                ternaryExpression(p);
                 lhs = end();
                 continue;
             }
@@ -891,7 +862,7 @@ export namespace Parser {
 
     }
 
-    function conditionalExpression(p: Phrase) {
+    function ternaryExpression(p: Phrase) {
 
         if (optional(TokenType.Colon)) {
             p.children.push(expression(0));
@@ -940,16 +911,25 @@ export namespace Parser {
 
     }
 
-    function constantAccessExpression(qName: Phrase) {
-        let p = start(PhraseType.ConstantAccessExpression);
-        p.children.push(qName);
+    function constantAccessExpression(qName: QualifiedName) {
+        let p = start<ConstantAccessExpression>({
+            phraseType: PhraseType.ConstantAccessExpression,
+            name: null,
+            children: []
+        });
+        p.children.push(p.name = qName);
         return end();
     }
 
     function postfixExpression(phraseType: PhraseType, variableNode: Phrase) {
-        let p = start(phraseType);
-        p.children.push(variableNode);
-        next(); //operator
+        let p = start<UnaryExpression>({
+            phraseType: phraseType,
+            operand: null,
+            operator: null,
+            children: []
+        });
+        p.children.push(p.operand = variableNode);
+        p.operator = next(); //operator
         return end();
     }
 
@@ -1031,29 +1011,29 @@ export namespace Parser {
             case TokenType.StartHeredoc:
                 return heredocStringLiteral();
             case TokenType.DoubleQuote:
-                return quotedEncapsulatedVariableList(PhraseType.DoubleQuotedStringLiteral, TokenType.DoubleQuote);
+                return doubleQuotedStringLiteral();
             case TokenType.Backtick:
-                return quotedEncapsulatedVariableList(PhraseType.ShellCommandExpression, TokenType.Backtick);
+                return shellCommandExpression();
             case TokenType.Print:
-                return keywordExpression(PhraseType.PrintIntrinsic);
+                return printIntrinsic();
             case TokenType.Yield:
                 return yieldExpression();
             case TokenType.YieldFrom:
-                return keywordExpression(PhraseType.YieldFromExpression);
+                return yieldFromExpression();
             case TokenType.Function:
                 return anonymousFunctionCreationExpression();
             case TokenType.Include:
-                return keywordExpression(PhraseType.IncludeExpression);
+                return scriptInclusion(PhraseType.IncludeExpression);
             case TokenType.IncludeOnce:
-                return keywordExpression(PhraseType.IncludeOnceExpression);
+                return scriptInclusion(PhraseType.IncludeOnceExpression);
             case TokenType.Require:
-                return keywordExpression(PhraseType.RequireExpression);
+                return scriptInclusion(PhraseType.RequireExpression);
             case TokenType.RequireOnce:
-                return keywordExpression(PhraseType.RequireOnceExpression);
+                return scriptInclusion(PhraseType.RequireOnceExpression);
             case TokenType.Eval:
-                return keywordEncapsulatedExpression(PhraseType.EvalIntrinsic);
+                return evalIntrinsic();
             case TokenType.Empty:
-                return keywordEncapsulatedExpression(PhraseType.EmptyIntrinsic);
+                return emptyIntrinsic();
             case TokenType.Exit:
                 return exitIntrinsic();
             case TokenType.Isset:
@@ -1068,11 +1048,16 @@ export namespace Parser {
     }
 
     function exitIntrinsic() {
-        let p = start(PhraseType.ExitIntrinsic);
+        let p = start<ExitIntrinsic>({
+            phraseType: PhraseType.ExitIntrinsic,
+            expr: null,
+            children: []
+        });
         next(); //exit or die
         if (optional(TokenType.OpenParenthesis)) {
             if (isExpressionStart(peek())) {
-                p.children.push(expression(0));
+                p.expr = expression(0);
+                p.children.push(p.expr);
             }
             expect(TokenType.CloseParenthesis);
         }
@@ -1081,59 +1066,146 @@ export namespace Parser {
 
     function issetIntrinsic() {
 
-        let p = start(PhraseType.IssetIntrinsic);
+        let p = start<IssetIntrinsic>({
+            phraseType: PhraseType.IssetIntrinsic,
+            variableList: null,
+            children: []
+        });
         next(); //isset
         expect(TokenType.OpenParenthesis);
-        p.children.push(variableList([TokenType.CloseParenthesis]));
+        p.variableList = <VariableList>variableList([TokenType.CloseParenthesis]);
+        p.children.push(p.variableList);
         expect(TokenType.CloseParenthesis);
         return end();
 
     }
 
-    function keywordEncapsulatedExpression(type: PhraseType) {
+    function emptyIntrinsic() {
 
-        let p = start(type);
+        let p = start<EmptyIntrinsic>({
+            phraseType: PhraseType.EmptyIntrinsic,
+            expr: null,
+            children: []
+        });
         next(); //keyword
         expect(TokenType.OpenParenthesis);
-        p.children.push(expression(0));
+        p.expr = expression(0);
+        p.children.push(p.expr);
         expect(TokenType.CloseParenthesis);
         return end();
 
     }
 
-    function keywordExpression(phraseType: PhraseType) {
+    function evalIntrinsic() {
 
-        let p = start(phraseType);
+        let p = start<EvalIntrinsic>({
+            phraseType: PhraseType.EvalIntrinsic,
+            expr: null,
+            children: []
+        });
         next(); //keyword
-        p.children.push(expression(0));
+        expect(TokenType.OpenParenthesis);
+        p.expr = expression(0);
+        p.children.push(p.expr);
+        expect(TokenType.CloseParenthesis);
+        return end();
+
+    }
+
+    function scriptInclusion(phraseType: PhraseType) {
+
+        let p = start<ScriptInclusion>({
+            phraseType: phraseType,
+            expr: null,
+            children: []
+        });
+        next(); //keyword
+        p.expr = expression(0);
+        p.children.push(p.expr);
+        return end();
+    }
+
+    function printIntrinsic() {
+
+        let p = start<PrintIntrinsic>({
+            phraseType: PhraseType.PrintIntrinsic,
+            expr: null,
+            children: []
+        });
+        next(); //keyword
+        p.expr = expression(0);
+        p.children.push(p.expr);
+        return end();
+    }
+
+    function yieldFromExpression() {
+
+        let p = start<YieldFromExpression>({
+            phraseType: PhraseType.YieldFromExpression,
+            expr: null,
+            children: []
+        });
+        next(); //keyword
+        p.expr = expression(0);
+        p.children.push(p.expr);
         return end();
     }
 
     function yieldExpression() {
 
-        let p = start(PhraseType.YieldExpression);
+        let p = start<YieldExpression>({
+            phraseType: PhraseType.YieldExpression,
+            key: null,
+            value: null,
+            children: []
+        });
         next(); //yield
 
         if (!isExpressionStart(peek())) {
             return end();
         }
 
-        p.children.push(expression(0));
+        let keyOrValue = expression(0);
+        p.children.push(keyOrValue);
 
         if (optional(TokenType.FatArrow)) {
-            p.children.push(expression(0));
+            p.key = keyOrValue;
+            p.value = expression(0);
+            p.children.push(p.value);
+        } else {
+            p.value = keyOrValue;
         }
 
         return end();
 
     }
 
-    function quotedEncapsulatedVariableList(phraseType: PhraseType, closeTokenType: TokenType) {
+    function shellCommandExpression() {
 
-        let p = start(phraseType);
-        next(); //open encaps
-        p.children.push(encapsulatedVariableList(closeTokenType));
-        expect(closeTokenType);
+        let p = start<ShellCommandExpression>({
+            phraseType: PhraseType.ShellCommandExpression,
+            encapsulatedVariableList: null,
+            children: []
+        });
+        next(); //`
+        p.encapsulatedVariableList = <EncapsulatedVariableList>encapsulatedVariableList(TokenType.Backtick);
+        p.children.push(p.encapsulatedVariableList);
+        expect(TokenType.Backtick);
+        return end();
+
+    }
+
+    function doubleQuotedStringLiteral() {
+
+        let p = start<DoubleQuotedStringLiteral>({
+            phraseType: PhraseType.DoubleQuotedStringLiteral,
+            encapsulatedVariableList: null,
+            children: []
+        });
+        next(); //"
+        p.encapsulatedVariableList = encapsulatedVariableList(TokenType.DoubleQuote);
+        p.children.push(p.encapsulatedVariableList);
+        expect(TokenType.DoubleQuote);
         return end();
 
     }
@@ -1146,7 +1218,7 @@ export namespace Parser {
             isEncapsulatedVariableStart,
             [breakOn],
             encapsulatedVariableListRecoverSet
-        );
+        ) as EncapsulatedVariableList;
 
     }
 
@@ -1190,9 +1262,14 @@ export namespace Parser {
 
     function curlyOpenEncapsulatedVariable() {
 
-        let p = start(PhraseType.EncapsulatedVariable);
+        let p = start<EncapsulatedVariable>({
+            phraseType: PhraseType.EncapsulatedVariable,
+            variable: null,
+            children: []
+        });
         next(); //{
-        p.children.push(variable(variableAtom()));
+        p.variable = variable(variableAtom());
+        p.children.push(p.variable);
         expect(TokenType.CloseBrace);
         return end();
 
@@ -1200,22 +1277,32 @@ export namespace Parser {
 
     function dollarCurlyOpenEncapsulatedVariable() {
 
-        let p = start(PhraseType.EncapsulatedVariable);
+        let p = start<EncapsulatedVariable>({
+            phraseType: PhraseType.EncapsulatedVariable,
+            variable: null,
+            children: []
+        });
         next(); //${
         let t = peek();
 
         if (t.tokenType === TokenType.VariableName) {
 
             if (peek(1).tokenType === TokenType.OpenBracket) {
-                p.children.push(dollarCurlyEncapsulatedDimension());
+                p.variable = dollarCurlyEncapsulatedDimension();
+                p.children.push(p.variable);
             } else {
-                start(PhraseType.SimpleVariable);
-                next();
-                p.children.push(end());
+                let sv = start<SimpleVariable>({
+                    phraseType:PhraseType.SimpleVariable,
+                    name:null,
+                    children:[]   
+                });
+                sv.name = next();
+                p.variable = end();
+                p.children.push(p.variable);
             }
 
         } else if (isExpressionStart(t)) {
-            p.children.push(expression(0));
+            p.children.push(p.variable = expression(0));
         } else {
             error();
         }
@@ -1225,34 +1312,49 @@ export namespace Parser {
     }
 
     function dollarCurlyEncapsulatedDimension() {
-        let p = start(PhraseType.SubscriptExpression);
-        next(); //VariableName
+        let p = start<SubscriptExpression>({
+            phraseType: PhraseType.SubscriptExpression,
+            dereferencable:null,
+            offset:null,
+            children:[]
+        });
+        p.dereferencable = next(); //VariableName
         next(); // [
-        p.children.push(expression(0));
+        p.children.push(p.offset = expression(0));
         expect(TokenType.CloseBracket);
         return end();
     }
 
     function encapsulatedDimension() {
 
-        let p = start(PhraseType.SubscriptExpression);
+        let p = start<SubscriptExpression>({
+            phraseType: PhraseType.SubscriptExpression,
+            dereferencable:null,
+            offset:null,
+            children:[]
+        });
 
-        p.children.push(simpleVariable()); //T_VARIABLE
+        p.children.push(p.dereferencable = simpleVariable()); //T_VARIABLE
         next(); //[
 
         switch (peek().tokenType) {
             case TokenType.Name:
             case TokenType.IntegerLiteral:
-                next();
+                p.offset = next();
                 break;
             case TokenType.VariableName:
-                p.children.push(simpleVariable());
+                p.children.push(p.offset = simpleVariable());
                 break;
             case TokenType.Minus:
-                start(PhraseType.UnaryOpExpression);
-                next(); //-
-                expect(TokenType.IntegerLiteral);
-                p.children.push(end());
+                let u = start<UnaryOpExpression>({
+                    phraseType: PhraseType.UnaryOpExpression,
+                    operand:null,
+                    operator:null,
+                    children:[]
+                });
+                u.operator = next(); //-
+                u.operand = expect(TokenType.IntegerLiteral);
+                p.children.push(p.offset = end());
                 break;
             default:
                 //error
@@ -1266,18 +1368,27 @@ export namespace Parser {
     }
 
     function encapsulatedProperty() {
-        let p = start(PhraseType.PropertyAccessExpression);
-        p.children.push(simpleVariable());
+        let p = start<PropertyAccessExpression>({
+            phraseType: PhraseType.PropertyAccessExpression,
+            variable:null,
+            propertyName:null,
+            children:[]   
+        });
+        p.children.push(p.variable = simpleVariable());
         next(); //->
-        expect(TokenType.Name);
+        p.propertyName = expect(TokenType.Name);
         return end();
     }
 
     function heredocStringLiteral() {
 
-        let p = start(PhraseType.HeredocStringLiteral);
+        let p = start<HeredocStringLiteral>({
+            phraseType:PhraseType.HeredocStringLiteral,
+            encapsulatedVariableList:null,
+            children:[]   
+        });
         next(); //StartHeredoc
-        p.children.push(encapsulatedVariableList(TokenType.EndHeredoc));
+        p.children.push(p.encapsulatedVariableList = encapsulatedVariableList(TokenType.EndHeredoc));
         expect(TokenType.EndHeredoc);
         return end();
 
@@ -1285,9 +1396,14 @@ export namespace Parser {
 
     function anonymousClassDeclaration() {
 
-        let p = start(PhraseType.AnonymousClassDeclaration);
-        p.children.push(anonymousClassDeclarationHeader(),
-            classTraitInterfaceDeclarationBody(
+        let p = start<AnonymousClassDeclaration>({
+            phraseType: PhraseType.AnonymousClassDeclaration,
+            header:null,
+            body:null,
+            children:[]
+        });
+        p.children.push(p.header = anonymousClassDeclarationHeader(),
+            p.body = <ClassDeclarationBody>classTraitInterfaceDeclarationBody(
                 PhraseType.ClassDeclarationBody, isClassMemberStart, classMemberDeclarationList
             ));
         return end();
@@ -1315,7 +1431,7 @@ export namespace Parser {
             p.children.push(classInterfaceClause());
         }
 
-        return end();
+        return end() as AnonymousClassDeclarationHeader;
 
     }
 

@@ -206,6 +206,10 @@ export interface UnaryExpression extends Phrase {
     operand: Phrase | Token;
 }
 
+export interface ScriptInclusion extends Phrase {
+    expr:Phrase|Token;
+}
+
 export interface AdditiveExpression extends BinaryExpression {
 
 }
@@ -533,11 +537,11 @@ export interface IfStatement extends Phrase {
     elseIfClauseList: ElseIfClauseList;
     elseClause: ElseClause;
 }
-export interface IncludeExpression extends Phrase {
-    expr: Phrase | Token;
+export interface IncludeExpression extends ScriptInclusion {
+    
 }
-export interface IncludeOnceExpression extends Phrase {
-    expr: Phrase | Token;
+export interface IncludeOnceExpression extends ScriptInclusion {
+    
 }
 export interface InlineText extends Phrase {
     text: Token;
@@ -678,7 +682,7 @@ export interface PrintIntrinsic extends Phrase {
 }
 export interface PropertyAccessExpression extends Phrase {
     variable: Phrase | Token;
-    propertyName: MemberName;
+    propertyName: MemberName | Token;
 }
 export interface PropertyDeclaration extends Phrase {
     modifierList: MemberModifierList;
@@ -709,11 +713,11 @@ export interface RelativeQualifiedName extends Phrase {
 export interface RelativeScope extends Phrase {
     identifier: Token;
 }
-export interface RequireExpression extends Phrase {
-    expr: Phrase | Token;
+export interface RequireExpression extends ScriptInclusion {
+
 }
 export interface RequireOnceExpression extends Phrase {
-    expr: Phrase | Token;
+
 }
 export interface ReturnStatement extends Phrase {
     expr: Phrase | Token;
