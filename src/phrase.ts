@@ -350,7 +350,7 @@ export interface CompoundAssignmentExpression extends BinaryExpression {
 
 }
 export interface CompoundStatement extends Phrase {
-    statementList: StatementList;
+    statementList?: StatementList;
 }
 export interface TernaryExpression extends Phrase {
     testExpr: Phrase | Token;
@@ -594,14 +594,14 @@ export interface MethodDeclaration extends Phrase {
     body: MethodDeclarationBody;
 }
 export interface MethodDeclarationBody extends Phrase {
-    block: CompoundStatement;
+    block?: CompoundStatement;
 }
 export interface MethodDeclarationHeader extends Phrase {
-    modifierList: MemberModifierList;
-    returnsRef: Token;
+    modifierList?: MemberModifierList;
+    returnsRef?: Token;
     name: Identifier;
-    parameterList: ParameterDeclarationList;
-    returnType: ReturnType;
+    parameterList?: ParameterDeclarationList;
+    returnType?: ReturnType;
 }
 export interface MethodReference extends Phrase {
     typeName: QualifiedName;
@@ -723,7 +723,7 @@ export interface ReturnStatement extends Phrase {
     expr: Phrase | Token;
 }
 export interface ReturnType extends Phrase {
-    type: Phrase | Token;
+    type: TypeDeclaration;
 }
 export interface ScopedCallExpression extends Phrase {
     scope: Phrase | Token;
@@ -808,7 +808,7 @@ export interface TryStatement extends Phrase {
     finally: FinallyClause;
 }
 export interface TypeDeclaration extends Phrase {
-    nullable: Token;
+    nullable?: Token;
     name: QualifiedName | Token;
 }
 export interface UnaryOpExpression extends UnaryExpression {
