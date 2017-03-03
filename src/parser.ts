@@ -174,7 +174,7 @@ import {
     TraitDeclarationBody,
     TraitDeclarationHeader,
     TraitMemberDeclarationList,
-    TraitPrecendence,
+    TraitPrecedence,
     TraitUseClause,
     TraitUseSpecification,
     TryStatement,
@@ -1505,22 +1505,22 @@ export namespace Parser {
                     p.children.push((<PropertyDeclaration>p).modifierList = modifiers);
                     return propertyDeclaration(<PropertyDeclaration>p);
                 } else if (t.tokenType === TokenType.Function) {
-                    return methodDeclaration(p, modifiers);
+                    return methodDeclaration(<MethodDeclaration>p, modifiers);
                 } else if (t.tokenType === TokenType.Const) {
                     p.children.push(modifiers);
-                    return classConstDeclaration(p);
+                    return classConstDeclaration(<ClassConstDeclaration>p);
                 } else {
                     //error
                     error();
                     return end();
                 }
             case TokenType.Function:
-                return methodDeclaration(p, null);
+                return methodDeclaration(<MethodDeclaration>p, null);
             case TokenType.Var:
                 next();
-                return propertyDeclaration(p);
+                return propertyDeclaration(<PropertyDeclaration>p);
             case TokenType.Const:
-                return classConstDeclaration(p);
+                return classConstDeclaration(<ClassConstDeclaration>p);
             case TokenType.Use:
                 return traitUseClause();
             default:
@@ -1536,27 +1536,35 @@ export namespace Parser {
 
     function traitUseClause() {
 
-        let p = start(PhraseType.TraitUseClause);
+        let p = start<TraitUseClause>({
+            phraseType: PhraseType.TraitUseClause,
+            nameList: undefined,
+            specification: undefined,
+            children: []
+        });
         next(); //use
-        p.children.push(qualifiedNameList([TokenType.Semicolon, TokenType.OpenBrace]));
-        p.children.push(traitUseSpecification());
+        p.children.push(p.nameList = qualifiedNameList([TokenType.Semicolon, TokenType.OpenBrace]));
+        p.children.push(p.specification = traitUseSpecification());
         return end();
 
     }
 
     function traitUseSpecification() {
 
-        let p = start(PhraseType.TraitUseSpecification);
+        let p = start<TraitUseSpecification>({
+            phraseType: PhraseType.TraitUseSpecification,
+            children: []
+        });
         let t = expectOneOf([TokenType.Semicolon, TokenType.OpenBrace]);
 
         if (t.tokenType === TokenType.OpenBrace) {
             if (isTraitAdaptationStart(peek())) {
-                p.children.push(traitAdaptationList());
+                p.children.push(p.adaptationList = traitAdaptationList());
             }
             expect(TokenType.CloseBrace);
         }
 
-        return end();
+        return end<TraitUseSpecification>();
 
     }
 
@@ -1568,7 +1576,7 @@ export namespace Parser {
             isTraitAdaptationStart,
             [TokenType.CloseBrace],
 
-        );
+        ) as TraitAdaptationList;
 
     }
 
@@ -1585,7 +1593,10 @@ export namespace Parser {
 
     function traitAdaptation() {
 
-        let p = start(PhraseType.ErrorTraitAdaptation);
+        let p = start<Phrase>({
+            phraseType: PhraseType.ErrorTraitAdaptation,
+            children: []
+        });
         let t = peek();
         let t2 = peek(1);
 
@@ -1594,30 +1605,34 @@ export namespace Parser {
             (t.tokenType === TokenType.Name &&
                 (t2.tokenType === TokenType.ColonColon || t2.tokenType === TokenType.Backslash))) {
 
-            p.children.push(methodReference());
+            p.children.push((<TraitPrecedence | TraitAlias>p).method = methodReference());
 
             if (peek().tokenType === TokenType.InsteadOf) {
                 next();
-                return traitPrecedence(p);
+                return traitPrecedence(<TraitPrecedence>p);
             }
 
         } else if (t.tokenType === TokenType.Name || isSemiReservedToken(t)) {
 
-            let methodRef = start(PhraseType.MethodReference);
-            methodRef.children.push(identifier());
-            p.children.push(end());
+            let methodRef = start<MethodReference>({
+                phraseType: PhraseType.MethodReference,
+                methodName: undefined,
+                children: []
+            });
+            methodRef.children.push(methodRef.methodName = identifier());
+            p.children.push((<TraitAlias>p).method = end<MethodReference>());
         } else {
             //error
             error();
             return end();
         }
 
-        return traitAlias(p);
+        return traitAlias(<TraitAlias>p);
 
 
     }
 
-    function traitAlias(p: Phrase) {
+    function traitAlias(p: TraitAlias) {
 
         p.phraseType = PhraseType.TraitAlias;
         expect(TokenType.As);
@@ -1625,38 +1640,43 @@ export namespace Parser {
         let t = peek();
 
         if (t.tokenType === TokenType.Name || isReservedToken(t)) {
-            p.children.push(identifier());
+            p.children.push(p.alias = identifier());
         } else if (isMemberModifier(t)) {
-            next();
+            p.modifier = next();
             t = peek();
             if (t.tokenType === TokenType.Name || isSemiReservedToken(t)) {
-                p.children.push(identifier());
+                p.children.push(p.alias = identifier());
             }
         } else {
             error();
         }
 
         expect(TokenType.Semicolon);
-        return end();
+        return end<TraitAlias>();
 
     }
 
-    function traitPrecedence(p: Phrase) {
+    function traitPrecedence(p: TraitPrecedence) {
 
-        p.phraseType = PhraseType.TraitPrecendence;
-        p.children.push(qualifiedNameList([TokenType.Semicolon]));
+        p.phraseType = PhraseType.TraitPrecedence;
+        p.children.push(p.insteadOfNameList = qualifiedNameList([TokenType.Semicolon]));
         expect(TokenType.Semicolon);
-        return end();
+        return end<TraitPrecedence>();
 
     }
 
     function methodReference() {
 
-        let p = start(PhraseType.MethodReference);
-        p.children.push(qualifiedName());
+        let p = start<MethodReference>({
+            phraseType: PhraseType.MethodReference,
+            methodName: undefined,
+            typeName: undefined,
+            children: []
+        });
+        p.children.push(p.typeName = qualifiedName());
         expect(TokenType.ColonColon);
-        p.children.push(identifier());
-        return end();
+        p.children.push(p.methodName = identifier());
+        return end<MethodReference>();
 
     }
 
@@ -1735,11 +1755,16 @@ export namespace Parser {
 
     function interfaceDeclaration() {
 
-        let p = start(PhraseType.InterfaceDeclaration);
-        p.children.push(interfaceDeclarationHeader(), classTraitInterfaceDeclarationBody(
+        let p = start<InterfaceDeclaration>({
+            phraseType: PhraseType.InterfaceDeclaration,
+            header:undefined,
+            body:undefined,
+            children:[]   
+        });
+        p.children.push(p.header = interfaceDeclarationHeader(), p.body=<InterfaceDeclarationBody>classTraitInterfaceDeclarationBody(
             PhraseType.InterfaceDeclarationBody, isClassMemberStart, interfaceMemberDeclarations
         ));
-        return end();
+        return end<InterfaceDeclaration>();
 
     }
 
@@ -1772,24 +1797,32 @@ export namespace Parser {
 
     function interfaceDeclarationHeader() {
 
-        let p = start(PhraseType.InterfaceDeclarationHeader);
+        let p = start<InterfaceDeclarationHeader>({
+            phraseType: PhraseType.InterfaceDeclarationHeader,
+            name:undefined,
+            children:[]
+        });
         next(); //interface
-        expect(TokenType.Name);
+        p.name = expect(TokenType.Name);
 
         if (peek().tokenType === TokenType.Extends) {
-            p.children.push(interfaceBaseClause());
+            p.children.push(p.baseClause = interfaceBaseClause());
         }
 
-        return end();
+        return end<InterfaceDeclarationHeader>();
 
     }
 
     function interfaceBaseClause() {
 
-        let n = start(PhraseType.InterfaceBaseClause);
+        let p = start<InterfaceBaseClause>({
+            phraseType: PhraseType.InterfaceBaseClause,
+            nameList:undefined,
+            children:[]
+        });
         next(); //extends
-        n.children.push(qualifiedNameList([TokenType.OpenBrace]));
-        return end();
+        p.children.push(p.nameList = qualifiedNameList([TokenType.OpenBrace]));
+        return end<InterfaceBaseClause>();
 
     }
 
@@ -2692,11 +2725,11 @@ export namespace Parser {
 
     }
 
-    function classConstDeclaration(p: Phrase) {
+    function classConstDeclaration(p: ClassConstDeclaration) {
 
         p.phraseType = PhraseType.ClassConstDeclaration;
         next(); //const
-        p.children.push(delimitedList(
+        p.children.push(p.constElementList = <ClassConstElementList>delimitedList(
             PhraseType.ClassConstElementList,
             classConstElement,
             isClassConstElementStartToken,

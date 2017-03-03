@@ -174,7 +174,7 @@ export const enum PhraseType {
     TraitDeclarationBody,
     TraitDeclarationHeader,
     TraitMemberDeclarationList,
-    TraitPrecendence,
+    TraitPrecedence,
     TraitUseClause,
     TraitUseSpecification,
     TryStatement,
@@ -564,7 +564,7 @@ export interface InterfaceDeclarationBody extends Phrase {
 }
 export interface InterfaceDeclarationHeader extends Phrase {
     name: Token;
-    baseClause: InterfaceBaseClause;
+    baseClause?: InterfaceBaseClause;
 }
 export interface InterfaceMemberDeclarationList extends Phrase {
     elements: Phrase[];
@@ -604,7 +604,7 @@ export interface MethodDeclarationHeader extends Phrase {
     returnType?: ReturnType;
 }
 export interface MethodReference extends Phrase {
-    typeName: QualifiedName;
+    typeName?: QualifiedName;
     methodName: Identifier;
 }
 export interface MultiplicativeExpression extends BinaryExpression {
@@ -771,7 +771,7 @@ export interface ThrowStatement extends Phrase {
     expr: Phrase | Token;
 }
 export interface TraitAdaptationList extends Phrase {
-    elements: (TraitPrecendence | TraitAlias)[];
+    elements: (TraitPrecedence | TraitAlias)[];
 }
 export interface TraitAlias extends Phrase {
     method: MethodReference;
@@ -791,16 +791,16 @@ export interface TraitDeclarationHeader extends Phrase {
 export interface TraitMemberDeclarationList extends Phrase {
     elements: Phrase[];
 }
-export interface TraitPrecendence extends Phrase {
+export interface TraitPrecedence extends Phrase {
     method: Phrase | Token;
-    insteadOfMethod: Phrase | Token;
+    insteadOfNameList: Phrase | Token;
 }
 export interface TraitUseClause extends Phrase {
     nameList: QualifiedNameList;
     specification: TraitUseSpecification;
 }
 export interface TraitUseSpecification extends Phrase {
-    adaptationList: TraitAdaptationList;
+    adaptationList?: TraitAdaptationList;
 }
 export interface TryStatement extends Phrase {
     block: CompoundStatement;
