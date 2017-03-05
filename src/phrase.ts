@@ -164,7 +164,7 @@ export const enum PhraseType {
     SimpleVariable,
     StatementList,
     StaticVariableDeclaration,
-    StaticVariableNameList,
+    StaticVariableDeclarationList,
     SubscriptExpression,
     SwitchStatement,
     ThrowStatement,
@@ -208,6 +208,10 @@ export interface UnaryExpression extends Phrase {
 
 export interface ScriptInclusion extends Phrase {
     expr:Phrase|Token;
+}
+
+export interface TypeDeclarationBody<T> extends Phrase {
+    memberList?:T;
 }
 
 export interface AdditiveExpression extends BinaryExpression {
@@ -267,17 +271,17 @@ export interface BitwiseExpression extends BinaryExpression {
 
 }
 export interface BreakStatement extends Phrase {
-    expr: Phrase | Token;
+    expr?: Phrase | Token;
 }
 export interface ByRefAssignmentExpression extends BinaryExpression {
 
 }
 export interface CaseStatement extends Phrase {
     expr: Phrase | Token;
-    statementList: StatementList;
+    statementList?: StatementList;
 }
 export interface CaseStatementList extends Phrase {
-    elements: CaseStatement[];
+    elements: (CaseStatement | DefaultStatement)[];
 }
 export interface CastExpression extends UnaryExpression {
 
@@ -316,14 +320,14 @@ export interface ClassDeclaration extends Phrase {
     header: ClassDeclarationHeader;
     body: ClassDeclarationBody;
 }
-export interface ClassDeclarationBody extends Phrase {
-    memberList: ClassMemberDeclarationList;
+export interface ClassDeclarationBody extends TypeDeclarationBody<ClassMemberDeclarationList> {
+   
 }
 export interface ClassDeclarationHeader extends Phrase {
-    modifierList: ClassModifiers;
+    modifier?: Token;
     name: Token;
-    baseClause: ClassBaseClause;
-    interfaceClause: ClassInterfaceClause;
+    baseClause?: ClassBaseClause;
+    interfaceClause?: ClassInterfaceClause;
 }
 export interface ClassInterfaceClause extends Phrase {
     nameList: QualifiedNameList;
@@ -331,9 +335,7 @@ export interface ClassInterfaceClause extends Phrase {
 export interface ClassMemberDeclarationList extends Phrase {
     elements: Phrase[];
 }
-export interface ClassModifiers extends Phrase {
-    elements: Token[];
-}
+
 export interface ClassTypeDesignator extends Phrase {
     type: Phrase;
 }
@@ -371,7 +373,7 @@ export interface ConstElementList extends Phrase {
     elements: ConstElement[];
 }
 export interface ContinueStatement extends Phrase {
-    expr: Phrase | Token;
+    expr?: Phrase | Token;
 }
 export interface DeclareDirective extends Phrase {
     name: Token;
@@ -382,7 +384,7 @@ export interface DeclareStatement extends Phrase {
     statement: Phrase | Token;
 }
 export interface DefaultStatement extends Phrase {
-    statementList: StatementList;
+    statementList?: StatementList;
 }
 export interface DoStatement extends Phrase {
     statement: Phrase | Token;
@@ -472,12 +474,12 @@ export interface ForeachKey extends Phrase {
 }
 export interface ForeachStatement extends Phrase {
     collection: ForeachCollection;
-    key: ForeachKey;
+    key?: ForeachKey;
     value: ForeachValue;
     statement: Phrase | Token;
 }
 export interface ForeachValue extends Phrase {
-    byRef: Token;
+    byRef?: Token;
     expr: Phrase | Token;
 }
 export interface ForEndOfLoop extends Phrase {
@@ -488,9 +490,9 @@ export interface ForInitialiser extends Phrase {
     elements: (Phrase | Token)[];
 }
 export interface ForStatement extends Phrase {
-    initialiser: ForInitialiser;
-    control: ForControl;
-    end: ForEndOfLoop;
+    initialiser?: ForInitialiser;
+    control?: ForControl;
+    end?: ForEndOfLoop;
     statement: Phrase | Token;
 }
 export interface FullyQualifiedName extends Phrase {
@@ -505,13 +507,13 @@ export interface FunctionDeclaration extends Phrase {
     body: CompoundStatement;
 }
 export interface FunctionDeclarationHeader extends Phrase {
-    returnsRef: Token;
+    returnsRef?: Token;
     name: Token;
-    parameterList: ParameterDeclarationList;
-    returnType: ReturnType;
+    parameterList?: ParameterDeclarationList;
+    returnType?: ReturnType;
 }
 export interface FunctionStaticDeclaration extends Phrase {
-    variableNameList: StaticVariableDeclarationList;
+    variableDeclarationList: StaticVariableDeclarationList;
 }
 export interface FunctionStaticInitialiser extends Phrase {
     value: Phrase | Token;
@@ -559,8 +561,8 @@ export interface InterfaceDeclaration extends Phrase {
     header: InterfaceDeclarationHeader;
     body: InterfaceDeclarationBody;
 }
-export interface InterfaceDeclarationBody extends Phrase {
-    memberList: InterfaceMemberDeclarationList;
+export interface InterfaceDeclarationBody extends TypeDeclarationBody<InterfaceMemberDeclarationList> {
+
 }
 export interface InterfaceDeclarationHeader extends Phrase {
     name: Token;
@@ -720,7 +722,7 @@ export interface RequireOnceExpression extends Phrase {
 
 }
 export interface ReturnStatement extends Phrase {
-    expr: Phrase | Token;
+    expr?: Phrase | Token;
 }
 export interface ReturnType extends Phrase {
     type: TypeDeclaration;
@@ -754,7 +756,7 @@ export interface StatementList extends Phrase {
 }
 export interface StaticVariableDeclaration extends Phrase {
     name: Token;
-    initialiser: FunctionStaticInitialiser;
+    initialiser?: FunctionStaticInitialiser;
 }
 export interface StaticVariableDeclarationList extends Phrase {
     elements: StaticVariableDeclaration[];
@@ -765,7 +767,7 @@ export interface SubscriptExpression extends Phrase {
 }
 export interface SwitchStatement extends Phrase {
     expr: Phrase | Token;
-    caseList: CaseStatementList;
+    caseList?: CaseStatementList;
 }
 export interface ThrowStatement extends Phrase {
     expr: Phrase | Token;
@@ -782,8 +784,8 @@ export interface TraitDeclaration extends Phrase {
     header: TraitDeclarationHeader;
     body: TraitDeclarationBody;
 }
-export interface TraitDeclarationBody extends Phrase {
-    memberList: TraitMemberDeclarationList;
+export interface TraitDeclarationBody extends TypeDeclarationBody<TraitMemberDeclarationList> {
+
 }
 export interface TraitDeclarationHeader extends Phrase {
     name: Token;
@@ -805,7 +807,7 @@ export interface TraitUseSpecification extends Phrase {
 export interface TryStatement extends Phrase {
     block: CompoundStatement;
     catchList: CatchClauseList;
-    finally: FinallyClause;
+    finally?: FinallyClause;
 }
 export interface TypeDeclaration extends Phrase {
     nullable?: Token;
