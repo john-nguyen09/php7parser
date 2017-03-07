@@ -234,11 +234,11 @@ export interface AnonymousFunctionCreationExpression extends Phrase {
     body: CompoundStatement;
 }
 export interface AnonymousFunctionHeader extends Phrase {
-    modifier: Token; //static
-    returnsRef: Token;
-    parameterList: ParameterDeclarationList;
-    useClause: AnonymousFunctionUseClause;
-    returnType: ReturnType;
+    modifier?: Token; //static
+    returnsRef?: Token;
+    parameterList?: ParameterDeclarationList;
+    useClause?: AnonymousFunctionUseClause;
+    returnType?: ReturnType;
 }
 export interface AnonymousFunctionUseClause extends Phrase {
     useList: ClosureUseList;
@@ -340,7 +340,7 @@ export interface ClassTypeDesignator extends Phrase {
     type: Phrase;
 }
 export interface CloneExpression extends Phrase {
-    expr: Phrase;
+    expr: Phrase | Token;
 }
 export interface ClosureUseList extends Phrase {
     elements: AnonymousFunctionUseVariable[];
@@ -536,8 +536,8 @@ export interface Identifier extends Phrase {
 export interface IfStatement extends Phrase {
     expr: Phrase | Token;
     statement: Phrase | Token;
-    elseIfClauseList: ElseIfClauseList;
-    elseClause: ElseClause;
+    elseIfClauseList?: ElseIfClauseList;
+    elseClause?: ElseClause;
 }
 export interface IncludeExpression extends ScriptInclusion {
     
@@ -655,7 +655,8 @@ export interface NullStatement extends Phrase {
 
 }
 export interface ObjectCreationExpression extends Phrase {
-    type: ClassTypeDesignator;
+    type: ClassTypeDesignator | AnonymousClassDeclaration;
+    argumentList?:ArgumentExpressionList;
 }
 export interface ParameterDeclaration extends Phrase {
     type: TypeDeclaration;
@@ -692,7 +693,7 @@ export interface PropertyDeclaration extends Phrase {
 }
 export interface PropertyElement extends Phrase {
     name: Token;
-    initialiser: PropertyInitialiser;
+    initialiser?: PropertyInitialiser;
 }
 export interface PropertyElementList extends Phrase {
     elements: PropertyElement[];
