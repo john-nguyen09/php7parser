@@ -41,7 +41,6 @@ import {
     ClassDeclarationHeader,
     ClassInterfaceClause,
     ClassMemberDeclarationList,
-    ClassModifiers,
     ClassTypeDesignator,
     CloneExpression,
     ClosureUseList,
@@ -190,7 +189,8 @@ import {
     UnaryExpression,
     BinaryExpression,
     ScriptInclusion,
-    TypeDeclarationBody
+    TypeDeclarationBody,
+    ScopedExpression
 } from './phrase';
 
 export namespace Parser {
@@ -1372,12 +1372,12 @@ export namespace Parser {
         let p = start<PropertyAccessExpression>({
             phraseType: PhraseType.PropertyAccessExpression,
             variable: null,
-            propertyName: null,
+            memberName: null,
             children: []
         });
         p.children.push(p.variable = simpleVariable());
         next(); //->
-        p.propertyName = expect(TokenType.Name);
+        p.memberName = expect(TokenType.Name);
         return end();
     }
 
@@ -2829,7 +2829,7 @@ export namespace Parser {
         }
 
         if (peek().tokenType === TokenType.ElseIf) {
-            p.children.push(p.elseIfClauseList= <ElseIfClauseList>list(
+            p.children.push(p.elseIfClauseList = <ElseIfClauseList>list(
                 PhraseType.ElseIfClauseList,
                 elseIfClauseFunction,
                 isElseIfClauseStart
@@ -2853,8 +2853,8 @@ export namespace Parser {
 
         let p = start<ExpressionStatement>({
             phraseType: PhraseType.ExpressionStatement,
-            expr:undefined,
-            children:[]   
+            expr: undefined,
+            children: []
         });
         p.children.push(p.expr = expression(0));
         expect(TokenType.Semicolon);
@@ -2984,8 +2984,8 @@ export namespace Parser {
         let p = start<ClassConstElement>({
             phraseType: PhraseType.ConstElement,
             name: undefined,
-            value:undefined,
-            children:[]
+            value: undefined,
+            children: []
         });
         p.children.push(p.name = identifier());
         expect(TokenType.Equals);
@@ -3018,8 +3018,8 @@ export namespace Parser {
 
         let p = start<PropertyElement>({
             phraseType: PhraseType.PropertyElement,
-            name:undefined,
-            children:[]   
+            name: undefined,
+            children: []
         });
         p.name = expect(TokenType.VariableName);
 
@@ -3035,8 +3035,8 @@ export namespace Parser {
 
         let p = start<PropertyInitialiser>({
             phraseType: PhraseType.PropertyInitialiser,
-            value:undefined,
-            children:[]   
+            value: undefined,
+            children: []
         });
         next(); //equals
         p.children.push(p.value = expression(0));
@@ -3090,8 +3090,8 @@ export namespace Parser {
 
         let p = start<ObjectCreationExpression>({
             phraseType: PhraseType.ObjectCreationExpression,
-            type:undefined,
-            children:[]
+            type: undefined,
+            children: []
         });
         next(); //new
 
@@ -3168,7 +3168,7 @@ export namespace Parser {
             default:
                 start({
                     phraseType: PhraseType.ErrorClassTypeDesignatorAtom,
-                    children:[]   
+                    children: []
                 });
                 error();
                 return end();
@@ -3180,8 +3180,8 @@ export namespace Parser {
 
         let p = start<CloneExpression>({
             phraseType: PhraseType.CloneExpression,
-            expr:undefined,
-            children:[]
+            expr: undefined,
+            children: []
         });
         next(); //clone
         p.children.push(p.expr = expression(0));
@@ -3193,8 +3193,8 @@ export namespace Parser {
 
         let p = start<ListIntrinsic>({
             phraseType: PhraseType.ListIntrinsic,
-            initialiserList:undefined,
-            children:[]
+            initialiserList: undefined,
+            children: []
         });
         next(); //list
         expect(TokenType.OpenParenthesis);
@@ -3208,9 +3208,9 @@ export namespace Parser {
 
         let p = start<UnaryExpression>({
             phraseType: phraseType,
-            operator:undefined,
-            operand:undefined,
-            children:[]
+            operator: undefined,
+            operand: undefined,
+            children: []
         });
         p.operator = next();//op
 
@@ -3231,7 +3231,7 @@ export namespace Parser {
     function anonymousFunctionHeader() {
         let p = start<AnonymousFunctionHeader>({
             phraseType: PhraseType.AnonymousFunctionHeader,
-            children:[]
+            children: []
         });
         p.modifier = optional(TokenType.Static);
         next(); //function
@@ -3266,9 +3266,9 @@ export namespace Parser {
 
         let p = start<AnonymousFunctionCreationExpression>({
             phraseType: PhraseType.AnonymousFunctionCreationExpression,
-            header:undefined,
-            body:undefined,
-            children:[]   
+            header: undefined,
+            body: undefined,
+            children: []
         });
         p.children.push(p.header = anonymousFunctionHeader(), p.body = compoundStatement());
         return end();
@@ -3282,10 +3282,14 @@ export namespace Parser {
 
     function anonymousFunctionUseClause() {
 
-        let p = start(PhraseType.AnonymousFunctionUseClause);
+        let p = start<AnonymousFunctionUseClause>({
+            phraseType: PhraseType.AnonymousFunctionUseClause,
+            useList: undefined,
+            children: []
+        });
         next(); //use
         expect(TokenType.OpenParenthesis);
-        p.children.push(delimitedList(
+        p.children.push(p.useList = <ClosureUseList>delimitedList(
             PhraseType.ClosureUseList,
             anonymousFunctionUseVariable,
             isAnonymousFunctionUseVariableStart,
@@ -3293,16 +3297,20 @@ export namespace Parser {
             [TokenType.CloseParenthesis]
         ));
         expect(TokenType.CloseParenthesis);
-        return end();
+        return end<AnonymousFunctionUseClause>();
 
     }
 
     function anonymousFunctionUseVariable() {
 
-        let p = start(PhraseType.AnonymousFunctionUseVariable);
-        optional(TokenType.Ampersand);
-        expect(TokenType.VariableName);
-        return end();
+        let p = start<AnonymousFunctionUseVariable>({
+            phraseType: PhraseType.AnonymousFunctionUseVariable,
+            name: undefined,
+            children: []
+        });
+        p.byRef = optional(TokenType.Ampersand);
+        p.name = expect(TokenType.VariableName);
+        return end<AnonymousFunctionUseVariable>();
 
     }
 
@@ -3322,22 +3330,26 @@ export namespace Parser {
 
     function parameterDeclaration() {
 
-        let p = start(PhraseType.ParameterDeclaration);
+        let p = start<ParameterDeclaration>({
+            phraseType: PhraseType.ParameterDeclaration,
+            name: undefined,
+            children: []
+        });
 
         if (isTypeDeclarationStart(peek())) {
-            p.children.push(typeDeclaration());
+            p.children.push(p.type = typeDeclaration());
         }
 
-        optional(TokenType.Ampersand);
-        optional(TokenType.Ellipsis);
-        expect(TokenType.VariableName);
+        p.byRef = optional(TokenType.Ampersand);
+        p.variadic = optional(TokenType.Ellipsis);
+        p.name = expect(TokenType.VariableName);
 
         if (peek().tokenType === TokenType.Equals) {
             next();
-            p.children.push(expression(0));
+            p.children.push(p.value = expression(0));
         }
 
-        return end();
+        return end<ParameterDeclaration>();
 
     }
 
@@ -3366,7 +3378,10 @@ export namespace Parser {
                 default:
                     //only simple variable atoms qualify as variables
                     if (count === 1 && (<Phrase>variableAtomNode).phraseType !== PhraseType.SimpleVariable) {
-                        let errNode = start(PhraseType.ErrorVariable);
+                        let errNode = start({
+                            phraseType : PhraseType.ErrorVariable,
+                            children:[]   
+                        });
                         errNode.children.push(variableAtomNode);
                         error();
                         return end();
@@ -3381,11 +3396,15 @@ export namespace Parser {
     }
 
     function functionCallExpression(lhs: Phrase | Token) {
-        let p = start(PhraseType.FunctionCallExpression);
-        p.children.push(lhs);
+        let p = start<FunctionCallExpression>({
+            phraseType : PhraseType.FunctionCallExpression,
+            callableExpr:undefined,
+            children:[]
+        });
+        p.children.push(p.callableExpr = lhs);
         expect(TokenType.OpenParenthesis);
         if (isArgumentStart(peek())) {
-            p.children.push(argumentList());
+            p.children.push(p.argumentList = argumentList());
         }
         expect(TokenType.CloseParenthesis);
         return end();
@@ -3393,22 +3412,27 @@ export namespace Parser {
 
     function scopedAccessExpression(lhs: Phrase | Token) {
 
-        let p = start(PhraseType.ErrorScopedAccessExpression);
-        p.children.push(lhs);
+        let p = start<ScopedExpression>({
+            phraseType: PhraseType.ErrorScopedAccessExpression,
+            scope:undefined,
+            memberName:undefined,
+            children:[]
+        });
+        p.children.push(p.scope = lhs);
         next() //::
-        p.children.push(scopedMemberName(p));
+        p.children.push(p.memberName = scopedMemberName(p));
 
         if (optional(TokenType.OpenParenthesis)) {
-            if (isArgumentStart(peek())) {
-                p.children.push(argumentList());
-            }
             p.phraseType = PhraseType.ScopedCallExpression;
+            if (isArgumentStart(peek())) {
+                p.children.push((<ScopedCallExpression>p).argumentList = argumentList());
+            }
+            
             expect(TokenType.CloseParenthesis);
             return end();
         } else if (p.phraseType === PhraseType.ScopedCallExpression) {
             //error
             error();
-            return end();
         }
 
         return end();
@@ -3417,28 +3441,32 @@ export namespace Parser {
 
     function scopedMemberName(parent: Phrase) {
 
-        let p = start(PhraseType.ScopedMemberName);
+        let p = start<ScopedMemberName>({
+            phraseType : PhraseType.ScopedMemberName,
+            name:undefined,
+            children:[]
+        });
         let t = peek();
 
         switch (t.tokenType) {
             case TokenType.OpenBrace:
                 parent.phraseType = PhraseType.ScopedCallExpression;
-                p.children.push(encapsulatedExpression(TokenType.OpenBrace, TokenType.CloseBrace));
+                p.children.push(p.name = encapsulatedExpression(TokenType.OpenBrace, TokenType.CloseBrace));
                 break;
             case TokenType.VariableName:
                 //Spec says this should be SimpleVariable
                 //leaving as a token as this avoids confusion between 
                 //static property names and simple variables
                 parent.phraseType = PhraseType.ScopedPropertyAccessExpression;
-                next();
+                p.name = next();
                 break;
             case TokenType.Dollar:
-                p.children.push(simpleVariable());
+                p.children.push(p.name = simpleVariable());
                 parent.phraseType = PhraseType.ScopedPropertyAccessExpression;
                 break;
             default:
                 if (t.tokenType === TokenType.Name || isSemiReservedToken(t)) {
-                    p.children.push(identifier());
+                    p.children.push(p.name = identifier());
                     parent.phraseType = PhraseType.ClassConstantAccessExpression;
                 } else {
                     //error
@@ -3447,15 +3475,20 @@ export namespace Parser {
                 break;
         }
 
-        return end();
+        return end<ScopedMemberName>();
 
     }
 
     function propertyAccessExpression(lhs: Phrase | Token) {
-        let p = start(PhraseType.PropertyAccessExpression);
-        p.children.push(lhs);
+        let p = start<PropertyAccessExpression>({
+            phraseType: PhraseType.PropertyAccessExpression,
+            variable:undefined,
+            memberName:undefined,
+            children:[]   
+        });
+        p.children.push(p.variable = lhs);
         next(); //->
-        p.children.push(memberName());
+        p.children.push(p.memberName = memberName());
         return end();
     }
 

@@ -214,6 +214,11 @@ export interface TypeDeclarationBody<T> extends Phrase {
     memberList?:T;
 }
 
+export interface ScopedExpression extends Phrase {
+    scope:Phrase|Token;
+    memberName:ScopedMemberName;
+}
+
 export interface AdditiveExpression extends BinaryExpression {
 
 }
@@ -244,7 +249,7 @@ export interface AnonymousFunctionUseClause extends Phrase {
     useList: ClosureUseList;
 }
 export interface AnonymousFunctionUseVariable extends Phrase {
-    byRef: Token;
+    byRef?: Token;
     name: Token;
 }
 export interface ArgumentExpressionList extends Phrase {
@@ -301,9 +306,7 @@ export interface CatchNameList extends Phrase {
 export interface ClassBaseClause extends Phrase {
     name: QualifiedName;
 }
-export interface ClassConstantAccessExpression extends Phrase {
-    left: Phrase | Token;
-    right: Phrase | Token;
+export interface ClassConstantAccessExpression extends ScopedExpression {
 }
 export interface ClassConstDeclaration extends Phrase {
     modifierList: MemberModifierList;
@@ -500,7 +503,7 @@ export interface FullyQualifiedName extends Phrase {
 }
 export interface FunctionCallExpression extends Phrase {
     callableExpr: Phrase | Token;
-    argumentList: ArgumentExpressionList;
+    argumentList?: ArgumentExpressionList;
 }
 export interface FunctionDeclaration extends Phrase {
     header: FunctionDeclarationHeader;
@@ -659,11 +662,11 @@ export interface ObjectCreationExpression extends Phrase {
     argumentList?:ArgumentExpressionList;
 }
 export interface ParameterDeclaration extends Phrase {
-    type: TypeDeclaration;
-    byRef: Token;
-    variadic: Token;
+    type?: TypeDeclaration;
+    byRef?: Token;
+    variadic?: Token;
     name: Token;
-    value: Phrase | Token;
+    value?: Phrase | Token;
 }
 export interface ParameterDeclarationList extends Phrase {
     elements: ParameterDeclaration[];
@@ -685,7 +688,7 @@ export interface PrintIntrinsic extends Phrase {
 }
 export interface PropertyAccessExpression extends Phrase {
     variable: Phrase | Token;
-    propertyName: MemberName | Token;
+    memberName: MemberName;
 }
 export interface PropertyDeclaration extends Phrase {
     modifierList: MemberModifierList;
@@ -728,17 +731,14 @@ export interface ReturnStatement extends Phrase {
 export interface ReturnType extends Phrase {
     type: TypeDeclaration;
 }
-export interface ScopedCallExpression extends Phrase {
-    scope: Phrase | Token;
-    memberName: Phrase | Token;
+export interface ScopedCallExpression extends ScopedExpression {
     argumentList: ArgumentExpressionList;
 }
 export interface ScopedMemberName extends Phrase {
     name: Phrase | Token;
 }
-export interface ScopedPropertyAccessExpression extends Phrase {
-    scope: Phrase | Token;
-    propertyName: Phrase | Token;
+export interface ScopedPropertyAccessExpression extends ScopedExpression {
+    
 }
 export interface ShellCommandExpression extends Phrase {
     encapsulatedVariableList: EncapsulatedVariableList;
