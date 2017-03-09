@@ -256,10 +256,10 @@ export interface ArgumentExpressionList extends Phrase {
     elements: (Phrase | Token)[];
 }
 export interface ArrayCreationExpression extends Phrase {
-    initialiserList: ArrayInitialiserList;
+    initialiserList?: ArrayInitialiserList;
 }
 export interface ArrayElement extends Phrase {
-    key: ArrayKey;
+    key?: ArrayKey;
     value: ArrayValue;
 }
 export interface ArrayInitialiserList extends Phrase {
@@ -269,7 +269,7 @@ export interface ArrayKey extends Phrase {
     expr: Phrase | Token;
 }
 export interface ArrayValue extends Phrase {
-    byRef: Token;
+    byRef?: Token;
     expr: Phrase | Token;
 }
 export interface BitwiseExpression extends BinaryExpression {
@@ -637,7 +637,7 @@ export interface NamespaceUseClauseList extends Phrase {
     elements: NamespaceUseClause[];
 }
 export interface NamespaceUseDeclaration extends Phrase {
-    kind: Token;
+    kind?: Token;
     list: NamespaceUseClauseList;
 }
 export interface NamespaceUseGroupClause extends Phrase {
@@ -650,7 +650,7 @@ export interface NamespaceUseGroupClauseList extends Phrase {
 }
 
 export interface NamespaceUseGroupClauseDeclaration extends Phrase {
-    kind: Token;
+    kind?: Token;
     prefix: NamespaceName;
     list: NamespaceUseGroupClauseList;
 }
