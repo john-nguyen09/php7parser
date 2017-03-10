@@ -207,16 +207,20 @@ export interface UnaryExpression extends Phrase {
 }
 
 export interface ScriptInclusion extends Phrase {
-    expr:Phrase|Token;
+    expr: Phrase | Token;
 }
 
 export interface TypeDeclarationBody<T> extends Phrase {
-    memberList?:T;
+    memberList?: T;
 }
 
 export interface ScopedExpression extends Phrase {
-    scope:Phrase|Token;
-    memberName:ScopedMemberName;
+    scope: Phrase | Token;
+    memberName: ScopedMemberName;
+}
+
+export interface List extends Phrase {
+    elements: (Phrase | Token)[];
 }
 
 export interface AdditiveExpression extends BinaryExpression {
@@ -324,7 +328,7 @@ export interface ClassDeclaration extends Phrase {
     body: ClassDeclarationBody;
 }
 export interface ClassDeclarationBody extends TypeDeclarationBody<ClassMemberDeclarationList> {
-   
+
 }
 export interface ClassDeclarationHeader extends Phrase {
     modifier?: Token;
@@ -543,10 +547,10 @@ export interface IfStatement extends Phrase {
     elseClause?: ElseClause;
 }
 export interface IncludeExpression extends ScriptInclusion {
-    
+
 }
 export interface IncludeOnceExpression extends ScriptInclusion {
-    
+
 }
 export interface InlineText extends Phrase {
     text: Token;
@@ -638,7 +642,7 @@ export interface NamespaceUseClauseList extends Phrase {
 }
 export interface NamespaceUseDeclaration extends Phrase {
     kind?: Token;
-    prefix?:NamespaceName;
+    prefix?: NamespaceName;
     list: NamespaceUseClauseList | NamespaceUseGroupClauseList;
 }
 export interface NamespaceUseGroupClause extends Phrase {
@@ -655,7 +659,7 @@ export interface NullStatement extends Phrase {
 }
 export interface ObjectCreationExpression extends Phrase {
     type: ClassTypeDesignator | AnonymousClassDeclaration;
-    argumentList?:ArgumentExpressionList;
+    argumentList?: ArgumentExpressionList;
 }
 export interface ParameterDeclaration extends Phrase {
     type?: TypeDeclaration;
@@ -734,7 +738,7 @@ export interface ScopedMemberName extends Phrase {
     name: Phrase | Token;
 }
 export interface ScopedPropertyAccessExpression extends ScopedExpression {
-    
+
 }
 export interface ShellCommandExpression extends Phrase {
     encapsulatedVariableList: EncapsulatedVariableList;
@@ -834,7 +838,7 @@ export interface YieldExpression extends Phrase {
     value: Phrase | Token;
 }
 export interface YieldFromExpression extends Phrase {
-    expr:Phrase|Token;
+    expr: Phrase | Token;
 }
 
 export interface ParseError {
