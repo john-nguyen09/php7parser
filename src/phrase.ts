@@ -623,37 +623,33 @@ export interface NamespaceAliasingClause extends Phrase {
     alias: Token;
 }
 export interface NamespaceDefinition extends Phrase {
-    name: NamespaceName;
-    block: Phrase;
+    name?: NamespaceName;
+    statementList?: StatementList;
 }
 export interface NamespaceName extends Phrase {
     parts: Token[];
 }
 export interface NamespaceUseClause extends Phrase {
     name: NamespaceName;
-    aliasingClause: NamespaceAliasingClause;
+    aliasingClause?: NamespaceAliasingClause;
 }
 export interface NamespaceUseClauseList extends Phrase {
     elements: NamespaceUseClause[];
 }
 export interface NamespaceUseDeclaration extends Phrase {
     kind?: Token;
-    list: NamespaceUseClauseList;
+    prefix?:NamespaceName;
+    list: NamespaceUseClauseList | NamespaceUseGroupClauseList;
 }
 export interface NamespaceUseGroupClause extends Phrase {
-    kind: Token;
+    kind?: Token;
     name: NamespaceName;
-    aliasingClause: NamespaceAliasingClause;
+    aliasingClause?: NamespaceAliasingClause;
 }
 export interface NamespaceUseGroupClauseList extends Phrase {
     elements: NamespaceUseGroupClause[];
 }
 
-export interface NamespaceUseGroupClauseDeclaration extends Phrase {
-    kind?: Token;
-    prefix: NamespaceName;
-    list: NamespaceUseGroupClauseList;
-}
 export interface NullStatement extends Phrase {
 
 }
