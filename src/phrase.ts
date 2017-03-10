@@ -219,8 +219,8 @@ export interface ScopedExpression extends Phrase {
     memberName: ScopedMemberName;
 }
 
-export interface List extends Phrase {
-    elements: (Phrase | Token)[];
+export interface List<T extends Phrase | Token> extends Phrase {
+    elements: T[];
 }
 
 export interface AdditiveExpression extends BinaryExpression {
@@ -256,8 +256,7 @@ export interface AnonymousFunctionUseVariable extends Phrase {
     byRef?: Token;
     name: Token;
 }
-export interface ArgumentExpressionList extends Phrase {
-    elements: (Phrase | Token)[];
+export interface ArgumentExpressionList extends List<Phrase|Token> {
 }
 export interface ArrayCreationExpression extends Phrase {
     initialiserList?: ArrayInitialiserList;
@@ -266,8 +265,7 @@ export interface ArrayElement extends Phrase {
     key?: ArrayKey;
     value: ArrayValue;
 }
-export interface ArrayInitialiserList extends Phrase {
-    elements: ArrayElement[];
+export interface ArrayInitialiserList extends List<ArrayElement> {
 }
 export interface ArrayKey extends Phrase {
     expr: Phrase | Token;
@@ -289,8 +287,7 @@ export interface CaseStatement extends Phrase {
     expr: Phrase | Token;
     statementList?: StatementList;
 }
-export interface CaseStatementList extends Phrase {
-    elements: (CaseStatement | DefaultStatement)[];
+export interface CaseStatementList extends List<CaseStatement|DefaultStatement> {
 }
 export interface CastExpression extends UnaryExpression {
 
@@ -301,11 +298,9 @@ export interface CatchClause extends Phrase {
     block: CompoundStatement;
 }
 
-export interface CatchClauseList extends Phrase {
-    elements: CatchClause[];
+export interface CatchClauseList extends List<CatchClause> {
 }
-export interface CatchNameList extends Phrase {
-    elements: QualifiedName[];
+export interface CatchNameList extends List<QualifiedName> {
 }
 export interface ClassBaseClause extends Phrase {
     name: QualifiedName;
@@ -320,8 +315,7 @@ export interface ClassConstElement extends Phrase {
     name: Identifier;
     value: Phrase | Token;
 }
-export interface ClassConstElementList extends Phrase {
-    elements: ClassConstElement[];
+export interface ClassConstElementList extends List<ClassConstElement> {
 }
 export interface ClassDeclaration extends Phrase {
     header: ClassDeclarationHeader;
@@ -339,8 +333,7 @@ export interface ClassDeclarationHeader extends Phrase {
 export interface ClassInterfaceClause extends Phrase {
     nameList: QualifiedNameList;
 }
-export interface ClassMemberDeclarationList extends Phrase {
-    elements: Phrase[];
+export interface ClassMemberDeclarationList extends List<Phrase> {
 }
 
 export interface ClassTypeDesignator extends Phrase {
@@ -349,8 +342,7 @@ export interface ClassTypeDesignator extends Phrase {
 export interface CloneExpression extends Phrase {
     expr: Phrase | Token;
 }
-export interface ClosureUseList extends Phrase {
-    elements: AnonymousFunctionUseVariable[];
+export interface ClosureUseList extends List<AnonymousFunctionUseVariable> {
 }
 export interface CoalesceExpression extends BinaryExpression {
 
@@ -376,8 +368,7 @@ export interface ConstElement extends Phrase {
     name: Token;
     value: Phrase | Token;
 }
-export interface ConstElementList extends Phrase {
-    elements: ConstElement[];
+export interface ConstElementList extends List<ConstElement> {
 }
 export interface ContinueStatement extends Phrase {
     expr?: Phrase | Token;
@@ -410,8 +401,7 @@ export interface ElseIfClause extends Phrase {
     expr: Phrase | Token;
     statement: Phrase | Token;
 }
-export interface ElseIfClauseList extends Phrase {
-    elements: ElseIfClause[];
+export interface ElseIfClauseList extends List<ElseIfClause> {
 }
 export interface EmptyIntrinsic extends Phrase {
     expr: Phrase | Token;
@@ -422,8 +412,7 @@ export interface EncapsulatedExpression extends Phrase {
 export interface EncapsulatedVariable extends Phrase {
     variable: Phrase | Token;
 }
-export interface EncapsulatedVariableList extends Phrase {
-    elements: (Phrase | Token)[];
+export interface EncapsulatedVariableList extends List<Phrase|Token> {
 }
 export interface EqualityExpression extends BinaryExpression {
 
@@ -461,8 +450,7 @@ export interface ExitIntrinsic extends Phrase {
 export interface ExponentiationExpression extends BinaryExpression {
 
 }
-export interface ExpressionList extends Phrase {
-    elements: (Phrase | Token)[];
+export interface ExpressionList extends List<Phrase|Token> {
 }
 export interface ExpressionStatement extends Phrase {
     expr: Phrase | Token;
@@ -575,8 +563,7 @@ export interface InterfaceDeclarationHeader extends Phrase {
     name: Token;
     baseClause?: InterfaceBaseClause;
 }
-export interface InterfaceMemberDeclarationList extends Phrase {
-    elements: Phrase[];
+export interface InterfaceMemberDeclarationList extends List<Phrase> {
 }
 export interface IssetIntrinsic extends Phrase {
     variableList: VariableList;
@@ -587,8 +574,7 @@ export interface ListIntrinsic extends Phrase {
 export interface LogicalExpression extends BinaryExpression {
 
 }
-export interface MemberModifierList extends Phrase {
-    elements: Token[];
+export interface MemberModifierList extends List<Token> {
 }
 export interface MemberName extends Phrase {
     name: Phrase | Token;
@@ -637,7 +623,7 @@ export interface NamespaceUseClause extends Phrase {
     name: NamespaceName;
     aliasingClause?: NamespaceAliasingClause;
 }
-export interface NamespaceUseClauseList extends Phrase {
+export interface NamespaceUseClauseList extends List<NamespaceUseClause> {
     elements: NamespaceUseClause[];
 }
 export interface NamespaceUseDeclaration extends Phrase {
@@ -650,8 +636,7 @@ export interface NamespaceUseGroupClause extends Phrase {
     name: NamespaceName;
     aliasingClause?: NamespaceAliasingClause;
 }
-export interface NamespaceUseGroupClauseList extends Phrase {
-    elements: NamespaceUseGroupClause[];
+export interface NamespaceUseGroupClauseList extends List<NamespaceUseGroupClause> {
 }
 
 export interface NullStatement extends Phrase {
@@ -668,8 +653,7 @@ export interface ParameterDeclaration extends Phrase {
     name: Token;
     value?: Phrase | Token;
 }
-export interface ParameterDeclarationList extends Phrase {
-    elements: ParameterDeclaration[];
+export interface ParameterDeclarationList extends List<ParameterDeclaration> {
 }
 export interface PostfixDecrementExpression extends UnaryExpression {
 
@@ -698,8 +682,7 @@ export interface PropertyElement extends Phrase {
     name: Token;
     initialiser?: PropertyInitialiser;
 }
-export interface PropertyElementList extends Phrase {
-    elements: PropertyElement[];
+export interface PropertyElementList extends List<PropertyElement> {
 }
 export interface PropertyInitialiser extends Phrase {
     value: Phrase | Token;
@@ -707,8 +690,7 @@ export interface PropertyInitialiser extends Phrase {
 export interface QualifiedName extends Phrase {
     name: NamespaceName;
 }
-export interface QualifiedNameList extends Phrase {
-    elements: QualifiedName[];
+export interface QualifiedNameList extends List<QualifiedName> {
 }
 export interface RelationalExpression extends BinaryExpression {
 
@@ -752,15 +734,13 @@ export interface SimpleAssignmentExpression extends BinaryExpression {
 export interface SimpleVariable extends Phrase {
     name: Phrase | Token;
 }
-export interface StatementList extends Phrase {
-    elements: (Phrase | Token)[];
+export interface StatementList extends List<Phrase|Token> {
 }
 export interface StaticVariableDeclaration extends Phrase {
     name: Token;
     initialiser?: FunctionStaticInitialiser;
 }
-export interface StaticVariableDeclarationList extends Phrase {
-    elements: StaticVariableDeclaration[];
+export interface StaticVariableDeclarationList extends List<StaticVariableDeclaration> {
 }
 export interface SubscriptExpression extends Phrase {
     dereferencable: Phrase | Token;
@@ -773,8 +753,7 @@ export interface SwitchStatement extends Phrase {
 export interface ThrowStatement extends Phrase {
     expr: Phrase | Token;
 }
-export interface TraitAdaptationList extends Phrase {
-    elements: (TraitPrecedence | TraitAlias)[];
+export interface TraitAdaptationList extends List<TraitPrecedence|TraitAlias> {
 }
 export interface TraitAlias extends Phrase {
     method: MethodReference;
@@ -791,8 +770,7 @@ export interface TraitDeclarationBody extends TypeDeclarationBody<TraitMemberDec
 export interface TraitDeclarationHeader extends Phrase {
     name: Token;
 }
-export interface TraitMemberDeclarationList extends Phrase {
-    elements: Phrase[];
+export interface TraitMemberDeclarationList extends List<Phrase> {
 }
 export interface TraitPrecedence extends Phrase {
     method: Phrase | Token;
@@ -820,11 +798,9 @@ export interface UnaryOpExpression extends UnaryExpression {
 export interface UnsetIntrinsic extends Phrase {
     variableList: VariableList;
 }
-export interface VariableList extends Phrase {
-    elements: (Phrase | Token)[];
+export interface VariableList extends List<Phrase|Token> {
 }
-export interface VariableNameList extends Phrase {
-    elements: SimpleVariable[];
+export interface VariableNameList extends List<SimpleVariable> {
 }
 export interface VariadicUnpacking extends Phrase {
     expr: Phrase | Token;
