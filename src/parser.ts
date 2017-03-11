@@ -607,19 +607,17 @@ export namespace Parser {
     function skip(predicate: Predicate) {
 
         let t: Token;
-        let lastSkipped: Token;
+        let nSkipped = 0;
 
         while (true) {
             t = tokenBuffer.length ? tokenBuffer.shift() : Lexer.lex();
 
             if (predicate(t) || t.tokenType === TokenType.EndOfFile) {
                 tokenBuffer.unshift(t);
-                errorPhrase.errors[errorPhrase.errors.length - 1].endErrorToken = lastSkipped;
+                errorPhrase.errors[errorPhrase.errors.length - 1].numberSkipped = nSkipped;
                 break;
             } else {
-                if (t.tokenType < TokenType.Comment) {
-                    lastSkipped = t;
-                }
+                ++nSkipped;
                 errorPhrase.children.push(t);
             }
         }
@@ -641,8 +639,8 @@ export namespace Parser {
 
         let t = peek();
         errorPhrase.errors.push({
-            startErrorToken: t,
-            endErrorToken: t
+            unexpected: t,
+            numberSkipped: 0
         });
 
     }
