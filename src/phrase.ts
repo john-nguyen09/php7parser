@@ -823,8 +823,8 @@ export interface YieldFromExpression extends Phrase {
 }
 
 export interface ParseError {
-    startErrorToken: Token;
-    endErrorToken: Token;
+    unexpected: Token;
+    numberSkipped:number;
 }
 
 
