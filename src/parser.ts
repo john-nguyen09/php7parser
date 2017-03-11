@@ -458,7 +458,10 @@ export namespace Parser {
 
     function start<T extends Phrase>(phrase: T) {
         //parent node gets hidden tokens between children
-        hidden();
+        if(phraseStack.length > 0){
+            hidden();
+        }
+
         phraseStack.push(phrase);
         return phrase;
     }
@@ -3865,7 +3868,7 @@ export namespace Parser {
         });
         next(); //use
         p.kind = optionalOneOf([TokenType.Function, TokenType.Const]);
-        optional(TokenType.ForwardSlash);
+        optional(TokenType.Backslash);
         let nsNameNode = namespaceName();
         let t = peek();
 
