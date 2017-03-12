@@ -550,7 +550,7 @@ export interface IncludeOnceExpression extends ScriptInclusion {
 
 }
 export interface InlineText extends Phrase {
-    text: Token;
+
 }
 export interface InstanceOfExpression extends BinaryExpression {
 
@@ -614,7 +614,6 @@ export interface MultiplicativeExpression extends BinaryExpression {
 }
 export interface NamedLabelStatement extends Phrase {
     name: Token;
-    statement: Phrase | Token;
 }
 export interface NamespaceAliasingClause extends Phrase {
     alias: Token;

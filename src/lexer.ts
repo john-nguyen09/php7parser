@@ -172,14 +172,14 @@ export const enum TokenType {
     FloatCast,
     StartHeredoc,
     ArrayCast,
-
-    //Comments, whitespace, open and close tags
-    Comment,
-    DocumentComment,
-    Whitespace,
     OpenTag,
     OpenTagEcho,
-    CloseTag
+    CloseTag,
+
+    //Comments, whitespace
+    Comment,
+    DocumentComment,
+    Whitespace
 }
 
 export const enum LexerMode {

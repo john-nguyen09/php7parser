@@ -371,7 +371,7 @@ export namespace Parser {
         TokenType.EncapsulatedAndWhitespace,
         TokenType.DollarCurlyOpen,
         TokenType.CurlyOpen
-    ]
+    ];
 
     function binaryOpToPhraseType(t: Token) {
         switch (t.tokenType) {
@@ -458,10 +458,7 @@ export namespace Parser {
 
     function start<T extends Phrase>(phrase: T) {
         //parent node gets hidden tokens between children
-        if(phraseStack.length > 0){
-            hidden();
-        }
-
+        hidden();
         phraseStack.push(phrase);
         return phrase;
     }
@@ -521,7 +518,7 @@ export namespace Parser {
 
         if (t.tokenType >= TokenType.Comment) {
             //hidden token
-           phraseStack[phraseStack.length - 1].children.push(t);
+            phraseStack[phraseStack.length - 1].children.push(t);
             return next();
         } else if (!doNotPush) {
             phraseStack[phraseStack.length - 1].children.push(t);
@@ -2026,7 +2023,10 @@ export namespace Parser {
                     return expressionStatement();
                 }
             case TokenType.Text:
-                return next(true);
+            case TokenType.OpenTag:
+            case TokenType.OpenTagEcho:
+            case TokenType.CloseTag:
+                return inlineText();
             case TokenType.ForEach:
                 return foreachStatement();
             case TokenType.Declare:
@@ -2053,6 +2053,19 @@ export namespace Parser {
 
         }
 
+    }
+
+    function inlineText() {
+        let p = start<InlineText>({
+            phraseType: PhraseType.InlineText,
+            children: []
+        });
+
+        optional(TokenType.CloseTag);
+        optional(TokenType.Text);
+        optionalOneOf([TokenType.OpenTagEcho, TokenType.OpenTag]);
+
+        return end();
     }
 
     function nullStatement() {
@@ -2295,12 +2308,10 @@ export namespace Parser {
         let p = start<NamedLabelStatement>({
             phraseType: PhraseType.NamedLabelStatement,
             name: null,
-            statement: null,
             children: []
         });
         p.name = next(); //name
         next(); //:
-        p.children.push(p.statement = statement());
         return end<NamedLabelStatement>();
     }
 
