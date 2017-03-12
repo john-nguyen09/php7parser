@@ -530,12 +530,14 @@ export namespace Parser {
 
     function expect(tokenType: TokenType) {
 
-        if (peek().tokenType === tokenType) {
+        let t = peek();
+
+        if (t.tokenType === tokenType) {
             errorPhrase = null;
             return next();
-        } else if (tokenType === TokenType.Semicolon && peek().tokenType === TokenType.CloseTag) {
+        } else if (tokenType === TokenType.Semicolon && t.tokenType === TokenType.CloseTag) {
             //implicit end statement
-            return peek();
+            return t;
         } else {
             error();
             //test skipping a single token to sync
@@ -552,12 +554,14 @@ export namespace Parser {
 
     function expectOneOf(tokenTypes: TokenType[]) {
 
-        if (tokenTypes.indexOf(peek().tokenType) >= 0) {
+        let t = peek();
+
+        if (tokenTypes.indexOf(t.tokenType) >= 0) {
             errorPhrase = null;
             return next();
-        } else if (tokenTypes.indexOf(TokenType.Semicolon) >= 0 && peek().tokenType === TokenType.CloseTag) {
+        } else if (tokenTypes.indexOf(TokenType.Semicolon) >= 0 && t.tokenType === TokenType.CloseTag) {
             //implicit end statement
-            return peek();
+            return t;
         } else {
             error();
             //test skipping single token to sync
