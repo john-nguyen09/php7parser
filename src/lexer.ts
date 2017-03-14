@@ -197,7 +197,7 @@ export const enum LexerMode {
 
 export interface Token {
     tokenType: TokenType,
-    position: number,
+    offset: number,
     length: number
     modeStack: LexerMode[],
 }
@@ -459,7 +459,7 @@ export namespace Lexer {
         if (!input.length) {
             return {
                 tokenType: TokenType.EndOfFile,
-                position: position,
+                offset: position,
                 length: 0,
                 modeStack: modeStack
             };
@@ -470,7 +470,7 @@ export namespace Lexer {
 
         let token: Token = {
             tokenType: 0,
-            position: position + 1,
+            offset: position + 1,
             length: 0,
             modeStack: modeStack
         };
