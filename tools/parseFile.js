@@ -4,7 +4,7 @@
 */
 var fs = require('fs');
 var path = require('path');
-var php = require('../../lib/php7parser');
+var php = require('../lib/php7parser');
 var tree;
 
 if (process.argv.length !== 3) {
@@ -25,21 +25,6 @@ fs.readFile(filepath, function (err, data) {
     let hrtimeDiff = process.hrtime(hrtime);
     console.log(JSON.stringify(tree, null, 4));
     console.log(hrtimeDiff);
-     console.log(process.memoryUsage());
-    
-});
-
-fs.readFile(filepath, function (err, data) {
-    if (err) {
-        throw err;
-    }
-
-    let dataString = data.toString();
-    let hrtime = process.hrtime();
-    tree = php.Parser.parse(dataString);
-    let hrtimeDiff = process.hrtime(hrtime);
-    console.log('Repeat parse');
-    console.log(hrtimeDiff);
     console.log(process.memoryUsage());
-    
+
 });
