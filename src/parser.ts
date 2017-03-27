@@ -4039,7 +4039,8 @@ export namespace Parser {
         if (peek().tokenType === TokenType.Name) {
 
             p.children.push(p.name = namespaceName());
-            if (expectOneOf([TokenType.Semicolon, TokenType.OpenBrace]).tokenType !== TokenType.OpenBrace) {
+            let t = expectOneOf([TokenType.Semicolon, TokenType.OpenBrace]);
+            if (!t || t.tokenType !== TokenType.OpenBrace) {
                 return end();
             }
 
