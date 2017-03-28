@@ -456,9 +456,11 @@ export namespace Parser {
         errorPhrase = null;
     }
 
-    function start<T extends Phrase>(phrase: T) {
+    function start<T extends Phrase>(phrase: T, dontPushHiddenToParent?:boolean) {
         //parent node gets hidden tokens between children
-        hidden();
+        if(!dontPushHiddenToParent){
+            hidden();
+        }
         phraseStack.push(phrase);
         return phrase;
     }
@@ -818,7 +820,7 @@ export namespace Parser {
                 operator: null,
                 right: null,
                 children: []
-            });
+            }, true);
             p.children.push(lhs);
             p.operator = next();
 
