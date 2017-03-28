@@ -521,7 +521,7 @@ export namespace Parser {
         if (t.tokenType >= TokenType.Comment) {
             //hidden token
             phraseStack[phraseStack.length - 1].children.push(t);
-            return next();
+            return next(doNotPush);
         } else if (!doNotPush) {
             phraseStack[phraseStack.length - 1].children.push(t);
         }
