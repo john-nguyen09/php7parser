@@ -1,6 +1,4 @@
 <?php
 
     /** Function */
-    function myFunction(int $param1, string $param2 = 'Hello World') : string {
-
-    }
+    function myFunction(string $param1 = 'Hello World') : string { }
