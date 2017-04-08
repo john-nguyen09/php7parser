@@ -850,7 +850,7 @@ export namespace Parser {
             testExpr: testExpr,
             falseExpr: null,
             children: []
-        });
+        }, true);
         p.children.push(testExpr);
         next(); //?
 
@@ -907,7 +907,7 @@ export namespace Parser {
             phraseType: PhraseType.ConstantAccessExpression,
             name: null,
             children: []
-        });
+        }, true);
         p.children.push(p.name = qName);
         return end();
     }
@@ -918,7 +918,7 @@ export namespace Parser {
             operand: null,
             operator: null,
             children: []
-        });
+        }, true);
         p.children.push(p.operand = variableNode);
         p.operator = next(); //operator
         return end();
@@ -1671,7 +1671,7 @@ export namespace Parser {
             phraseType: PhraseType.MethodDeclarationHeader,
             name: null,
             children: []
-        });
+        }, true);
         if (memberModifers) {
             p.children.push(p.modifierList = memberModifers);
         }
@@ -3406,7 +3406,7 @@ export namespace Parser {
                         let errNode = start({
                             phraseType: PhraseType.ErrorVariable,
                             children: []
-                        });
+                        }, true);
                         errNode.children.push(variableAtomNode);
                         error();
                         return end();
@@ -3425,7 +3425,7 @@ export namespace Parser {
             phraseType: PhraseType.FunctionCallExpression,
             callableExpr: null,
             children: []
-        });
+        }, true);
         p.children.push(p.callableExpr = lhs);
         expect(TokenType.OpenParenthesis);
         if (isArgumentStart(peek())) {
@@ -3442,7 +3442,7 @@ export namespace Parser {
             scope: null,
             memberName: null,
             children: []
-        });
+        }, true);
         p.children.push(p.scope = lhs);
         next() //::
         p.children.push(p.memberName = scopedMemberName(p));
@@ -3510,7 +3510,7 @@ export namespace Parser {
             variable: null,
             memberName: null,
             children: []
-        });
+        }, true);
         p.children.push(p.variable = lhs);
         next(); //->
         p.children.push(p.memberName = memberName());
@@ -3524,7 +3524,7 @@ export namespace Parser {
             variable: null,
             memberName: null,
             children: []
-        });
+        }, true);
         p.children.push(p.variable = lhs);
         next(); //->
         p.children.push(p.memberName = memberName());
@@ -3576,7 +3576,7 @@ export namespace Parser {
             dereferencable: null,
             offset: null,
             children: []
-        });
+        }, true);
         p.children.push(p.dereferencable = lhs);
         next(); // [ or {
 
@@ -3923,7 +3923,7 @@ export namespace Parser {
                 phraseType: PhraseType.NamespaceUseClause,
                 name: null,
                 children: []
-            });
+            }, !!nsName);
 
             if (nsName) {
                 p.children.push(p.name = nsName);
