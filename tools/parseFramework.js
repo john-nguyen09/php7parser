@@ -16,6 +16,9 @@ if(process.argv.length !== 3){
 }
 
 var pathToCodeRootDir = process.argv[2];
+if (!path.isAbsolute(pathToCodeRootDir)) {
+    pathToCodeRootDir = path.resolve(pathToCodeRootDir);
+}
 
 function hasErrorRecurse(node){
     if(node.errors){
@@ -37,11 +40,11 @@ function parseRecurse(dir) {
         }
 
         list.forEach(function (file) {
-            var filepath = dir + "/" + file;
+            var filepath = path.join(dir,file);
  
-            fs.stat(filepath, function (err, stat) {
-                if (err) {
-                    throw err;
+            fs.stat(filepath, function (statErr, stat) {
+                if (statErr) {
+                    throw statErr;
                 }
 
                 if (stat && stat.isDirectory()) {
@@ -49,9 +52,9 @@ function parseRecurse(dir) {
                 }
                 else if (path.extname(filepath) === '.php') {
                     ++count;
-                    fs.readFile(filepath, function (err, data) {
-                        if (err) {
-                            throw err;
+                    fs.readFile(filepath, function (fileErr, data) {
+                        if (fileErr) {
+                            throw fileErr;
                         }
                         console.log('parsing ' + filepath);
                         let dataString = data.toString();
