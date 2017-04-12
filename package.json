@@ -9,8 +9,7 @@
     "build": "rm -f ./lib/* && tsc"
   },
   "author": "Ben Mewburn",
-  "license": "MIT",
-  "private": true,
+  "license": "ISC",
   "devDependencies": {
     "@types/chai":"^3.4.35",
     "@types/mocha":"^2.2.39",
