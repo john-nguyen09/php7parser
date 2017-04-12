@@ -1390,8 +1390,8 @@ export namespace Parser {
             body: null,
             children: []
         });
-        p.children.push(p.header = anonymousClassDeclarationHeader(),
-            p.body = <ClassDeclarationBody>TypeDeclarationBody(
+        p.children.push(p.header = anonymousClassDeclarationHeader());
+        p.children.push(p.body = <ClassDeclarationBody>TypeDeclarationBody(
                 PhraseType.ClassDeclarationBody, isClassMemberStart, classMemberDeclarationList
             ));
         return end<AnonymousClassDeclaration>();
@@ -1746,7 +1746,8 @@ export namespace Parser {
             body: null,
             children: []
         });
-        p.children.push(p.header = interfaceDeclarationHeader(), p.body = <InterfaceDeclarationBody>TypeDeclarationBody(
+        p.children.push(p.header = interfaceDeclarationHeader());
+        p.children.push(p.body = <InterfaceDeclarationBody>TypeDeclarationBody(
             PhraseType.InterfaceDeclarationBody, isClassMemberStart, interfaceMemberDeclarations
         ));
         return end<InterfaceDeclaration>();
@@ -1821,7 +1822,8 @@ export namespace Parser {
             body: null,
             children: []
         });
-        p.children.push(p.header = traitDeclarationHeader(), p.body = TypeDeclarationBody(
+        p.children.push(p.header = traitDeclarationHeader());
+        p.children.push(p.body = TypeDeclarationBody(
             PhraseType.TraitDeclarationBody, isClassMemberStart, traitMemberDeclarations
         ));
         return end<TraitDeclaration>();
@@ -1860,7 +1862,8 @@ export namespace Parser {
             body: null,
             children: []
         });
-        p.children.push(p.header = functionDeclarationHeader(), p.body = compoundStatement());
+        p.children.push(p.header = functionDeclarationHeader());
+        p.children.push(p.body = compoundStatement());
         return end();
 
     }
@@ -1919,7 +1922,9 @@ export namespace Parser {
             body: null,
             children: []
         });
-        p.children.push(p.header = classDeclarationHeader(), p.body = TypeDeclarationBody(
+        
+        p.children.push(p.header = classDeclarationHeader());
+        p.children.push(p.body = TypeDeclarationBody(
             PhraseType.ClassDeclarationBody, isClassMemberStart, classMemberDeclarationList
         ));
         return end<ClassDeclaration>();
@@ -3295,7 +3300,9 @@ export namespace Parser {
             body: null,
             children: []
         });
-        p.children.push(p.header = anonymousFunctionHeader(), p.body = compoundStatement());
+        
+        p.children.push(p.header = anonymousFunctionHeader());
+        p.children.push(p.body = compoundStatement());
         return end();
 
     }
