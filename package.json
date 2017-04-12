@@ -8,7 +8,7 @@
     "test": "mocha",
     "build": "rm -f ./lib/* && tsc"
   },
-  "author": "Ben Mewburn",
+  "author": "Ben Mewburn <ben@mewburn.id.au>",
   "license": "ISC",
   "devDependencies": {
     "@types/chai":"^3.4.35",
