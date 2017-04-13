@@ -1496,6 +1496,7 @@ export namespace Parser {
                     return classConstDeclaration(<ClassConstDeclaration>p);
                 } else {
                     //error
+                    p.children.push(modifiers);
                     error();
                     return end();
                 }

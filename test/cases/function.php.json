@@ -42,14 +42,6 @@
             "phraseType": 85,
             "children": [
                 {
-                    "tokenType": 161,
-                    "offset": 91,
-                    "length": 1,
-                    "modeStack": [
-                        1
-                    ]
-                },
-                {
                     "phraseType": 86,
                     "children": [
                         {
@@ -225,6 +217,14 @@
                                 }
                             ]
                         }
+                    ]
+                },
+                {
+                    "tokenType": 161,
+                    "offset": 91,
+                    "length": 1,
+                    "modeStack": [
+                        1
                     ]
                 },
                 {
