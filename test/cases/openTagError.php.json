@@ -1,0 +1,59 @@
+{
+    "phraseType": 155,
+    "children": [
+        {
+            "phraseType": 97,
+            "children": [
+                {
+                    "tokenType": 156,
+                    "offset": 0,
+                    "length": 2,
+                    "modeStack": [
+                        0
+                    ]
+                }
+            ]
+        },
+        {
+            "phraseType": 72,
+            "children": [
+                {
+                    "phraseType": 41,
+                    "children": [
+                        {
+                            "phraseType": 139,
+                            "children": [
+                                {
+                                    "phraseType": 119,
+                                    "children": [
+                                        {
+                                            "tokenType": 83,
+                                            "offset": 2,
+                                            "length": 1,
+                                            "modeStack": [
+                                                1
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "errors": [
+                {
+                    "unexpected": {
+                        "tokenType": 1,
+                        "offset": 2,
+                        "length": 0,
+                        "modeStack": [
+                            1
+                        ]
+                    },
+                    "numberSkipped": 0
+                }
+            ]
+        }
+    ]
+}
