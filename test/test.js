@@ -13,7 +13,8 @@ function isNumeric(n) {
 
 const keys = [
     'tokenType', 'offset', 'length', 'modeStack',
-    'phraseType', 'children', 'errors'
+    'phraseType', 'children', 'errors', 'unexpected',
+    'numberSkipped'
 ];
 
 describe("php7parser", function () {

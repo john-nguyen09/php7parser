@@ -20,7 +20,8 @@ if (!path.isAbsolute(filepath)) {
 
 const keys = [
     'tokenType', 'offset', 'length', 'modeStack',
-    'phraseType', 'children', 'errors'
+    'phraseType', 'children', 'errors', 'unexpected',
+    'numberSkipped'
 ];
 
 function isNumeric(n) {
