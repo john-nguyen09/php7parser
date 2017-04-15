@@ -93,6 +93,7 @@ export const enum PhraseType {
     FullyQualifiedName,
     FunctionCallExpression,
     FunctionDeclaration,
+    FunctionDeclarationBody,
     FunctionDeclarationHeader,
     FunctionStaticDeclaration,
     FunctionStaticInitialiser,

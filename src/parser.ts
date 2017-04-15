@@ -1864,9 +1864,15 @@ export namespace Parser {
             children: []
         });
         p.children.push(p.header = functionDeclarationHeader());
-        p.children.push(p.body = compoundStatement());
+        p.children.push(p.body = functionDeclarationBody());
         return end();
 
+    }
+
+    function functionDeclarationBody(){
+        let cs = compoundStatement();
+        cs.phraseType = PhraseType.FunctionDeclarationBody;
+        return cs;
     }
 
     function functionDeclarationHeader() {
