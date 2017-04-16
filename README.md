@@ -8,7 +8,7 @@ The parser outputs a parse tree of phrases (branches) and tokens (leaves). The c
 
 * Modern browser and nodejs compatibility.
 * Error tolerant and high performance.
-* Output should be representative of full source code.
+* Output representative of full source code.
 * Adherance to the PHP language specifications.
 
 ## Usage
