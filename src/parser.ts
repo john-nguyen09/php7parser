@@ -3309,7 +3309,7 @@ export namespace Parser {
         });
         
         p.children.push(p.header = anonymousFunctionHeader());
-        p.children.push(p.body = compoundStatement());
+        p.children.push(p.body = functionDeclarationBody());
         return end();
 
     }
