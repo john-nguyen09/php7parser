@@ -49,7 +49,7 @@ The parser outputs a parse tree of phrases (branches) and tokens (leaves). The c
          */
         tokenType: TokenType;
         /**
-         * Offset within source were first char of token is found
+         * Offset within source where first char of token is found
          */
         offset: number;
         /**
