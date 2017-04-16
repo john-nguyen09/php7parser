@@ -4,7 +4,7 @@
 */
 var fs = require('fs');
 var path = require('path');
-var php = require('../../lib/php7parser');
+var php = require('../lib/php7parser');
 
 var count = 0;
 var done = 0;
