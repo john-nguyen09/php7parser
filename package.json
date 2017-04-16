@@ -10,11 +10,24 @@
   },
   "author": "Ben Mewburn <ben@mewburn.id.au>",
   "license": "ISC",
+  "keywords": [
+    "php",
+    "php7",
+    "parser"
+  ],
+  "homepage": "https://github.com/bmewburn/php7parser",
+  "bugs": {
+    "url": "https://github.com/bmewburn/php7parser/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bmewburn/php7parser.git"
+  },
   "devDependencies": {
-    "@types/chai":"^3.4.35",
-    "@types/mocha":"^2.2.39",
+    "@types/chai": "^3.4.35",
+    "@types/mocha": "^2.2.39",
     "chai": "^3.5.0",
     "mocha": "^3.2.0",
-    "typescript": "^2.2.1"
+    "typescript": "^2.2.2"
   }
 }
