@@ -191,8 +191,17 @@ export const enum PhraseType {
 }
 
 export interface Phrase {
+    /**
+     * Phrase type
+     */
     phraseType: PhraseType;
+    /**
+     * Phrase and token child nodes
+     */
     children: (Phrase | Token)[];
+    /**
+     * Parse errors encountered whilst parsing phrase
+     */
     errors?: ParseError[];
 }
 
@@ -823,7 +832,13 @@ export interface YieldFromExpression extends Phrase {
 }
 
 export interface ParseError {
+    /**
+     * The token that prompted the parse error
+     */
     unexpected: Token;
+    /**
+     * The number of tokens skipped to recover from this error
+     */
     numberSkipped: number;
 }
 
