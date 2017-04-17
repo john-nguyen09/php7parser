@@ -2981,7 +2981,7 @@ export namespace Parser {
     function classConstElement() {
 
         let p = start<ClassConstElement>({
-            phraseType: PhraseType.ConstElement,
+            phraseType: PhraseType.ClassConstElement,
             name: null,
             value: null,
             children: []
