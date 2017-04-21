@@ -1391,7 +1391,7 @@ export namespace Parser {
             children: []
         });
         p.children.push(p.header = anonymousClassDeclarationHeader());
-        p.children.push(p.body = <ClassDeclarationBody>TypeDeclarationBody(
+        p.children.push(p.body = <ClassDeclarationBody>typeDeclarationBody(
             PhraseType.ClassDeclarationBody, isClassMemberStart, classMemberDeclarationList
         ));
         return end<AnonymousClassDeclaration>();
@@ -1508,7 +1508,7 @@ export namespace Parser {
             case TokenType.Const:
                 return classConstDeclaration(<ClassConstDeclaration>p);
             case TokenType.Use:
-                return traitUseClause();
+                return traitUseClause(<TraitUseClause>p);
             default:
                 //should not get here
                 throwUnexpectedTokenError(t);
@@ -1520,14 +1520,8 @@ export namespace Parser {
         throw new Error(`Unexpected token: ${t.tokenType}`);
     }
 
-    function traitUseClause() {
-
-        let p = start<TraitUseClause>({
-            phraseType: PhraseType.TraitUseClause,
-            nameList: null,
-            specification: null,
-            children: []
-        });
+    function traitUseClause(p:TraitUseClause) {
+        p.phraseType = PhraseType.TraitUseClause;
         next(); //use
         p.children.push(p.nameList = qualifiedNameList([TokenType.Semicolon, TokenType.OpenBrace]));
         p.children.push(p.specification = traitUseSpecification());
@@ -1748,14 +1742,14 @@ export namespace Parser {
             children: []
         });
         p.children.push(p.header = interfaceDeclarationHeader());
-        p.children.push(p.body = <InterfaceDeclarationBody>TypeDeclarationBody(
+        p.children.push(p.body = <InterfaceDeclarationBody>typeDeclarationBody(
             PhraseType.InterfaceDeclarationBody, isClassMemberStart, interfaceMemberDeclarations
         ));
         return end<InterfaceDeclaration>();
 
     }
 
-    function TypeDeclarationBody<T extends Phrase>(phraseType: PhraseType, elementStartPredicate: Predicate, listFunction: () => T) {
+    function typeDeclarationBody<T extends Phrase>(phraseType: PhraseType, elementStartPredicate: Predicate, listFunction: () => T) {
 
         let p = start<TypeDeclarationBody<T>>({
             phraseType: phraseType,
@@ -1824,7 +1818,7 @@ export namespace Parser {
             children: []
         });
         p.children.push(p.header = traitDeclarationHeader());
-        p.children.push(p.body = TypeDeclarationBody(
+        p.children.push(p.body = typeDeclarationBody(
             PhraseType.TraitDeclarationBody, isClassMemberStart, traitMemberDeclarations
         ));
         return end<TraitDeclaration>();
@@ -1931,7 +1925,7 @@ export namespace Parser {
         });
 
         p.children.push(p.header = classDeclarationHeader());
-        p.children.push(p.body = TypeDeclarationBody(
+        p.children.push(p.body = typeDeclarationBody(
             PhraseType.ClassDeclarationBody, isClassMemberStart, classMemberDeclarationList
         ));
         return end<ClassDeclaration>();
