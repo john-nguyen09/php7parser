@@ -456,9 +456,9 @@ export namespace Parser {
         errorPhrase = null;
     }
 
-    function start<T extends Phrase>(phrase: T, dontPushHiddenToParent?:boolean) {
+    function start<T extends Phrase>(phrase: T, dontPushHiddenToParent?: boolean) {
         //parent node gets hidden tokens between children
-        if(!dontPushHiddenToParent){
+        if (!dontPushHiddenToParent) {
             hidden();
         }
         phraseStack.push(phrase);
@@ -1392,8 +1392,8 @@ export namespace Parser {
         });
         p.children.push(p.header = anonymousClassDeclarationHeader());
         p.children.push(p.body = <ClassDeclarationBody>TypeDeclarationBody(
-                PhraseType.ClassDeclarationBody, isClassMemberStart, classMemberDeclarationList
-            ));
+            PhraseType.ClassDeclarationBody, isClassMemberStart, classMemberDeclarationList
+        ));
         return end<AnonymousClassDeclaration>();
 
     }
@@ -1543,7 +1543,7 @@ export namespace Parser {
         });
         let t = expectOneOf([TokenType.Semicolon, TokenType.OpenBrace]);
 
-        if (t.tokenType === TokenType.OpenBrace) {
+        if (t && t.tokenType === TokenType.OpenBrace) {
             if (isTraitAdaptationStart(peek())) {
                 p.children.push(p.adaptationList = traitAdaptationList());
             }
@@ -1869,7 +1869,7 @@ export namespace Parser {
 
     }
 
-    function functionDeclarationBody(){
+    function functionDeclarationBody() {
         let cs = compoundStatement();
         cs.phraseType = PhraseType.FunctionDeclarationBody;
         return cs;
@@ -1929,7 +1929,7 @@ export namespace Parser {
             body: null,
             children: []
         });
-        
+
         p.children.push(p.header = classDeclarationHeader());
         p.children.push(p.body = TypeDeclarationBody(
             PhraseType.ClassDeclarationBody, isClassMemberStart, classMemberDeclarationList
@@ -2239,11 +2239,11 @@ export namespace Parser {
         let tCase = peek();
 
         if (tCase.tokenType === TokenType.Case || tCase.tokenType === TokenType.Default) {
-            p.children.push(p.caseList = caseStatements(t.tokenType === TokenType.Colon ?
+            p.children.push(p.caseList = caseStatements(t && t.tokenType === TokenType.Colon ?
                 TokenType.EndSwitch : TokenType.CloseBrace));
         }
 
-        if (t.tokenType === TokenType.Colon) {
+        if (t && t.tokenType === TokenType.Colon) {
             expect(TokenType.EndSwitch);
             expect(TokenType.Semicolon);
         } else {
@@ -3307,7 +3307,7 @@ export namespace Parser {
             body: null,
             children: []
         });
-        
+
         p.children.push(p.header = anonymousFunctionHeader());
         p.children.push(p.body = functionDeclarationBody());
         return end();
@@ -3854,7 +3854,7 @@ export namespace Parser {
         });
         let t = expectOneOf([TokenType.VariableName, TokenType.Dollar]);
 
-        if (t.tokenType === TokenType.Dollar) {
+        if (t && t.tokenType === TokenType.Dollar) {
             t = peek();
             if (t.tokenType === TokenType.OpenBrace) {
                 next();
@@ -3865,7 +3865,7 @@ export namespace Parser {
             } else {
                 error();
             }
-        } else if (t.tokenType === TokenType.VariableName) {
+        } else if (t && t.tokenType === TokenType.VariableName) {
             p.name = t;
         }
 
