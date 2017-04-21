@@ -1,6 +1,10 @@
 # Change Log
 
-## [0.9.2] - 2017-04-17
+## [0.9.3] - 2017-04-21
+### Fixed
+- Use trait mangles parse tree
+
+## [0.9.2] - 2017-04-21
 ### Fixed
 - Check for expect() null return.
 
