@@ -550,10 +550,11 @@ export namespace Lexer {
         return TokenType.OpenTag;
     }
 
+    const openTagRegex = /<\?=|<\?php(?:[ \t]|(?:\r\n|\n|\r))|<\?/;
     function action4() {
-        //read until open tag or end
         if (input.length > lexemeLength) {
-            let pos = input.search(/<\?=|<\?php(?:[ \t]|(?:\r\n|\n|\r))|<\?/);
+            //read until open tag or end
+            let pos = input.search(openTagRegex);
             if (pos === -1) {
                 lexemeLength = input.length;
             } else {
@@ -603,10 +604,11 @@ export namespace Lexer {
         return TokenType.CloseBrace;
     }
 
+    const newLineOrCloseTagRegex = /(?:\r\n|\n|\r)+|\?>/;
     function action10() {
 
         //find first newline or closing tag
-        let match: RegExpMatchArray = input.match(/(?:\r\n|\n|\r)+|\?>/);
+        let match: RegExpMatchArray = input.match(newLineOrCloseTagRegex);
 
         if (!match) {
             lexemeLength = input.length;
@@ -721,10 +723,11 @@ export namespace Lexer {
 
     }
 
+    const labelRegex = /[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/;
     function action15() {
 
         let lexeme = input.substr(0, lexemeLength);
-        let match = lexeme.match(/[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*/);
+        let match = lexeme.match(labelRegex);
         hereDocLabel = match[0];
         let c = lexeme[match.index - 1];
 

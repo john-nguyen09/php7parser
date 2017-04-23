@@ -175,21 +175,9 @@ export declare const enum LexerMode {
     LookingForVarName = 9,
 }
 export interface Token {
-    /**
-     * Token type
-     */
     tokenType: TokenType;
-    /**
-     * Offset within source were first char of token is found
-     */
     offset: number;
-    /**
-     * Length of token string
-     */
     length: number;
-    /**
-     * Lexer mode prior to this token being read.
-     */
     modeStack: LexerMode[];
 }
 export declare namespace Lexer {
