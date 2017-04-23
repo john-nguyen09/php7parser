@@ -10,7 +10,7 @@ var count = 0;
 var done = 0;
 var elapsed = 0;
 
-if(process.argv.length !== 3){
+if (process.argv.length !== 3) {
     console.log('Usage: node parseFramework.js PATH_TO_CODE_ROOT_DIR');
     return;
 }
@@ -20,29 +20,31 @@ if (!path.isAbsolute(pathToCodeRootDir)) {
     pathToCodeRootDir = path.resolve(pathToCodeRootDir);
 }
 
-function hasErrorRecurse(node){
-    if(node.errors){
+function hasErrorRecurse(node) {
+    if (node.errors) {
         let keys = ['tokenType', 'phraseType', 'errors', 'unexpected', 'offset', 'numberSkipped'];
-        throw new Error(JSON.stringify(node, function(k,v){ return isNaN(k) && keys.indexOf(k) < 0 ? undefined : v; }, 4));
+        //throw new Error(JSON.stringify(node, function(k,v){ return isNaN(k) && keys.indexOf(k) < 0 ? undefined : v; }, 4));
+        console.log('ERROR');
+        console.log(JSON.stringify(node, function (k, v) { return isNaN(k) && keys.indexOf(k) < 0 ? undefined : v; }, 4));
     }
 
-    if(node.children){
-        for(let n = 0; n < node.children.length; ++n){
+    if (node.children) {
+        for (let n = 0; n < node.children.length; ++n) {
             hasErrorRecurse(node.children[n]);
         }
     }
 }
 
 function parseRecurse(dir) {
-    
+
     fs.readdir(dir, function (err, list) {
         if (err) {
             throw err;
         }
 
         list.forEach(function (file) {
-            var filepath = path.join(dir,file);
- 
+            var filepath = path.join(dir, file);
+
             fs.stat(filepath, function (statErr, stat) {
                 if (statErr) {
                     throw statErr;
@@ -68,7 +70,7 @@ function parseRecurse(dir) {
                         elapsed += hrTimeDiff[1] + hrTimeDiff[0] * 1000000000;
                         hasErrorRecurse(tree);
                         ++done;
-                        if(count === done){
+                        if (count === done) {
                             console.log(count + ' files parsed');
                             console.log('elapsed: ' + Math.round(elapsed / 1000000) + ' ms');
                         }

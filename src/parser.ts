@@ -3908,6 +3908,7 @@ export namespace Parser {
                 TokenType.Comma,
                 [TokenType.CloseBrace]
             ));
+            expect(TokenType.CloseBrace);
             return end();
         }
 
