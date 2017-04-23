@@ -3911,6 +3911,7 @@ export namespace Parser {
                 [TokenType.CloseBrace]
             ));
             expect(TokenType.CloseBrace);
+            expect(TokenType.Semicolon);
             return end();
         }
 
