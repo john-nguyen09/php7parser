@@ -740,8 +740,9 @@ export namespace Parser {
 
         let p = start<ConstDeclaration>({
             phraseType: PhraseType.ConstDeclaration,
-            constElementList: null,
-            children: []
+            children: [],
+            constElementList: null
+            
         });
         next(); //const
         p.children.push(p.constElementList = <ConstElementList>delimitedList(
@@ -768,9 +769,9 @@ export namespace Parser {
 
         let p = start<ConstElement>({
             phraseType: PhraseType.ConstElement,
+            children: [],
             name: null,
-            value: null,
-            children: []
+            value: null
         });
         p.name = expect(TokenType.Name);
         expect(TokenType.Equals);
@@ -816,10 +817,10 @@ export namespace Parser {
 
             p = start<BinaryExpression>({
                 phraseType: binaryPhraseType,
+                children: [],
                 left: lhs,
                 operator: null,
-                right: null,
-                children: []
+                right: null
             }, true);
             p.children.push(lhs);
             p.operator = next();
@@ -847,9 +848,9 @@ export namespace Parser {
 
         let p = start<TernaryExpression>({
             phraseType: PhraseType.TernaryExpression,
+            children: [],
             testExpr: testExpr,
-            falseExpr: null,
-            children: []
+            falseExpr: null
         }, true);
         p.children.push(testExpr);
         next(); //?
@@ -905,8 +906,8 @@ export namespace Parser {
     function constantAccessExpression(qName: QualifiedName) {
         let p = start<ConstantAccessExpression>({
             phraseType: PhraseType.ConstantAccessExpression,
-            name: null,
-            children: []
+            children: [],
+            name: null
         }, true);
         p.children.push(p.name = qName);
         return end();
@@ -915,9 +916,9 @@ export namespace Parser {
     function postfixExpression(phraseType: PhraseType, variableNode: Phrase) {
         let p = start<UnaryExpression>({
             phraseType: phraseType,
+            children: [],
             operand: null,
-            operator: null,
-            children: []
+            operator: null
         }, true);
         p.children.push(p.operand = variableNode);
         p.operator = next(); //operator
@@ -1058,8 +1059,8 @@ export namespace Parser {
 
         let p = start<IssetIntrinsic>({
             phraseType: PhraseType.IssetIntrinsic,
-            variableList: null,
-            children: []
+            children: [],
+            variableList: null
         });
         next(); //isset
         expect(TokenType.OpenParenthesis);
@@ -1074,8 +1075,8 @@ export namespace Parser {
 
         let p = start<EmptyIntrinsic>({
             phraseType: PhraseType.EmptyIntrinsic,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         next(); //keyword
         expect(TokenType.OpenParenthesis);
@@ -1090,8 +1091,8 @@ export namespace Parser {
 
         let p = start<EvalIntrinsic>({
             phraseType: PhraseType.EvalIntrinsic,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         next(); //keyword
         expect(TokenType.OpenParenthesis);
@@ -1106,8 +1107,8 @@ export namespace Parser {
 
         let p = start<ScriptInclusion>({
             phraseType: phraseType,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         next(); //keyword
         p.expr = expression(0);
@@ -1119,8 +1120,8 @@ export namespace Parser {
 
         let p = start<PrintIntrinsic>({
             phraseType: PhraseType.PrintIntrinsic,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         next(); //keyword
         p.expr = expression(0);
@@ -1132,8 +1133,8 @@ export namespace Parser {
 
         let p = start<YieldFromExpression>({
             phraseType: PhraseType.YieldFromExpression,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         next(); //keyword
         p.expr = expression(0);
@@ -1172,8 +1173,8 @@ export namespace Parser {
 
         let p = start<ShellCommandExpression>({
             phraseType: PhraseType.ShellCommandExpression,
-            encapsulatedVariableList: null,
-            children: []
+            children: [],
+            encapsulatedVariableList: null
         });
         next(); //`
         p.encapsulatedVariableList = <EncapsulatedVariableList>encapsulatedVariableList(TokenType.Backtick);
@@ -1187,8 +1188,8 @@ export namespace Parser {
 
         let p = start<DoubleQuotedStringLiteral>({
             phraseType: PhraseType.DoubleQuotedStringLiteral,
-            encapsulatedVariableList: null,
-            children: []
+            children: [],
+            encapsulatedVariableList: null
         });
         next(); //"
         p.encapsulatedVariableList = encapsulatedVariableList(TokenType.DoubleQuote);
@@ -1252,8 +1253,8 @@ export namespace Parser {
 
         let p = start<EncapsulatedVariable>({
             phraseType: PhraseType.EncapsulatedVariable,
-            variable: null,
-            children: []
+            children: [],
+            variable: null
         });
         next(); //{
         p.variable = variable(variableAtom());
@@ -1267,8 +1268,8 @@ export namespace Parser {
 
         let p = start<EncapsulatedVariable>({
             phraseType: PhraseType.EncapsulatedVariable,
-            variable: null,
-            children: []
+            children: [],
+            variable: null
         });
         next(); //${
         let t = peek();
@@ -1281,8 +1282,8 @@ export namespace Parser {
             } else {
                 let sv = start<SimpleVariable>({
                     phraseType: PhraseType.SimpleVariable,
-                    name: null,
-                    children: []
+                    children: [],
+                    name: null
                 });
                 sv.name = next();
                 p.variable = end();
@@ -1302,9 +1303,9 @@ export namespace Parser {
     function dollarCurlyEncapsulatedDimension() {
         let p = start<SubscriptExpression>({
             phraseType: PhraseType.SubscriptExpression,
+            children: [],
             dereferencable: null,
-            offset: null,
-            children: []
+            offset: null
         });
         p.dereferencable = next(); //VariableName
         next(); // [
@@ -1317,9 +1318,9 @@ export namespace Parser {
 
         let p = start<SubscriptExpression>({
             phraseType: PhraseType.SubscriptExpression,
+            children: [],
             dereferencable: null,
-            offset: null,
-            children: []
+            offset: null
         });
 
         p.children.push(p.dereferencable = simpleVariable()); //T_VARIABLE
@@ -1336,9 +1337,9 @@ export namespace Parser {
             case TokenType.Minus:
                 let u = start<UnaryOpExpression>({
                     phraseType: PhraseType.UnaryOpExpression,
+                    children: [],
                     operand: null,
-                    operator: null,
-                    children: []
+                    operator: null
                 });
                 u.operator = next(); //-
                 u.operand = expect(TokenType.IntegerLiteral);
@@ -1358,9 +1359,9 @@ export namespace Parser {
     function encapsulatedProperty() {
         let p = start<PropertyAccessExpression>({
             phraseType: PhraseType.PropertyAccessExpression,
+            children: [],
             variable: null,
-            memberName: null,
-            children: []
+            memberName: null
         });
         p.children.push(p.variable = simpleVariable());
         next(); //->
@@ -1372,8 +1373,9 @@ export namespace Parser {
 
         let p = start<HeredocStringLiteral>({
             phraseType: PhraseType.HeredocStringLiteral,
-            encapsulatedVariableList: null,
-            children: []
+            children: [],
+            encapsulatedVariableList: null
+            
         });
         next(); //StartHeredoc
         p.children.push(p.encapsulatedVariableList = encapsulatedVariableList(TokenType.EndHeredoc));
@@ -1386,9 +1388,9 @@ export namespace Parser {
 
         let p = start<AnonymousClassDeclaration>({
             phraseType: PhraseType.AnonymousClassDeclaration,
+            children: [],
             header: null,
-            body: null,
-            children: []
+            body: null
         });
         p.children.push(p.header = anonymousClassDeclarationHeader());
         p.children.push(p.body = <ClassDeclarationBody>typeDeclarationBody(
@@ -1430,8 +1432,8 @@ export namespace Parser {
 
         let p = start<ClassInterfaceClause>({
             phraseType: PhraseType.ClassInterfaceClause,
-            nameList: null,
-            children: []
+            children: [],
+            nameList: null
         });
         next(); //implements
         p.children.push(p.nameList = qualifiedNameList([TokenType.OpenBrace]));
@@ -1596,8 +1598,8 @@ export namespace Parser {
 
             let methodRef = start<MethodReference>({
                 phraseType: PhraseType.MethodReference,
-                methodName: null,
-                children: []
+                children: [],
+                methodName: null
             });
             methodRef.children.push(methodRef.methodName = identifier());
             p.children.push((<TraitAlias>p).method = end<MethodReference>());
@@ -1649,9 +1651,9 @@ export namespace Parser {
 
         let p = start<MethodReference>({
             phraseType: PhraseType.MethodReference,
+            children: [],
             methodName: null,
-            typeName: null,
-            children: []
+            typeName: null
         });
         p.children.push(p.typeName = qualifiedName());
         expect(TokenType.ColonColon);
@@ -1664,8 +1666,8 @@ export namespace Parser {
 
         let p = start<MethodDeclarationHeader>({
             phraseType: PhraseType.MethodDeclarationHeader,
-            name: null,
-            children: []
+            children: [],
+            name: null
         }, true);
         if (memberModifers) {
             p.children.push(p.modifierList = memberModifers);
@@ -1721,8 +1723,8 @@ export namespace Parser {
     function identifier() {
         let p = start<Identifier>({
             phraseType: PhraseType.Identifier,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
         let t = peek();
         if (t.tokenType === TokenType.Name || isSemiReservedToken(t)) {
@@ -1737,9 +1739,9 @@ export namespace Parser {
 
         let p = start<InterfaceDeclaration>({
             phraseType: PhraseType.InterfaceDeclaration,
+            children: [],
             header: null,
-            body: null,
-            children: []
+            body: null
         });
         p.children.push(p.header = interfaceDeclarationHeader());
         p.children.push(p.body = <InterfaceDeclarationBody>typeDeclarationBody(
@@ -1782,8 +1784,8 @@ export namespace Parser {
 
         let p = start<InterfaceDeclarationHeader>({
             phraseType: PhraseType.InterfaceDeclarationHeader,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
         next(); //interface
         p.name = expect(TokenType.Name);
@@ -1800,8 +1802,8 @@ export namespace Parser {
 
         let p = start<InterfaceBaseClause>({
             phraseType: PhraseType.InterfaceBaseClause,
-            nameList: null,
-            children: []
+            children: [],
+            nameList: null
         });
         next(); //extends
         p.children.push(p.nameList = qualifiedNameList([TokenType.OpenBrace]));
@@ -1813,9 +1815,9 @@ export namespace Parser {
 
         let p = start<TraitDeclaration>({
             phraseType: PhraseType.TraitDeclaration,
+            children: [],
             header: null,
-            body: null,
-            children: []
+            body: null
         });
         p.children.push(p.header = traitDeclarationHeader());
         p.children.push(p.body = typeDeclarationBody(
@@ -1828,8 +1830,8 @@ export namespace Parser {
     function traitDeclarationHeader() {
         let p = start<TraitDeclarationHeader>({
             phraseType: PhraseType.TraitDeclarationHeader,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
         next(); //trait
         p.name = expect(TokenType.Name);
@@ -1853,9 +1855,9 @@ export namespace Parser {
 
         let p = start<FunctionDeclaration>({
             phraseType: PhraseType.FunctionDeclaration,
+            children: [],
             header: null,
-            body: null,
-            children: []
+            body: null
         });
         p.children.push(p.header = functionDeclarationHeader());
         p.children.push(p.body = functionDeclarationBody());
@@ -1873,8 +1875,8 @@ export namespace Parser {
 
         let p = start<FunctionDeclarationHeader>({
             phraseType: PhraseType.FunctionDeclarationHeader,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
 
         next(); //function
@@ -1919,9 +1921,9 @@ export namespace Parser {
 
         let p = start<ClassDeclaration>({
             phraseType: PhraseType.ClassDeclaration,
+            children: [],
             header: null,
-            body: null,
-            children: []
+            body: null
         });
 
         p.children.push(p.header = classDeclarationHeader());
@@ -1936,8 +1938,8 @@ export namespace Parser {
 
         let p = start<ClassDeclarationHeader>({
             phraseType: PhraseType.ClassDeclarationHeader,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
         p.modifier = optionalOneOf([TokenType.Abstract, TokenType.Final]);
         expect(TokenType.Class);
@@ -1958,8 +1960,8 @@ export namespace Parser {
     function classBaseClause() {
         let p = start<ClassBaseClause>({
             phraseType: PhraseType.ClassBaseClause,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
         next(); //extends
         p.children.push(p.name = qualifiedName());
@@ -2097,9 +2099,9 @@ export namespace Parser {
 
         let p = start<TryStatement>({
             phraseType: PhraseType.TryStatement,
+            children: [],
             block: null,
-            catchList: null,
-            children: []
+            catchList: null
         });
         next(); //try
         p.children.push(p.block = compoundStatement());
@@ -2128,8 +2130,8 @@ export namespace Parser {
 
         let p = start<FinallyClause>({
             phraseType: PhraseType.FinallyClause,
-            block: null,
-            children: []
+            children: [],
+            block: null
         });
         next(); //finally
         p.children.push(p.block = compoundStatement());
@@ -2141,10 +2143,10 @@ export namespace Parser {
 
         let p = start<CatchClause>({
             phraseType: PhraseType.CatchClause,
+            children: [],
             nameList: null,
             variable: null,
-            block: null,
-            children: []
+            block: null
         });
         next(); //catch
         expect(TokenType.OpenParenthesis);
@@ -2166,9 +2168,9 @@ export namespace Parser {
 
         let p = start<DeclareDirective>({
             phraseType: PhraseType.DeclareDirective,
+            children: [],
             name: null,
-            value: null,
-            children: []
+            value: null
         });
         p.name = expect(TokenType.Name);
         expect(TokenType.Equals);
@@ -2181,9 +2183,9 @@ export namespace Parser {
 
         let p = start<DeclareStatement>({
             phraseType: PhraseType.DeclareStatement,
+            children: [],
             directive: null,
-            statement: null,
-            children: []
+            statement: null
         });
         next(); //declare
         expect(TokenType.OpenParenthesis);
@@ -2221,8 +2223,8 @@ export namespace Parser {
 
         let p = start<SwitchStatement>({
             phraseType: PhraseType.SwitchStatement,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         next(); //switch
         expect(TokenType.OpenParenthesis);
@@ -2252,8 +2254,8 @@ export namespace Parser {
 
         let p = start<CaseStatementList>({
             phraseType: PhraseType.CaseStatementList,
-            elements: [],
-            children: []
+            children: [],
+            elements: []
         });
         let t: Token;
         let caseBreakOn = [TokenType.Case, TokenType.Default];
@@ -2289,8 +2291,8 @@ export namespace Parser {
 
         let p = start<CaseStatement>({
             phraseType: PhraseType.CaseStatement,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         next(); //case
         p.children.push(p.expr = expression(0));
@@ -2319,8 +2321,8 @@ export namespace Parser {
 
         let p = start<NamedLabelStatement>({
             phraseType: PhraseType.NamedLabelStatement,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
         p.name = next(); //name
         next(); //:
@@ -2331,8 +2333,8 @@ export namespace Parser {
 
         let p = start<GotoStatement>({
             phraseType: PhraseType.GotoStatement,
-            label: null,
-            children: []
+            children: [],
+            label: null
         });
         next(); //goto
         p.label = expect(TokenType.Name);
@@ -2345,8 +2347,8 @@ export namespace Parser {
 
         let p = start<ThrowStatement>({
             phraseType: PhraseType.ThrowStatement,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         next(); //throw
         p.children.push(p.expr = expression(0));
@@ -2357,8 +2359,8 @@ export namespace Parser {
     function foreachCollection() {
         let p = start<ForeachCollection>({
             phraseType: PhraseType.ForeachCollection,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         p.children.push(p.expr = expression(0));
         return end<ForeachCollection>();
@@ -2367,8 +2369,8 @@ export namespace Parser {
     function foreachKeyOrValue() {
         let p = start<ForeachValue>({
             phraseType: PhraseType.ForeachValue,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         p.children.push(p.expr = expression(0));
         if (peek().tokenType === TokenType.FatArrow) {
@@ -2381,8 +2383,8 @@ export namespace Parser {
     function foreachValue() {
         let p = start<ForeachValue>({
             phraseType: PhraseType.ForeachValue,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         p.byRef = optional(TokenType.Ampersand);
         p.children.push(p.expr = expression(0));
@@ -2393,10 +2395,10 @@ export namespace Parser {
 
         let p = start<ForeachStatement>({
             phraseType: PhraseType.ForeachStatement,
+            children: [],
             collection: null,
             value: null,
-            statement: null,
-            children: []
+            statement: null
         });
         next(); //foreach
         expect(TokenType.OpenParenthesis);
@@ -2469,8 +2471,8 @@ export namespace Parser {
 
         let p = start<UnsetIntrinsic>({
             phraseType: PhraseType.UnsetIntrinsic,
-            variableList: null,
-            children: []
+            children: [],
+            variableList: null
         });
         next(); //unset
         expect(TokenType.OpenParenthesis);
@@ -2489,8 +2491,8 @@ export namespace Parser {
 
         let p = start<EchoIntrinsic>({
             phraseType: PhraseType.EchoIntrinsic,
-            exprList: null,
-            children: []
+            children: [],
+            exprList: null
         });
         next(); //echo
         p.children.push(p.exprList = <ExpressionList>delimitedList(
@@ -2512,8 +2514,8 @@ export namespace Parser {
 
         let p = start<FunctionStaticDeclaration>({
             phraseType: PhraseType.FunctionStaticDeclaration,
-            variableDeclarationList: null,
-            children: []
+            children: [],
+            variableDeclarationList: null
         });
         next(); //static
         p.children.push(p.variableDeclarationList = <StaticVariableDeclarationList>delimitedList(
@@ -2532,8 +2534,8 @@ export namespace Parser {
 
         let p = start<GlobalDeclaration>({
             phraseType: PhraseType.GlobalDeclaration,
-            variableNameList: null,
-            children: []
+            children: [],
+            variableNameList: null
         });
         next(); //global
         p.children.push(p.variableNameList = <VariableNameList>delimitedList(
@@ -2562,8 +2564,8 @@ export namespace Parser {
 
         let p = start<StaticVariableDeclaration>({
             phraseType: PhraseType.StaticVariableDeclaration,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
         p.name = expect(TokenType.VariableName);
 
@@ -2579,8 +2581,8 @@ export namespace Parser {
 
         let p = start<FunctionStaticInitialiser>({
             phraseType: PhraseType.FunctionStaticInitialiser,
-            value: null,
-            children: []
+            children: [],
+            value: null
         });
         next(); //=
         p.children.push(p.value = expression(0));
@@ -2641,8 +2643,8 @@ export namespace Parser {
 
         let p = start<ForStatement>({
             phraseType: PhraseType.ForStatement,
-            statement: null,
-            children: []
+            children: [],
+            statement: null
         });
         next(); //for
         expect(TokenType.OpenParenthesis);
@@ -2686,9 +2688,9 @@ export namespace Parser {
 
         let p = start<DoStatement>({
             phraseType: PhraseType.DoStatement,
+            children: [],
             statement: null,
-            expr: null,
-            children: []
+            expr: null
         });
         next(); // do
         p.children.push(p.statement = statement());
@@ -2705,9 +2707,9 @@ export namespace Parser {
 
         let p = start<WhileStatement>({
             phraseType: PhraseType.WhileStatement,
+            children: [],
             expr: null,
-            statement: null,
-            children: []
+            statement: null
         });
         next(); //while
         expect(TokenType.OpenParenthesis);
@@ -2736,9 +2738,9 @@ export namespace Parser {
 
         let p = start<ElseIfClause>({
             phraseType: PhraseType.ElseIfClause,
+            children: [],
             expr: null,
-            statement: null,
-            children: []
+            statement: null
         });
         next(); //elseif
         expect(TokenType.OpenParenthesis);
@@ -2751,9 +2753,9 @@ export namespace Parser {
     function elseIfClause2() {
         let p = start<ElseIfClause>({
             phraseType: PhraseType.ElseIfClause,
+            children: [],
             expr: null,
-            statement: null,
-            children: []
+            statement: null
         });
         next(); //elseif
         expect(TokenType.OpenParenthesis);
@@ -2767,8 +2769,8 @@ export namespace Parser {
     function elseClause1() {
         let p = start<ElseClause>({
             phraseType: PhraseType.ElseClause,
-            statement: null,
-            children: []
+            children: [],
+            statement: null
         });
         next(); //else
         p.children.push(p.statement = statement());
@@ -2778,8 +2780,8 @@ export namespace Parser {
     function elseClause2() {
         let p = start<ElseClause>({
             phraseType: PhraseType.ElseClause,
-            statement: null,
-            children: []
+            children: [],
+            statement: null
         });
         next(); //else
         expect(TokenType.Colon);
@@ -2795,9 +2797,9 @@ export namespace Parser {
 
         let p = start<IfStatement>({
             phraseType: PhraseType.IfStatement,
+            children: [],
             expr: null,
-            statement: null,
-            children: []
+            statement: null
         });
         next(); //if
         expect(TokenType.OpenParenthesis);
@@ -2846,8 +2848,8 @@ export namespace Parser {
 
         let p = start<ExpressionStatement>({
             phraseType: PhraseType.ExpressionStatement,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         p.children.push(p.expr = expression(0));
         expect(TokenType.Semicolon);
@@ -2858,8 +2860,8 @@ export namespace Parser {
     function returnType() {
         let p = start<ReturnType>({
             phraseType: PhraseType.ReturnType,
-            type: null,
-            children: []
+            children: [],
+            type: null
         });
         next(); //:
         p.children.push(p.type = typeDeclaration());
@@ -2870,8 +2872,8 @@ export namespace Parser {
 
         let p = start<TypeDeclaration>({
             phraseType: PhraseType.TypeDeclaration,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
         p.nullable = optional(TokenType.Question);
 
@@ -2976,9 +2978,9 @@ export namespace Parser {
 
         let p = start<ClassConstElement>({
             phraseType: PhraseType.ClassConstElement,
+            children: [],
             name: null,
-            value: null,
-            children: []
+            value: null
         });
         p.children.push(p.name = identifier());
         expect(TokenType.Equals);
@@ -3011,8 +3013,8 @@ export namespace Parser {
 
         let p = start<PropertyElement>({
             phraseType: PhraseType.PropertyElement,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
         p.name = expect(TokenType.VariableName);
 
@@ -3028,8 +3030,8 @@ export namespace Parser {
 
         let p = start<PropertyInitialiser>({
             phraseType: PhraseType.PropertyInitialiser,
-            value: null,
-            children: []
+            children: [],
+            value: null
         });
         next(); //equals
         p.children.push(p.value = expression(0));
@@ -3041,8 +3043,8 @@ export namespace Parser {
 
         let p = start<MemberModifierList>({
             phraseType: PhraseType.MemberModifierList,
-            elements: [],
-            children: []
+            children: [],
+            elements: []
         });
 
         while (isMemberModifier(peek())) {
@@ -3083,8 +3085,8 @@ export namespace Parser {
 
         let p = start<ObjectCreationExpression>({
             phraseType: PhraseType.ObjectCreationExpression,
-            type: null,
-            children: []
+            children: [],
+            type: null
         });
         next(); //new
 
@@ -3112,8 +3114,8 @@ export namespace Parser {
 
         let p = start<TypeDesignator>({
             phraseType: phraseType,
-            type: null,
-            children: []
+            children: [],
+            type: null
         });
         let part = classTypeDesignatorAtom();
 
@@ -3132,9 +3134,9 @@ export namespace Parser {
                 case TokenType.ColonColon:
                     let staticPropNode = start<ScopedPropertyAccessExpression>({
                         phraseType: PhraseType.ScopedPropertyAccessExpression,
+                        children: [],
                         scope: part,
-                        memberName: null,
-                        children: []
+                        memberName: null
                     });
                     staticPropNode.children.push(part);
                     next(); //::
@@ -3158,8 +3160,8 @@ export namespace Parser {
 
         let p = start<ScopedMemberName>({
             phraseType: PhraseType.ScopedMemberName,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
         let t = peek();
 
@@ -3211,8 +3213,8 @@ export namespace Parser {
 
         let p = start<CloneExpression>({
             phraseType: PhraseType.CloneExpression,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         next(); //clone
         p.children.push(p.expr = expression(0));
@@ -3224,8 +3226,8 @@ export namespace Parser {
 
         let p = start<ListIntrinsic>({
             phraseType: PhraseType.ListIntrinsic,
-            initialiserList: null,
-            children: []
+            children: [],
+            initialiserList: null
         });
         next(); //list
         expect(TokenType.OpenParenthesis);
@@ -3239,9 +3241,9 @@ export namespace Parser {
 
         let p = start<UnaryExpression>({
             phraseType: phraseType,
+            children: [],
             operator: null,
-            operand: null,
-            children: []
+            operand: null
         });
         p.operator = next();//op
 
@@ -3297,9 +3299,9 @@ export namespace Parser {
 
         let p = start<AnonymousFunctionCreationExpression>({
             phraseType: PhraseType.AnonymousFunctionCreationExpression,
+            children: [],
             header: null,
-            body: null,
-            children: []
+            body: null
         });
 
         p.children.push(p.header = anonymousFunctionHeader());
@@ -3317,8 +3319,8 @@ export namespace Parser {
 
         let p = start<AnonymousFunctionUseClause>({
             phraseType: PhraseType.AnonymousFunctionUseClause,
-            useList: null,
-            children: []
+            children: [],
+            useList: null
         });
         next(); //use
         expect(TokenType.OpenParenthesis);
@@ -3338,8 +3340,8 @@ export namespace Parser {
 
         let p = start<AnonymousFunctionUseVariable>({
             phraseType: PhraseType.AnonymousFunctionUseVariable,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
         p.byRef = optional(TokenType.Ampersand);
         p.name = expect(TokenType.VariableName);
@@ -3365,8 +3367,8 @@ export namespace Parser {
 
         let p = start<ParameterDeclaration>({
             phraseType: PhraseType.ParameterDeclaration,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
 
         if (isTypeDeclarationStart(peek())) {
@@ -3431,8 +3433,8 @@ export namespace Parser {
     function functionCallExpression(lhs: Phrase | Token) {
         let p = start<FunctionCallExpression>({
             phraseType: PhraseType.FunctionCallExpression,
-            callableExpr: null,
-            children: []
+            children: [],
+            callableExpr: null
         }, true);
         p.children.push(p.callableExpr = lhs);
         expect(TokenType.OpenParenthesis);
@@ -3447,9 +3449,9 @@ export namespace Parser {
 
         let p = start<ScopedExpression>({
             phraseType: PhraseType.ErrorScopedAccessExpression,
+            children: [],
             scope: null,
-            memberName: null,
-            children: []
+            memberName: null
         }, true);
         p.children.push(p.scope = lhs);
         next() //::
@@ -3476,8 +3478,8 @@ export namespace Parser {
 
         let p = start<ScopedMemberName>({
             phraseType: PhraseType.ScopedMemberName,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
         let t = peek();
 
@@ -3515,9 +3517,9 @@ export namespace Parser {
     function propertyAccessExpression(lhs: Phrase | Token) {
         let p = start<PropertyAccessExpression>({
             phraseType: PhraseType.PropertyAccessExpression,
+            children: [],
             variable: null,
-            memberName: null,
-            children: []
+            memberName: null
         }, true);
         p.children.push(p.variable = lhs);
         next(); //->
@@ -3529,9 +3531,9 @@ export namespace Parser {
 
         let p = start<ObjectAccessExpression>({
             phraseType: PhraseType.PropertyAccessExpression,
+            children: [],
             variable: null,
-            memberName: null,
-            children: []
+            memberName: null
         }, true);
         p.children.push(p.variable = lhs);
         next(); //->
@@ -3553,8 +3555,8 @@ export namespace Parser {
 
         let p = start<MemberName>({
             phraseType: PhraseType.MemberName,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
 
         switch (peek().tokenType) {
@@ -3581,9 +3583,9 @@ export namespace Parser {
 
         let p = start<SubscriptExpression>({
             phraseType: PhraseType.SubscriptExpression,
+            children: [],
             dereferencable: null,
-            offset: null,
-            children: []
+            offset: null
         }, true);
         p.children.push(p.dereferencable = lhs);
         next(); // [ or {
@@ -3616,8 +3618,8 @@ export namespace Parser {
     function variadicUnpacking() {
         let p = start<VariadicUnpacking>({
             phraseType: PhraseType.VariadicUnpacking,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         next(); //...
         p.children.push(p.expr = expression(0));
@@ -3633,8 +3635,8 @@ export namespace Parser {
 
         let p = start<QualifiedName>({
             phraseType: PhraseType.QualifiedName,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
         let t = peek();
 
@@ -3704,8 +3706,8 @@ export namespace Parser {
 
         let p = start<ArrayInitialiserList>({
             phraseType: PhraseType.ArrayInitialiserList,
-            elements: [],
-            children: []
+            children: [],
+            elements: []
         });
         let t: Token;
         let el: ArrayElement;
@@ -3738,8 +3740,8 @@ export namespace Parser {
 
         let p = start<ArrayValue>({
             phraseType: PhraseType.ArrayValue,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         p.byRef = optional(TokenType.Ampersand)
         p.children.push(p.expr = expression(0));
@@ -3750,8 +3752,8 @@ export namespace Parser {
     function arrayKey() {
         let p = start<ArrayKey>({
             phraseType: PhraseType.ArrayKey,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         p.children.push(p.expr = expression(0));
         return end<ArrayKey>();
@@ -3761,8 +3763,8 @@ export namespace Parser {
 
         let p = start<ArrayElement>({
             phraseType: PhraseType.ArrayElement,
-            value: null,
-            children: []
+            children: [],
+            value: null
         });
 
         if (peek().tokenType === TokenType.Ampersand) {
@@ -3789,8 +3791,8 @@ export namespace Parser {
 
         let p = start<EncapsulatedExpression>({
             phraseType: PhraseType.EncapsulatedExpression,
-            expr: null,
-            children: []
+            children: [],
+            expr: null
         });
         expect(openTokenType);
         p.children.push(p.expr = expression(0));
@@ -3802,8 +3804,8 @@ export namespace Parser {
     function relativeScope() {
         let p = start<RelativeScope>({
             phraseType: PhraseType.RelativeScope,
-            identifier: null,
-            children: []
+            children: [],
+            identifier: null
         });
         p.identifier = next();
         return end();
@@ -3843,8 +3845,8 @@ export namespace Parser {
 
         let p = start<SimpleVariable>({
             phraseType: PhraseType.SimpleVariable,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
         let t = expectOneOf([TokenType.VariableName, TokenType.Dollar]);
 
@@ -3888,8 +3890,8 @@ export namespace Parser {
 
         let p = start<NamespaceUseDeclaration>({
             phraseType: PhraseType.NamespaceUseDeclaration,
-            list: null,
-            children: []
+            children: [],
+            list: null
         });
         next(); //use
         p.kind = optionalOneOf([TokenType.Function, TokenType.Const]);
@@ -3930,8 +3932,8 @@ export namespace Parser {
 
             let p = start<NamespaceUseClause>({
                 phraseType: PhraseType.NamespaceUseClause,
-                name: null,
-                children: []
+                children: [],
+                name: null
             }, !!nsName);
 
             if (nsName) {
@@ -3955,8 +3957,8 @@ export namespace Parser {
         elementStartPredicate: Predicate, delimiter: TokenType, breakOn?: TokenType[]) {
         let p = start<List<Phrase | Token>>({
             phraseType: phraseType,
-            elements: [],
-            children: []
+            children: [],
+            elements: []
         });
         let t: Token;
         let element: Phrase | Token;
@@ -4012,8 +4014,8 @@ export namespace Parser {
 
         let p = start<NamespaceUseGroupClause>({
             phraseType: PhraseType.NamespaceUseGroupClause,
-            name: null,
-            children: []
+            children: [],
+            name: null
         });
         p.kind = optionalOneOf([TokenType.Function, TokenType.Const]);
         p.children.push(p.name = namespaceName());
@@ -4030,8 +4032,8 @@ export namespace Parser {
 
         let p = start<NamespaceAliasingClause>({
             phraseType: PhraseType.NamespaceAliasingClause,
-            alias: null,
-            children: []
+            children: [],
+            alias: null
         });
         next(); //as
         p.alias = expect(TokenType.Name);
@@ -4069,8 +4071,8 @@ export namespace Parser {
 
         let p = start<NamespaceName>({
             phraseType: PhraseType.NamespaceName,
-            parts: [],
-            children: []
+            children: [],
+            parts: []
         });
         let part = expect(TokenType.Name);
         if (part) {
