@@ -22,7 +22,8 @@ if (!path.isAbsolute(pathToCodeRootDir)) {
 
 function hasErrorRecurse(node){
     if(node.errors){
-        throw new Error(JSON.stringify(node, null, 4));
+        let keys = ['tokenType', 'phraseType', 'errors', 'unexpected', 'offset', 'numberSkipped'];
+        throw new Error(JSON.stringify(node, function(k,v){ return isNaN(k) && keys.indexOf(k) < 0 ? undefined : v; }, 4));
     }
 
     if(node.children){
@@ -58,12 +59,12 @@ function parseRecurse(dir) {
                         }
                         console.log('parsing ' + filepath);
                         let dataString = data.toString();
-                        console.log(process.memoryUsage());
+                        //console.log(process.memoryUsage());
                         let hrTime = process.hrtime();
                         let tree = php.Parser.parse(dataString);
                         let hrTimeDiff = process.hrtime(hrTime);
-                        console.log(hrTimeDiff);
-                        console.log(process.memoryUsage());
+                        //console.log(hrTimeDiff);
+                        //console.log(process.memoryUsage());
                         elapsed += hrTimeDiff[1] + hrTimeDiff[0] * 1000000000;
                         hasErrorRecurse(tree);
                         ++done;

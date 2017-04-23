@@ -878,8 +878,8 @@ export namespace Lexer {
     }
 
     function action27() {
-
-        let n = lexemeLength;
+        
+        let n = 0;
         let char: string;
         while (n < input.length) {
             char = input[n++];
