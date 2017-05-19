@@ -28,7 +28,8 @@
                                     "offset": 6,
                                     "length": 4,
                                     "modeStack": [
-                                        1
+                                        1,
+                                        5
                                     ]
                                 }
                             ]
@@ -38,7 +39,8 @@
                             "offset": 10,
                             "length": 1,
                             "modeStack": [
-                                1
+                                1,
+                                5
                             ]
                         },
                         {
@@ -46,7 +48,8 @@
                             "offset": 11,
                             "length": 1,
                             "modeStack": [
-                                1
+                                1,
+                                5
                             ]
                         },
                         {
@@ -54,7 +57,8 @@
                             "offset": 12,
                             "length": 1,
                             "modeStack": [
-                                1
+                                1,
+                                5
                             ]
                         },
                         {
@@ -65,7 +69,8 @@
                                     "offset": 13,
                                     "length": 7,
                                     "modeStack": [
-                                        1
+                                        1,
+                                        5
                                     ]
                                 },
                                 {
@@ -76,6 +81,7 @@
                                             "offset": 20,
                                             "length": 6,
                                             "modeStack": [
+                                                1,
                                                 5
                                             ]
                                         },
@@ -87,6 +93,7 @@
                                                     "offset": 26,
                                                     "length": 6,
                                                     "modeStack": [
+                                                        1,
                                                         5
                                                     ]
                                                 }
@@ -97,6 +104,7 @@
                                             "offset": 32,
                                             "length": 1,
                                             "modeStack": [
+                                                1,
                                                 5
                                             ]
                                         }
@@ -107,6 +115,7 @@
                                     "offset": 33,
                                     "length": 3,
                                     "modeStack": [
+                                        1,
                                         6
                                     ]
                                 }
@@ -119,6 +128,7 @@
                     "offset": 36,
                     "length": 1,
                     "modeStack": [
+                        1,
                         1
                     ]
                 }

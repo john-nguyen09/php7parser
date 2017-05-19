@@ -128,6 +128,14 @@
                         1,
                         1
                     ]
+                },
+                {
+                    "tokenType": 88,
+                    "offset": 29,
+                    "length": 1,
+                    "modeStack": [
+                        1
+                    ]
                 }
             ]
         }
