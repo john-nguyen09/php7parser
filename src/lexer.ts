@@ -534,19 +534,22 @@ export namespace Lexer {
 
     function action1() {
         position += lexemeLength;
-        modeStack = [LexerMode.Scripting];
+        modeStack = modeStack.slice(0, -1);
+        modeStack.push(LexerMode.Scripting);
         return TokenType.OpenTagEcho;
     }
 
     function action2() {
         position += lexemeLength;
-        modeStack = [LexerMode.Scripting];
+        modeStack = modeStack.slice(0, -1);
+        modeStack.push(LexerMode.Scripting);
         return TokenType.OpenTag;
     }
 
     function action3() {
         position += lexemeLength;
-        modeStack = [LexerMode.Scripting];
+        modeStack = modeStack.slice(0, -1);
+        modeStack.push(LexerMode.Scripting);
         return TokenType.OpenTag;
     }
 
@@ -651,7 +654,8 @@ export namespace Lexer {
     }
 
     function action12() {
-        modeStack = [LexerMode.Initial];
+        modeStack = modeStack.slice(0, -1);
+        modeStack.push(LexerMode.Initial);
         position += lexemeLength;
         return TokenType.CloseTag;
     }
@@ -718,7 +722,8 @@ export namespace Lexer {
 
         position += lexemeLength;
         doubleQuoteScannedLength = n - lexemeLength; //less DoubleQuote length
-        modeStack = [LexerMode.DoubleQuotes];
+        modeStack = modeStack.slice(0, -1);
+        modeStack.push(LexerMode.DoubleQuotes);
         return TokenType.DoubleQuote;
 
     }
@@ -732,15 +737,18 @@ export namespace Lexer {
         let c = lexeme[match.index - 1];
 
         if (c === '\'') {
-            modeStack = [LexerMode.NowDoc];
+            modeStack.slice(0, -1);
+            modeStack.push(LexerMode.NowDoc);
         } else {
-            modeStack = [LexerMode.HereDoc];
+            modeStack.slice(0,-1);
+            modeStack.push(LexerMode.HereDoc);
         }
 
         //check for end on next line
         if (input.substr(lexemeLength, hereDocLabel.length + 3)
             .search(new RegExp('^' + hereDocLabel + ';?(?:\r\n|\n|\r)')) >= 0) {
-            modeStack = [LexerMode.EndHereDoc];
+            modeStack = modeStack.slice(0, -1);
+            modeStack.push(LexerMode.EndHereDoc);
         }
 
         position += lexemeLength;
@@ -749,7 +757,8 @@ export namespace Lexer {
 
     function action16() {
         position += lexemeLength;
-        modeStack = [LexerMode.Backtick];
+        modeStack = modeStack.slice(0, -1);
+        modeStack.push(LexerMode.Backtick);
         return TokenType.Backtick;
     }
 
@@ -806,7 +815,8 @@ export namespace Lexer {
 
 
     function action24() {
-        modeStack = [LexerMode.Scripting];
+        modeStack = modeStack.slice(0, -1);
+        modeStack.push(LexerMode.Scripting);
         position += lexemeLength;
         return TokenType.DoubleQuote;
     }
@@ -872,7 +882,8 @@ export namespace Lexer {
         } else {
             nNewlineChars = match[0].substr(0, 2) === '\r\n' ? 2 : 1;
             lexemeLength = match.index + nNewlineChars;
-            modeStack = [LexerMode.EndHereDoc];
+            modeStack = modeStack.slice(0, -1);
+            modeStack.push(LexerMode.EndHereDoc);
         }
 
         position += lexemeLength;
@@ -902,7 +913,8 @@ export namespace Lexer {
                         }
 
                         if (k < input.length && (input[k] === '\n' || input[k] === '\r')) {
-                            modeStack = [LexerMode.EndHereDoc];
+                            modeStack = modeStack.slice(0, -1);
+                            modeStack.push(LexerMode.EndHereDoc);
                             lexemeLength = n;
                             position += lexemeLength;
                             return TokenType.EncapsulatedAndWhitespace;
@@ -941,13 +953,15 @@ export namespace Lexer {
     function action28() {
         lexemeLength = hereDocLabel.length;
         hereDocLabel = null;
-        modeStack = [LexerMode.Scripting];
+        modeStack = modeStack.slice(0, -1);
+        modeStack.push(LexerMode.Scripting);
         position += lexemeLength;
         return TokenType.EndHeredoc;
     }
 
     function action29() {
-        modeStack = [LexerMode.Scripting];
+        modeStack = modeStack.slice(0, -1);
+        modeStack.push(LexerMode.Scripting);
         position += lexemeLength;
         return TokenType.Backtick;
     }
