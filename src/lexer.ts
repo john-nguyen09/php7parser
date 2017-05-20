@@ -214,6 +214,12 @@ export interface Token {
     modeStack: LexerMode[],
 }
 
+export namespace Token {
+    export function create(type: TokenType, offset: number, length: number, modeStack: LexerMode[]): Token {
+        return { tokenType: type, offset: offset, length: length, modeStack: modeStack };
+    }
+}
+
 export namespace Lexer {
 
     const table: [RegExp, (TokenType | LexerAction)][][] = [
@@ -532,6 +538,70 @@ export namespace Lexer {
         (): TokenType;
     }
 
+    interface LexerState {
+        position: number;
+        input: string;
+        modeStack: LexerMode[];
+    }
+
+    function isWhitespace(c: string) {
+        switch (c) {
+            case ' ':
+            case '\t':
+            case '\r':
+            case '\n':
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    function initial(s: LexerState): Token {
+
+        let l = s.input.length;
+        let c = s.input[s.position];
+        let start = s.position;
+
+        if (c === '<' && s.position + 1 < l && s.input[s.position + 1] === '?') {
+            let tokenType = TokenType.OpenTag;
+
+            if (
+                s.input.substr(s.position, 5).toLowerCase() === '<?php' &&
+                s.position + 5 < l && isWhitespace(s.input[s.position + 5])
+            ) {
+
+                if (s.input[s.position + 5] === '\r' && s.position + 6 < l && s.input[s.position + 6] === '\n') {
+                    s.position += 7;
+                } else {
+                    s.position += 6;
+                }
+
+            } else if (s.position + 2 < l && s.input[s.position + 2] === '=') {
+                tokenType = TokenType.OpenTagEcho;
+                s.position += 3;
+            }
+            else {
+                s.position += 2;
+            }
+
+            let t = { tokenType: tokenType, offset: start, length: s.position - start, modeStack: s.modeStack };
+            s.modeStack = s.modeStack.slice(0, -1);
+            s.modeStack.push(LexerMode.Scripting);
+            return t;
+        }
+
+        while (s.position < l) {
+            c = s.input[s.position];
+            if (c === '<' && s.position + 1 < l && s.input[s.position + 1] === '?') {
+                break;
+            }
+            ++s.position;
+        }
+
+        return { tokenType: TokenType.Text, offset: start, length: s.position - start, modeStack: s.modeStack };
+
+    }
+
     function action1() {
         position += lexemeLength;
         modeStack = modeStack.slice(0, -1);
@@ -740,7 +810,7 @@ export namespace Lexer {
             modeStack.slice(0, -1);
             modeStack.push(LexerMode.NowDoc);
         } else {
-            modeStack.slice(0,-1);
+            modeStack.slice(0, -1);
             modeStack.push(LexerMode.HereDoc);
         }
 
@@ -892,7 +962,7 @@ export namespace Lexer {
     }
 
     function action27() {
-        
+
         let n = 0;
         let char: string;
         while (n < input.length) {
