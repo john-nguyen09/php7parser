@@ -545,15 +545,7 @@ export namespace Lexer {
     }
 
     function isWhitespace(c: string) {
-        switch (c) {
-            case ' ':
-            case '\t':
-            case '\r':
-            case '\n':
-                return true;
-            default:
-                return false;
-        }
+        return c === ' ' || c === '\n' || c === '\r' || c === '\t';
     }
 
     function initial(s: LexerState): Token {
@@ -600,6 +592,346 @@ export namespace Lexer {
 
         return { tokenType: TokenType.Text, offset: start, length: s.position - start, modeStack: s.modeStack };
 
+    }
+
+    function scripting(s: LexerState): Token {
+
+        let c = s.input[s.position];
+        let start = s.position;
+        let l = s.input.length;
+
+        switch (c) {
+
+            case ' ':
+            case '\t':
+            case '\n':
+            case '\r':
+                while (++s.position < l && isWhitespace(s.input[s.position])) { }
+                return { tokenType: TokenType.Whitespace, offset: start, length: s.position - start, modeStack: s.modeStack };
+
+            case '-':
+                return scriptingMinus(s);
+
+            case ':':
+                if (++s.position < l && s.input[s.position] === ':') {
+                    ++s.position;
+                    return { tokenType: TokenType.ColonColon, offset: start, length: 2, modeStack: s.modeStack };
+                }
+                return { tokenType: TokenType.Colon, offset: start, length: 1, modeStack: s.modeStack };
+
+            case '.':
+                return scriptingDot(s);
+
+            case '=':
+                return scriptingEquals(s);
+
+            case '+':
+                return scriptingPlus(s);
+
+            case '!':
+                return scriptingExclamation(s);
+
+            case '<':
+                return scriptingLessThan(s);
+
+            case '>':
+                return scriptingGreaterThan(s);
+
+            case '*':
+                return scriptingAsterisk(s);
+
+            case '/':
+                return scriptingForwardSlash(s);
+
+            case '%':
+                if (++s.position < l && s.input[s.position] === '=') {
+                    ++s.position;
+                    return { tokenType: TokenType.PercentEquals, offset: start, length: 2, modeStack: s.modeStack };
+                }
+                return { tokenType: TokenType.Percent, offset: start, length: 1, modeStack: s.modeStack };
+
+            case '&':
+                return scriptingAmpersand(s);
+
+            case ''
+
+        }
+
+    }
+
+    function scriptingAmpersand(s: LexerState): Token {
+
+        let start = s.position;
+        ++s.position;
+
+        if (s.position < s.input.length) {
+
+            switch (s.input[s.position]) {
+                case '=':
+                    ++s.position;
+                    return { tokenType: TokenType.AmpersandEquals, offset: start, length: 2, modeStack: s.modeStack };
+
+                case '&':
+                    ++s.position;
+                    return { tokenType: TokenType.AmpersandAmpersand, offset: start, length: 2, modeStack: s.modeStack };
+
+                default:
+                    break;
+            }
+
+        }
+
+        return { tokenType: TokenType.Ampersand, offset: start, length: 1, modeStack: s.modeStack };
+
+    }
+
+    function scriptingInlineCommentOrDocBlock(s: LexerState): Token {
+
+        // /* already read
+
+        let tokenType = TokenType.Comment;
+        let start = s.position - 2;
+        let l = s.input.length;
+
+        if (s.position < l && s.input[s.position] === '*') {
+            ++s.position;
+            tokenType = TokenType.DocumentComment;
+        }
+
+        //find comment end */
+        while (s.position < l) {
+            if (s.input[s.position] === '*' && s.position + 1 < l && s.input[s.position + 1] === '/') {
+                s.position += 2;
+                break;
+            }
+            ++s.position;
+        }
+
+        //todo WARN unterminated comment
+
+        return { tokenType: tokenType, offset: start, length: s.position - start, modeStack: s.modeStack };
+
+    }
+
+    function scriptingForwardSlash(s: LexerState) {
+
+        let start = s.position;
+        ++s.position;
+
+        if (s.position < s.input.length) {
+
+            switch (s.input[s.position]) {
+                case '=':
+                    ++s.position;
+                    return { tokenType: TokenType.ForwardslashEquals, offset: start, length: 2, modeStack: s.modeStack };
+
+                case '*':
+                    ++s.position;
+                    return scriptingInlineCommentOrDocBlock(s);
+
+                default:
+                    break;
+            }
+
+        }
+
+        return { tokenType: TokenType.ForwardSlash, offset: start, length: 1, modeStack: s.modeStack };
+    }
+
+    function scriptingAsterisk(s: LexerState) {
+        let start = s.position;
+
+        if (++s.position < s.input.length) {
+            switch (s.input[s.position]) {
+                case '*':
+                    ++s.position;
+                    if (s.position < s.input.length && s.input[s.position] === '=') {
+                        ++s.position;
+                        return { tokenType: TokenType.AsteriskAsteriskEquals, offset: start, length: 3, modeStack: s.modeStack };
+                    }
+                    return { tokenType: TokenType.AsteriskAsterisk, offset: start, length: 2, modeStack: s.modeStack };
+
+                case '=':
+                    ++s.position;
+                    return { tokenType: TokenType.AsteriskEquals, offset: start, length: 2, modeStack: s.modeStack };
+
+                default:
+                    break;
+            }
+        }
+
+        return { tokenType: TokenType.Asterisk, offset: start, length: 1, modeStack: s.modeStack };
+    }
+
+    function scriptingGreaterThan(s: LexerState) {
+        let start = s.position;
+
+        if (++s.position < s.input.length) {
+
+            switch (s.input[s.position]) {
+                case '>':
+                    ++s.position;
+                    if (s.position < s.input.length && s.input[s.position] === '=') {
+                        ++s.position;
+                        return { tokenType: TokenType.GreaterThanGreaterThanEquals, offset: start, length: 3, modeStack: s.modeStack };
+                    }
+                    return { tokenType: TokenType.GreaterThanGreaterThan, offset: start, length: 2, modeStack: s.modeStack };
+                case '=':
+                    ++s.position;
+                    return { tokenType: TokenType.GreaterThanEquals, offset: start, length: 2, modeStack: s.modeStack };
+                default:
+                    break;
+            }
+        }
+
+        return { tokenType: TokenType.GreaterThan, offset: start, length: 1, modeStack: s.modeStack };
+
+    }
+
+    function scriptingLessThan(s: LexerState) {
+
+        let start = s.position;
+
+        if (++s.position < s.input.length) {
+
+            switch (s.input[s.position]) {
+                case '>':
+                    ++s.position;
+                    return { tokenType: TokenType.ExclamationEquals, offset: start, length: 2, modeStack: s.modeStack };
+
+                case '<':
+                    ++s.position;
+                    if (s.position < s.input.length) {
+                        if (s.input[s.position] === '=') {
+                            ++s.position;
+                            return { tokenType: TokenType.LessThanLessThanEquals, offset: start, length: 3, modeStack: s.modeStack };
+                        } else if (s.input[s.position] === '<') {
+                            return scriptingHeredoc(s);
+                        }
+
+                    }
+                    return { tokenType: TokenType.LessThanLessThan, offset: start, length: 2, modeStack: s.modeStack };
+                case '=':
+                    ++s.position;
+                    if (s.position < s.input.length && s.input[s.position] === '>') {
+                        ++s.position;
+                        return { tokenType: TokenType.Spaceship, offset: start, length: 3, modeStack: s.modeStack };
+                    }
+                    return { tokenType: TokenType.LessThanEquals, offset: start, length: 2, modeStack: s.modeStack };
+
+                default:
+                    break;
+
+            }
+
+        }
+
+        return { tokenType: TokenType.LessThan, offset: start, length: 1, modeStack: s.modeStack };
+    }
+
+    function scriptingExclamation(s: LexerState) {
+
+        let start = s.position;
+
+        if (++s.position < s.input.length && s.input[s.position] === '=') {
+            if (++s.position < s.input.length && s.input[s.position] === '=') {
+                ++s.position;
+                return { tokenType: TokenType.ExclamationEqualsEquals, offset: start, length: 1, modeStack: s.modeStack };
+            }
+            return { tokenType: TokenType.ExclamationEquals, offset: start, length: 2, modeStack: s.modeStack };
+        }
+
+        return { tokenType: TokenType.Exclamation, offset: start, length: 1, modeStack: s.modeStack };
+    }
+
+    function scriptingPlus(s: LexerState) {
+
+        let start = s.position;
+
+        if (++s.position < s.input.length) {
+
+            switch (s.input[s.position]) {
+                case '=':
+                    ++s.position;
+                    return { tokenType: TokenType.PlusEquals, offset: start, length: 2, modeStack: s.modeStack };
+                case '+':
+                    ++s.position;
+                    return { tokenType: TokenType.PlusPlus, offset: start, length: 2, modeStack: s.modeStack };
+                default:
+                    break;
+
+            }
+
+        }
+
+        return { tokenType: TokenType.Plus, offset: start, length: 1, modeStack: s.modeStack };
+
+    }
+
+    function scriptingEquals(s: LexerState) {
+
+        let start = s.position;
+
+        if (++s.position < s.input.length) {
+            switch (s.input[s.position]) {
+                case '=':
+                    if (++s.position < s.input.length && s.input[s.position] === '=') {
+                        ++s.position;
+                        return { tokenType: TokenType.EqualsEqualsEquals, offset: start, length: 3, modeStack: s.modeStack };
+                    }
+                    return { tokenType: TokenType.EqualsEquals, offset: start, length: 2, modeStack: s.modeStack };
+                case '>':
+                    ++s.position;
+                    return { tokenType: TokenType.FatArrow, offset: start, length: 2, modeStack: s.modeStack };
+                default:
+                    break;
+            }
+        }
+
+        return { tokenType: TokenType.Equals, offset: start, length: 1, modeStack: s.modeStack };
+    }
+
+    function scriptingDot(s: LexerState) {
+        let start = s.position;
+
+        if (++s.position < s.input.length) {
+            let c = s.input[s.position];
+            if (c === '=') {
+                ++s.position;
+                return { tokenType: TokenType.DotEquals, offset: start, length: 2, modeStack: s.modeStack };
+            } else if (c === '.' && s.position + 1 < s.input.length && s.input[s.position + 1] === '.') {
+                s.position += 2;
+                return { tokenType: TokenType.Ellipsis, offset: start, length: 3, modeStack: s.modeStack };
+            } else if (c >= '0' && c <= '9') {
+                //float
+            }
+        }
+        return { tokenType: TokenType.Dot, offset: start, length: 1, modeStack: s.modeStack };
+    }
+
+    function scriptingMinus(s: LexerState) {
+
+        let start = s.position;
+
+        if (++s.position < s.input.length) {
+
+            switch (s.input[s.position]) {
+                case '>':
+                    ++s.position;
+                    return { tokenType: TokenType.Arrow, offset: start, length: 2, modeStack: s.modeStack };
+                case '-':
+                    ++s.position;
+                    return { tokenType: TokenType.MinusMinus, offset: start, length: 2, modeStack: s.modeStack };
+                case '=':
+                    ++s.position;
+                    return { tokenType: TokenType.MinusEquals, offset: start, length: 2, modeStack: s.modeStack };
+                default:
+                    break;
+            }
+
+        }
+
+        return { tokenType: TokenType.Minus, offset: start, length: 1, modeStack: s.modeStack };
     }
 
     function action1() {
