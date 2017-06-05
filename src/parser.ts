@@ -879,6 +879,8 @@ export namespace Parser {
 
             switch ((<Phrase>part).phraseType) {
                 case PhraseType.QualifiedName:
+                case PhraseType.FullyQualifiedName:
+                case PhraseType.RelativeQualifiedName:
                     part = constantAccessExpression(<QualifiedName>part);
                     break;
                 default:
