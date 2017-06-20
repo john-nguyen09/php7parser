@@ -3714,27 +3714,22 @@ export namespace Parser {
         let t: Token;
         let el: ArrayElement;
 
-        //arrays can have empty elements
-        if (peek().tokenType === breakOn) {
-            return end<ArrayInitialiserList>();
-        }
-
         let arrayInitialiserListRecoverSet = [breakOn, TokenType.Comma];
         recoverSetStack.push(arrayInitialiserListRecoverSet);
 
         while (true) {
 
-            el = arrayElement();
-            p.children.push(el);
-            p.elements.push(el);
+            //an array can have empty elements
+            if (isArrayElementStart(peek())) {
+                el = arrayElement();
+                p.children.push(el);
+                p.elements.push(el);
+            }
+
             t = peek();
 
             if (t.tokenType === TokenType.Comma) {
                 next();
-                //trailing comma allowed
-                if (peek().tokenType === breakOn) {
-                    break;
-                }
             } else if (t.tokenType === breakOn) {
                 break;
             } else {
@@ -3745,11 +3740,9 @@ export namespace Parser {
                 } else {
                     //skip until recover token
                     defaultSyncStrategy();
-                    if (peek().tokenType === TokenType.Comma) {
-                        next();
-                        if (peek().tokenType !== breakOn) {
-                            continue;
-                        }
+                    t = peek();
+                    if (t.tokenType === TokenType.Comma || t.tokenType === breakOn) {
+                        continue;
                     }
                 }
 
