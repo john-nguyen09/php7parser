@@ -742,7 +742,7 @@ export namespace Parser {
             phraseType: PhraseType.ConstDeclaration,
             children: [],
             constElementList: null
-            
+
         });
         next(); //const
         p.children.push(p.constElementList = <ConstElementList>delimitedList(
@@ -1377,7 +1377,7 @@ export namespace Parser {
             phraseType: PhraseType.HeredocStringLiteral,
             children: [],
             encapsulatedVariableList: null
-            
+
         });
         next(); //StartHeredoc
         p.children.push(p.encapsulatedVariableList = encapsulatedVariableList(TokenType.EndHeredoc));
@@ -1524,7 +1524,7 @@ export namespace Parser {
         throw new Error(`Unexpected token: ${t.tokenType}`);
     }
 
-    function traitUseClause(p:TraitUseClause) {
+    function traitUseClause(p: TraitUseClause) {
         p.phraseType = PhraseType.TraitUseClause;
         next(); //use
         p.children.push(p.nameList = qualifiedNameList([TokenType.Semicolon, TokenType.OpenBrace]));
@@ -3714,26 +3714,51 @@ export namespace Parser {
         let t: Token;
         let el: ArrayElement;
 
+        //arrays can have empty elements
+        if (peek().tokenType === breakOn) {
+            return end<ArrayInitialiserList>();
+        }
+
+        let arrayInitialiserListRecoverSet = [breakOn, TokenType.Comma];
+        recoverSetStack.push(arrayInitialiserListRecoverSet);
+
         while (true) {
 
+            el = arrayElement();
+            p.children.push(el);
+            p.elements.push(el);
             t = peek();
 
-            //arrays can have empty elements
-            if (isArrayElementStart(t)) {
-                el = arrayElement();
-                p.children.push(el);
-                p.elements.push(el);
-            } else if (t.tokenType === TokenType.Comma) {
+            if (t.tokenType === TokenType.Comma) {
                 next();
+                //trailing comma allowed
+                if (peek().tokenType === breakOn) {
+                    break;
+                }
             } else if (t.tokenType === breakOn) {
                 break;
             } else {
                 error();
+                //check for missing delimeter
+                if (isArrayElementStart(t)) {
+                    continue;
+                } else {
+                    //skip until recover token
+                    defaultSyncStrategy();
+                    if (peek().tokenType === TokenType.Comma) {
+                        next();
+                        if (peek().tokenType !== breakOn) {
+                            continue;
+                        }
+                    }
+                }
+
                 break;
             }
 
         }
 
+        recoverSetStack.pop();
         return end<ArrayInitialiserList>();
 
     }
