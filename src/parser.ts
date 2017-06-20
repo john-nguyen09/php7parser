@@ -2598,7 +2598,9 @@ export namespace Parser {
             children: []
         });
         next(); //break/continue
-        p.expr = optional(TokenType.IntegerLiteral);
+        if(isExpressionStart(peek())) {
+            p.children.push(p.expr = expression(0));
+        }
         expect(TokenType.Semicolon);
         return end();
     }
@@ -2609,7 +2611,9 @@ export namespace Parser {
             children: []
         });
         next(); //break/continue
-        p.expr = optional(TokenType.IntegerLiteral);
+        if(isExpressionStart(peek())) {
+            p.children.push(p.expr = expression(0));
+        }
         expect(TokenType.Semicolon);
         return end();
     }
