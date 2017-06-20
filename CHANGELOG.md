@@ -2,7 +2,7 @@
 
 ## [0.9.7] - 2017-06-20
 #### Fixed
-- ArrayInitialiser error on empty element
+- ArrayInitialiser allow empty element
 - Floats with exponent
 - Allow optional expr with break and continue
 
