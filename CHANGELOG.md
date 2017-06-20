@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.9.7] - 2017-06-20
+#### Fixed
+- ArrayInitialiser error on empty element
+- Floats with exponent
+- Allow optional expr with break and continue
+
 ## [0.9.6] - 2017-06-20
 #### Fixed
 - Complex string syntax
