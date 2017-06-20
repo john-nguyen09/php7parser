@@ -339,7 +339,7 @@ export namespace Lexer {
             [/^\}/, action9],
             [/^0b[01]+/, TokenType.IntegerLiteral],
             [/^0x[0-9a-fA-F]+/, TokenType.IntegerLiteral],
-            [/^(?:[0-9]*\.[0-9]+|[0-9]+\.[0-9]*)|^(?:[0-9]+|(?:[0-9]*\.[0-9]+|[0-9]+\.[0-9]*))[eE][+-]?[0-9]+/, TokenType.FloatingLiteral],
+            [/^(?:[0-9]+|(?:[0-9]*\.[0-9]+|[0-9]+\.[0-9]*))[eE][+-]?[0-9]+|^(?:[0-9]*\.[0-9]+|[0-9]+\.[0-9]*)/, TokenType.FloatingLiteral],
             [/^[0-9]+/, TokenType.IntegerLiteral],
             [/^__CLASS__/, TokenType.ClassConstant],
             [/^__TRAIT__/, TokenType.TraitConstant],
