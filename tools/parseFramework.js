@@ -9,6 +9,7 @@ var php = require('../lib/php7parser');
 var count = 0;
 var done = 0;
 var elapsed = 0;
+var errors = 0;
 
 if (process.argv.length !== 3) {
     console.log('Usage: node parseFramework.js PATH_TO_CODE_ROOT_DIR');
@@ -26,6 +27,7 @@ function hasErrorRecurse(node) {
         //throw new Error(JSON.stringify(node, function(k,v){ return isNaN(k) && keys.indexOf(k) < 0 ? undefined : v; }, 4));
         console.log('ERROR');
         console.log(JSON.stringify(node, function (k, v) { return isNaN(k) && keys.indexOf(k) < 0 ? undefined : v; }, 4));
+        errors++;
     }
 
     if (node.children) {
@@ -72,6 +74,7 @@ function parseRecurse(dir) {
                         ++done;
                         if (count === done) {
                             console.log(count + ' files parsed');
+                            console.log(errors + ' errors');
                             console.log('elapsed: ' + Math.round(elapsed / 1000000) + ' ms');
                         }
                     });
