@@ -3944,7 +3944,8 @@ export namespace Parser {
             namespaceUseClauseFunction(nsNameNode),
             isQualifiedNameStart,
             TokenType.Comma,
-            [TokenType.Semicolon]));
+            [TokenType.Semicolon],
+            true));
 
         expect(TokenType.Semicolon);
         return end();
@@ -3979,12 +3980,12 @@ export namespace Parser {
     }
 
     function delimitedList(phraseType: PhraseType, elementFunction: () => Phrase | Token,
-        elementStartPredicate: Predicate, delimiter: TokenType, breakOn?: TokenType[]) {
+        elementStartPredicate: Predicate, delimiter: TokenType, breakOn?: TokenType[], doNotPushHiddenToParent?:boolean) {
         let p = start<List<Phrase | Token>>({
             phraseType: phraseType,
             children: [],
             elements: []
-        });
+        }, doNotPushHiddenToParent);
         let t: Token;
         let element: Phrase | Token;
         let delimitedListRecoverSet = breakOn ? breakOn.slice(0) : [];
