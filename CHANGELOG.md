@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.9.8] - 2017-06-22
+#### Fixed
+- Whitespace inside on namespace use decl
+
 ## [0.9.7] - 2017-06-20
 #### Fixed
 - ArrayInitialiser allow empty element
