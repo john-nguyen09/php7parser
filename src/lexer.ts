@@ -529,9 +529,9 @@ export namespace Lexer {
 
     }
 
-    function isLabelStart(char: string) {
-        let cp = char.charCodeAt(0);
-        return (cp >= 97 && cp <= 122) || (cp >= 65 && cp <= 90) || cp === 95 || cp >= 0x7F;
+    function isLabelStart(chr: string) {
+        let cp = chr.charCodeAt(0);
+        return (cp >= 97 && cp <= 122) || (cp >= 65 && cp <= 90) || cp === 95 || cp > 0x7F;
     }
 
     interface LexerAction {
@@ -606,7 +606,7 @@ export namespace Lexer {
             case '\t':
             case '\n':
             case '\r':
-                while (++s.position < l && isWhitespace(s.input[s.position])) { }
+                while (++s.position < l && (c === ' ' || c === '\n' || c === '\r' || c === '\t')) { }
                 return { tokenType: TokenType.Whitespace, offset: start, length: s.position - start, modeStack: s.modeStack };
 
             case '-':
@@ -653,10 +653,180 @@ export namespace Lexer {
             case '&':
                 return scriptingAmpersand(s);
 
-            case ''
+            case '|':
+                return scriptingBar(s);
+
+            case '^':
+                if (++s.position < l && s.input[s.position] === '=') {
+                    ++s.position;
+                    return { tokenType: TokenType.CaretEquals, offset: start, length: 2, modeStack: s.modeStack };
+                }
+                return { tokenType: TokenType.Caret, offset: start, length: 1, modeStack: s.modeStack };
+                
+            case ';':
+                ++s.position;
+                return { tokenType: TokenType.Semicolon, offset: start, length: 1, modeStack: s.modeStack };
+
+            case ',':
+                ++s.position;
+                return { tokenType: TokenType.Comma, offset: start, length: 1, modeStack: s.modeStack };
+
+            case '[':
+                ++s.position;
+                return { tokenType: TokenType.OpenBracket, offset: start, length: 1, modeStack: s.modeStack };
+
+            case ']':
+                ++s.position;
+                return { tokenType: TokenType.CloseBracket, offset: start, length: 1, modeStack: s.modeStack };
+
+            case '(':
+                return scriptingOpenParenthesis(s);
+
+            case ')':
+                ++s.position;
+                return { tokenType: TokenType.CloseParenthesis, offset: start, length: 1, modeStack: s.modeStack };
+
+            case '~':
+                ++s.position;
+                return { tokenType: TokenType.Tilde, offset: start, length: 1, modeStack: s.modeStack };
+
+            case '?':
+                if (++s.position < l && s.input[s.position] === '?') {
+                    ++s.position;
+                    return { tokenType: TokenType.QuestionQuestion, offset: start, length: 2, modeStack: s.modeStack };
+                }
+                return { tokenType: TokenType.Question, offset: start, length: 1, modeStack: s.modeStack };
+
+            case '@':
+                ++s.position;
+                return { tokenType: TokenType.AtSymbol, offset: start, length: 1, modeStack: s.modeStack };
+
+            case '$':
+                return scriptingDollar(s);
+
+                
 
         }
 
+    }
+
+    function scriptingDollar(s:LexerState) : Token {
+        let start = s.position;
+        let k = s.position;
+        let l = s.input.length;
+        ++k;
+
+        if(k < l && isLabelStart(s.input[k])) {
+            ++k;
+            let cp:number;
+            while(k < l) {
+                cp = s.input.charCodeAt(k);
+                if((cp >= 48 && cp <= 57) || (cp >= 97 && cp <= 122) || (cp >= 65 && cp <= 90) || cp === 95 || (cp >= 0x90 && cp <= 0xff)) {
+                    ++k;
+                }
+            }
+
+            s.position = k;
+            return { tokenType: TokenType.VariableName, offset: start, length: s.position - start, modeStack: s.modeStack };
+        }
+
+        ++s.position;
+        return { tokenType: TokenType.Dollar, offset: start, length: 1, modeStack: s.modeStack };
+    }
+
+    function scriptingOpenParenthesis(s:LexerState) : Token{
+
+        let start = s.position;
+        let k = start;
+        let l = s.input.length;
+
+        //check for cast tokens
+        ++k;
+        while(k < l && (s.input[k] === ' ' || s.input[k] === '\t')) {
+            ++k;
+        }
+
+        let keywordStart = k;
+        while(k < l && ((s.input[k] >= 'A' && s.input <= 'Z') || (s.input[k] >= 'a' && s.input <= 'z'))) {
+            ++k;
+        }
+        let keywordEnd = k;
+
+        while(k < l && (s.input[k] === ' ' || s.input[k] === '\t')) { 
+            ++k;
+        }
+
+        //should have a ) here if valid cast token
+        if(k < l && s.input[k] === ')') {
+            let keyword = s.input.slice(keywordStart, keywordEnd).toLowerCase();
+            let tokenType = 0;
+            switch(keyword) {
+                case 'int':
+                case 'integer':
+                    tokenType = TokenType.IntegerCast;
+                    break;
+
+                case 'real':
+                case 'float':
+                case 'double':
+                    tokenType = TokenType.FloatCast;
+                    break;
+
+                case 'string':
+                case 'binary':
+                    tokenType = TokenType.StringCast;
+                    break;
+
+                case 'array':
+                    tokenType = TokenType.ArrayCast;
+                    break;
+
+                case 'object':
+                    tokenType = TokenType.ObjectCast;
+                    break;
+
+                case 'bool':
+                case 'boolean':
+                    tokenType = TokenType.BooleanCast;
+                    break;
+
+                case 'unset':
+                    tokenType = TokenType.UnsetCast;
+                    break;
+
+                default:
+                    break;
+            }
+
+            if(tokenType > 0) {
+                s.position = k + 1;
+                return { tokenType: tokenType, offset: start, length: s.position - start, modeStack: s.modeStack };
+            }
+
+        }
+
+        ++s.position;
+        return { tokenType: TokenType.OpenParenthesis, offset: start, length: 1, modeStack: s.modeStack };
+
+    }
+
+    function scriptingBar(s: LexerState): Token {
+        let start = s.position;
+        ++s.position;
+
+        if (s.position < s.input.length) {
+            switch(s.input[s.position]) {
+                case '=':
+                    ++s.position;
+                    return { tokenType: TokenType.BarEquals, offset: start, length: 2, modeStack: s.modeStack };
+
+                case '|':
+                    ++s.position;
+                    return { tokenType: TokenType.BarBar, offset: start, length: 2, modeStack: s.modeStack };
+            }
+        }
+
+        return { tokenType: TokenType.Bar, offset: start, length: 1, modeStack: s.modeStack };
     }
 
     function scriptingAmpersand(s: LexerState): Token {
