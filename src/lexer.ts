@@ -704,7 +704,13 @@ export namespace Lexer {
             case '$':
                 return scriptingDollar(s);
 
-                
+            case '#':
+                ++s.position;
+                return scriptingComment(s, start);
+
+            default:
+                ++s.position;
+                return { tokenType: TokenType.Unknown, offset: start, length: 1, modeStack: s.modeStack };
 
         }
 
@@ -899,6 +905,10 @@ export namespace Lexer {
                     ++s.position;
                     return scriptingInlineCommentOrDocBlock(s);
 
+                case '/':
+                    ++s.position;
+                    return scriptingComment(s, start);
+
                 default:
                     break;
             }
@@ -906,6 +916,31 @@ export namespace Lexer {
         }
 
         return { tokenType: TokenType.ForwardSlash, offset: start, length: 1, modeStack: s.modeStack };
+    }
+
+    function scriptingComment(s:LexerState, start:number) {
+        //s.position will be on first char after # or //
+        //find first newline or closing tag
+
+        let l = s.input.length;
+        let c:string;
+
+        while(s.position < l) {
+            c = s.input[s.position];
+            ++s.position;
+            if(c === '\n' || c === '\r') {
+                if(c === '\r' && s.position < l && s.input[s.position] === '\n') {
+                    ++s.position;
+                }
+                break;
+            } else if(c === '?' && s.input[s.position] === '>') {
+                ++s.position;
+                break;
+            }
+        }
+
+        return { tokenType: TokenType.Comment, offset: start, length: s.position - start, modeStack: s.modeStack };
+
     }
 
     function scriptingAsterisk(s: LexerState) {
