@@ -826,7 +826,7 @@ export namespace Lexer {
 
         }
 
-        return doubleQuotesContent(s);
+        return doubleQuotesAny(s);
     }
 
     function nowdoc(s: LexerState) {
@@ -915,6 +915,89 @@ export namespace Lexer {
 
     }
 
+    function backtick(s: LexerState) {
+
+        let l = s.input.length;
+        let c = s.input[s.position];
+        let start = s.position;
+        let modeStack = s.modeStack;
+        let t: Token;
+
+        switch (c) {
+            case '$':
+                if ((t = encapsulatedDollar(s))) {
+                    return t;
+                }
+                break;
+
+            case '{':
+                if (s.position + 1 < l && s.input[s.position + 1] === '$') {
+                    s.modeStack = s.modeStack.slice(0);
+                    s.modeStack.push(LexerMode.Scripting);
+                    ++s.position;
+                    return { tokenType: TokenType.CurlyOpen, offset: start, length: 1, modeStack: modeStack };
+                }
+                break;
+
+            case '`':
+                s.modeStack = s.modeStack.slice(0, -1);
+                s.modeStack.push(LexerMode.Scripting);
+                ++s.position;
+                return { tokenType: TokenType.Backtick, offset: start, length: 1, modeStack: modeStack };
+
+            default:
+                break;
+
+        }
+
+        return backtickAny(s);
+
+    }
+
+    function backtickAny(s: LexerState) {
+
+        let n = s.position;
+        let c: string;
+        let start = n;
+        let l = s.input.length;
+
+        if (s.input[n] === '\\' && n < l) {
+            ++n;
+        }
+
+        while (n < l) {
+            c = s.input[n++];
+            switch (c) {
+                case '`':
+                    break;
+                case '$':
+                    if (n < l && (isLabelStart(s.input[n]) || s.input[n] === '{')) {
+                        break;
+                    }
+                    continue;
+                case '{':
+                    if (n < l && s.input[n] === '$') {
+                        break;
+                    }
+                    continue;
+                case '\\':
+                    if (n < l) {
+                        ++n;
+                    }
+                /* fall through */
+                default:
+                    continue;
+            }
+
+            --n;
+            break;
+        }
+
+        s.position = n;
+        return { tokenType: TokenType.EncapsulatedAndWhitespace, offset: start, length: s.position - start, modeStack: s.modeStack };
+
+    }
+
     function heredocAny(s: LexerState) {
 
         let start = s.position;
@@ -943,8 +1026,8 @@ export namespace Lexer {
 
                         if (k < l && (s.input[k] === '\n' || s.input[k] === '\r')) {
                             let nl = s.input.slice(n - 2, n);
-                            if(nl === '\r\n') {
-                                n -=2
+                            if (nl === '\r\n') {
+                                n -= 2
                             } else {
                                 --n;
                             }
@@ -998,7 +1081,7 @@ export namespace Lexer {
 
     }
 
-    function doubleQuotesContent(s: LexerState) {
+    function doubleQuotesAny(s: LexerState) {
 
         let start = s.position;
 
