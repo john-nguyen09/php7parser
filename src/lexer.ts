@@ -243,7 +243,6 @@ export namespace Lexer {
     }
 
     export function lex(): Token {
-        console.log(state.position);
         if (state.position >= state.input.length) {
             return {
                 tokenType: TokenType.EndOfFile,
@@ -262,6 +261,10 @@ export namespace Lexer {
 
             case LexerMode.Scripting:
                 t = scripting(state);
+                break;
+
+            case LexerMode.LookingForProperty:
+                t = lookingForProperty(state);
                 break;
 
             case LexerMode.DoubleQuotes:
@@ -1091,9 +1094,8 @@ export namespace Lexer {
         //optional \ already consumed
         //find first unescaped '
         let l = s.input.length;
-
+        ++s.position;
         while (true) {
-            ++s.position;
             if (s.position < l) {
                 if (s.input[s.position] === '\'') {
                     ++s.position;
@@ -1535,10 +1537,7 @@ export namespace Lexer {
         ++k;
 
         if (k < l && isLabelStart(s.input[k])) {
-            ++k;
-            let cp: number;
             while (++k < l && ((s.input[k] >= '0' && s.input[k] <= '9') || isLabelStart(s.input[k]))) { }
-
             s.position = k;
             return { tokenType: TokenType.VariableName, offset: start, length: s.position - start, modeStack: s.modeStack };
         }
@@ -1639,7 +1638,7 @@ export namespace Lexer {
                 s.position = k;
                 return { tokenType: TokenType.IntegerLiteral, offset: start, length: s.position - start, modeStack: s.modeStack };
             }
-            k = s.position;
+            k = s.position + 1;
             if (s.input[k] === 'x' && ++k < l && isHexDigit(s.input[k])) {
                 while (++k < l && isHexDigit(s.input[k])) { }
                 s.position = k;
@@ -1754,7 +1753,6 @@ export namespace Lexer {
         }
 
         //todo WARN unterminated comment
-        console.log('COMMENT');
         return { tokenType: tokenType, offset: start, length: s.position - start, modeStack: s.modeStack };
 
     }
