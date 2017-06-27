@@ -742,7 +742,7 @@ export namespace Parser {
             phraseType: PhraseType.ConstDeclaration,
             children: [],
             constElementList: null
-            
+
         });
         next(); //const
         p.children.push(p.constElementList = <ConstElementList>delimitedList(
@@ -879,6 +879,8 @@ export namespace Parser {
 
             switch ((<Phrase>part).phraseType) {
                 case PhraseType.QualifiedName:
+                case PhraseType.FullyQualifiedName:
+                case PhraseType.RelativeQualifiedName:
                     part = constantAccessExpression(<QualifiedName>part);
                     break;
                 default:
@@ -1375,7 +1377,7 @@ export namespace Parser {
             phraseType: PhraseType.HeredocStringLiteral,
             children: [],
             encapsulatedVariableList: null
-            
+
         });
         next(); //StartHeredoc
         p.children.push(p.encapsulatedVariableList = encapsulatedVariableList(TokenType.EndHeredoc));
@@ -1522,7 +1524,7 @@ export namespace Parser {
         throw new Error(`Unexpected token: ${t.tokenType}`);
     }
 
-    function traitUseClause(p:TraitUseClause) {
+    function traitUseClause(p: TraitUseClause) {
         p.phraseType = PhraseType.TraitUseClause;
         next(); //use
         p.children.push(p.nameList = qualifiedNameList([TokenType.Semicolon, TokenType.OpenBrace]));
@@ -2596,7 +2598,9 @@ export namespace Parser {
             children: []
         });
         next(); //break/continue
-        p.expr = optional(TokenType.IntegerLiteral);
+        if(isExpressionStart(peek())) {
+            p.children.push(p.expr = expression(0));
+        }
         expect(TokenType.Semicolon);
         return end();
     }
@@ -2607,7 +2611,9 @@ export namespace Parser {
             children: []
         });
         next(); //break/continue
-        p.expr = optional(TokenType.IntegerLiteral);
+        if(isExpressionStart(peek())) {
+            p.children.push(p.expr = expression(0));
+        }
         expect(TokenType.Semicolon);
         return end();
     }
@@ -3712,26 +3718,44 @@ export namespace Parser {
         let t: Token;
         let el: ArrayElement;
 
+        let arrayInitialiserListRecoverSet = [breakOn, TokenType.Comma];
+        recoverSetStack.push(arrayInitialiserListRecoverSet);
+
         while (true) {
 
-            t = peek();
-
-            //arrays can have empty elements
-            if (isArrayElementStart(t)) {
+            //an array can have empty elements
+            if (isArrayElementStart(peek())) {
                 el = arrayElement();
                 p.children.push(el);
                 p.elements.push(el);
-            } else if (t.tokenType === TokenType.Comma) {
+            }
+
+            t = peek();
+
+            if (t.tokenType === TokenType.Comma) {
                 next();
             } else if (t.tokenType === breakOn) {
                 break;
             } else {
                 error();
+                //check for missing delimeter
+                if (isArrayElementStart(t)) {
+                    continue;
+                } else {
+                    //skip until recover token
+                    defaultSyncStrategy();
+                    t = peek();
+                    if (t.tokenType === TokenType.Comma || t.tokenType === breakOn) {
+                        continue;
+                    }
+                }
+
                 break;
             }
 
         }
 
+        recoverSetStack.pop();
         return end<ArrayInitialiserList>();
 
     }
@@ -3920,7 +3944,8 @@ export namespace Parser {
             namespaceUseClauseFunction(nsNameNode),
             isQualifiedNameStart,
             TokenType.Comma,
-            [TokenType.Semicolon]));
+            [TokenType.Semicolon],
+            true));
 
         expect(TokenType.Semicolon);
         return end();
@@ -3955,12 +3980,12 @@ export namespace Parser {
     }
 
     function delimitedList(phraseType: PhraseType, elementFunction: () => Phrase | Token,
-        elementStartPredicate: Predicate, delimiter: TokenType, breakOn?: TokenType[]) {
+        elementStartPredicate: Predicate, delimiter: TokenType, breakOn?: TokenType[], doNotPushHiddenToParent?:boolean) {
         let p = start<List<Phrase | Token>>({
             phraseType: phraseType,
             children: [],
             elements: []
-        });
+        }, doNotPushHiddenToParent);
         let t: Token;
         let element: Phrase | Token;
         let delimitedListRecoverSet = breakOn ? breakOn.slice(0) : [];

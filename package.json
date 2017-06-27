@@ -1,6 +1,6 @@
 {
   "name": "php7parser",
-  "version": "0.9.5",
+  "version": "0.9.8",
   "description": "PHP 7 Parser",
   "main": "./lib/php7parser.js",
   "types": "./lib/php7parser.d.ts",
@@ -28,6 +28,6 @@
     "@types/mocha": "^2.2.39",
     "chai": "^3.5.0",
     "mocha": "^3.2.0",
-    "typescript": "^2.2.2"
+    "typescript": "^2.3.4"
   }
 }
