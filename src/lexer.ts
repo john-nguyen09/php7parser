@@ -758,6 +758,177 @@ export namespace Lexer {
 
     }
 
+    function lookingForProperty(s: LexerState): Token {
+
+        let start = s.position;
+        let c = s.input[s.position];
+        let l = s.input.length;
+        let modeStack = s.modeStack;
+
+        switch (c) {
+            case ' ':
+            case '\t':
+            case '\n':
+            case '\r':
+                while (++s.position < l && (c === ' ' || c === '\n' || c === '\r' || c === '\t')) { }
+                return { tokenType: TokenType.Whitespace, offset: start, length: s.position - start, modeStack: modeStack };
+
+            default:
+                if (isLabelStart(c)) {
+                    while (++s.position < l && ((s.input[s.position] >= '0' && s.input[s.position] <= '9') || isLabelStart(s.input[s.position]))) { }
+                    s.modeStack = s.modeStack.slice(0, -1);
+                    return { tokenType: TokenType.Name, offset: start, length: s.position - start, modeStack: modeStack };
+                }
+
+                if (c === '-' && s.position + 1 < l && s.input[s.position + 1] === '>') {
+                    s.position += 2;
+                    return { tokenType: TokenType.Arrow, offset: start, length: 2, modeStack: modeStack };
+                }
+
+                s.modeStack = s.modeStack.slice(0, -1);
+                return null;
+        }
+
+    }
+
+    function doubleQuotes(s: LexerState) {
+
+        let l = s.input.length;
+        let c = s.input[s.position];
+        let start = s.position;
+        let modestack = s.modeStack;
+        let t: Token;
+
+        switch (c) {
+            case '$':
+                if ((t = doubleQuotesDollar(s))) {
+                    return t;
+                }
+                break;
+
+            case '{':
+                if (s.position + 1 < l && s.input[s.position + 1] === '$') {
+                    s.modeStack = s.modeStack.slice(0);
+                    s.modeStack.push(LexerMode.Scripting);
+                    ++s.position;
+                    return { tokenType: TokenType.CurlyOpen, offset: start, length: 1, modeStack: modeStack };
+                }
+                break;
+
+            case '"':
+                s.modeStack = s.modeStack.slice(0, -1);
+                s.modeStack.push(LexerMode.Scripting);
+                ++s.position;
+                return { tokenType: TokenType.DoubleQuote, offset: start, length: 1, modeStack: modeStack };
+
+            default:
+                break;
+
+        }
+
+        return doubleQuotesContent(s);
+    }
+
+    function doubleQuotesContent(s: LexerState) {
+
+        let start = s.position;
+
+        if (s.doubleQuoteScannedLength > 0) {
+            //already know position
+            s.position = s.doubleQuoteScannedLength;
+            s.doubleQuoteScannedLength = -1
+        } else {
+            //find new pos
+            let n = s.position;
+            let l = s.input.length;
+
+            if (s.input[n] === '\\' && n + 1 < l) {
+                ++n;
+            }
+
+            let c: string;
+            while (n < l) {
+                c = input[n++];
+                switch (c) {
+                    case '"':
+                        break;
+                    case '$':
+                        if (n < l && (isLabelStart(input[n]) || input[n] == '{')) {
+                            break;
+                        }
+                        continue;
+                    case '{':
+                        if (n < l && input[n] === '$') {
+                            break;
+                        }
+                        continue;
+                    case '\\':
+                        if (n < l) {
+                            ++n;
+                        }
+                    /* fall through */
+                    default:
+                        continue;
+                }
+
+                --n;
+                break;
+            }
+
+            s.position = n;
+        }
+
+        return { tokenType: TokenType.EncapsulatedAndWhitespace, offset: start, length: s.position - start, modeStack: s.modeStack };
+
+    }
+
+    function doubleQuotesDollar(s: LexerState): Token {
+
+        let start = s.position;
+        let l = s.input.length;
+        let k = s.position + 1;
+        let modestack = s.modeStack;
+
+        if (k >= l) {
+            return null;
+        }
+
+        if (s.input[k] === '{') {
+            s.position += 2;
+            s.modeStack = s.modeStack.slice(0);
+            s.modeStack.push(LexerMode.LookingForVarName);
+            return { tokenType: TokenType.DollarCurlyOpen, offset: start, length: 2, modeStack: modeStack };
+        }
+
+        if (!isLabelStart(s.input[k])) {
+            return null;
+        }
+
+        while (++k < l && ((s.input[k] >= '0' && s.input[k] <= '9') || isLabelStart(s.input[k]))) { }
+
+        if (k < l && s.input[k] === '[') {
+            --lexemeLength;
+            s.modeStack = s.modeStack.slice(0);
+            s.modeStack.push(LexerMode.VarOffset);
+            s.position = k;
+            return { tokenType: TokenType.VariableName, offset: start, length: s.position - start, modeStack: modeStack };
+        }
+
+        if (k < l && s.input[k] === '-') {
+            let n = k + 1;
+            if (n < l && s.input[n] === '>' && ++n < l && isLabelStart(s.input[n])) {
+                s.modeStack = s.modeStack.slice(0);
+                s.modeStack.push(LexerMode.LookingForProperty);
+                s.position = k;
+                return { tokenType: TokenType.VariableName, offset: start, length: s.position - start, modeStack: modeStack };
+            }
+        }
+
+        s.position = k;
+        return { tokenType: TokenType.VariableName, offset: start, length: s.position - start, modeStack: modeStack };
+
+    }
+
     function scriptingDoubleQuote(s: LexerState, start: number): Token {
 
         //optional \ consumed
@@ -1256,12 +1427,7 @@ export namespace Lexer {
         if (k < l && isLabelStart(s.input[k])) {
             ++k;
             let cp: number;
-            while (k < l) {
-                cp = s.input.charCodeAt(k);
-                if ((cp >= 48 && cp <= 57) || (cp >= 97 && cp <= 122) || (cp >= 65 && cp <= 90) || cp === 95 || (cp >= 0x90 && cp <= 0xff)) {
-                    ++k;
-                }
-            }
+            while (++k < l && ((s.input[k] >= '0' && s.input[k] <= '9') || isLabelStart(s.input[k]))) { }
 
             s.position = k;
             return { tokenType: TokenType.VariableName, offset: start, length: s.position - start, modeStack: s.modeStack };
