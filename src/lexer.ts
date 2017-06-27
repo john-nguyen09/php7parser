@@ -302,7 +302,7 @@ export namespace Lexer {
     }
 
     function isLabelStart(c: string) {
-        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c === '_' || c.charCodeAt(0) >= 0x80;
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c === '_' || <any>c >= 0x80;
     }
 
     function isWhitespace(c: string) {
