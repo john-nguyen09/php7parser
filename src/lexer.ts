@@ -239,11 +239,11 @@ export namespace Lexer {
             modeStack: lexerModeStack ? lexerModeStack : [LexerMode.Initial],
             doubleQuoteScannedLength: -1,
             heredocLabel:null
-        }
+        };
     }
 
     export function lex(): Token {
-
+        console.log(state.position);
         if (state.position >= state.input.length) {
             return {
                 tokenType: TokenType.EndOfFile,
@@ -368,7 +368,7 @@ export namespace Lexer {
             case '\t':
             case '\n':
             case '\r':
-                while (++s.position < l && (c === ' ' || c === '\n' || c === '\r' || c === '\t')) { }
+                while (++s.position < l && isWhitespace(s.input[s.position])) { }
                 return { tokenType: TokenType.Whitespace, offset: start, length: s.position - start, modeStack: modeStack };
 
             case '-':
@@ -1754,7 +1754,7 @@ export namespace Lexer {
         }
 
         //todo WARN unterminated comment
-
+        console.log('COMMENT');
         return { tokenType: tokenType, offset: start, length: s.position - start, modeStack: s.modeStack };
 
     }
