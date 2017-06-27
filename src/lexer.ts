@@ -954,7 +954,7 @@ export namespace Lexer {
 
     }
 
-    function lookingForVarName(s: LexerState) {
+    function varOffset(s: LexerState) {
 
         let start = s.position;
         let c = s.input[s.position];
@@ -986,7 +986,7 @@ export namespace Lexer {
 
             default:
                 if (c >= '0' && c <= '9') {
-                    return lookingForVarNameNumeric(s);
+                    return varOffsetNumeric(s);
                 } else if (isLabelStart(c)) {
                     while (++s.position < l && ((s.input[s.position] >= '0' && s.input[s.position] <= '9') || isLabelStart(s.input[s.position]))) { }
                     return { tokenType: TokenType.Name, offset: start, length: s.position - start, modeStack: s.modeStack };
@@ -1002,7 +1002,31 @@ export namespace Lexer {
 
     }
 
-    function lookingForVarNameNumeric(s: LexerState) {
+    function lookingForVarName(s: LexerState) {
+
+        let start = s.position;
+        let l = s.input.length;
+        let modeStack = s.modeStack;
+
+        if (isLabelStart(s.input[s.position])) {
+            let k = s.position + 1;
+            while (++k < l && ((s.input[k] >= '0' && s.input[k] <= '9') || isLabelStart(s.input[k]))) { }
+            if (k < l && (s.input[k] === '[' || s.input[k] === '}')) {
+                s.modeStack = s.modeStack.slice(0, -1);
+                s.modeStack.push(LexerMode.Scripting);
+                s.position = k;
+                return { tokenType: TokenType.VariableName, offset: start, length: s.position - start, modeStack: modeStack };
+            }
+        }
+
+        s.modeStack = s.modeStack.slice(0, -1);
+        s.modeStack.push(LexerMode.Scripting);
+        return null;
+
+
+    }
+
+    function varOffsetNumeric(s: LexerState) {
 
         let start = s.position;
         let c = s.input[s.position];
