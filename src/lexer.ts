@@ -796,12 +796,12 @@ export namespace Lexer {
         let l = s.input.length;
         let c = s.input[s.position];
         let start = s.position;
-        let modestack = s.modeStack;
+        let modeStack = s.modeStack;
         let t: Token;
 
         switch (c) {
             case '$':
-                if ((t = doubleQuotesDollar(s))) {
+                if ((t = encapsulatedDollar(s))) {
                     return t;
                 }
                 break;
@@ -882,6 +882,107 @@ export namespace Lexer {
 
     }
 
+    function heredoc(s: LexerState) {
+
+        let l = s.input.length;
+        let c = s.input[s.position];
+        let start = s.position;
+        let modeStack = s.modeStack;
+        let t: Token;
+
+        switch (c) {
+            case '$':
+                if ((t = encapsulatedDollar(s))) {
+                    return t;
+                }
+                break;
+
+            case '{':
+                if (s.position + 1 < l && s.input[s.position + 1] === '$') {
+                    s.modeStack = s.modeStack.slice(0);
+                    s.modeStack.push(LexerMode.Scripting);
+                    ++s.position;
+                    return { tokenType: TokenType.CurlyOpen, offset: start, length: 1, modeStack: modeStack };
+                }
+                break;
+
+            default:
+                break;
+
+        }
+
+        return heredocAny(s);
+
+    }
+
+    function heredocAny(s: LexerState) {
+
+        let start = s.position;
+        let n = start;
+        let c: string;
+        let l = s.input.length;
+        let modeStack = s.modeStack;
+
+        while (n < l) {
+            c = s.input[n++];
+            switch (c) {
+                case '\r':
+                    if (n < l && s.input[n] === '\n') {
+                        ++n;
+                    }
+                /* fall through */
+                case '\n':
+                    /* Check for ending label on the next line */
+                    if (n < l && s.input.slice(n, n + s.heredocLabel.length) === s.heredocLabel) {
+                        let k = n + hereDocLabel.length;
+                        let startLabel = n;
+
+                        if (k < l && s.input[k] === ';') {
+                            ++k;
+                        }
+
+                        if (k < l && (s.input[k] === '\n' || s.input[k] === '\r')) {
+                            let nl = s.input.slice(n - 2, n);
+                            if(nl === '\r\n') {
+                                n -=2
+                            } else {
+                                --n;
+                            }
+
+                            s.position = n;
+                            s.modeStack = s.modeStack.slice(0, -1);
+                            s.modeStack.push(LexerMode.EndHereDoc);
+                            return { tokenType: TokenType.EncapsulatedAndWhitespace, offset: start, length: s.position - start, modeStack: modeStack };
+                        }
+                    }
+                    continue;
+                case '$':
+                    if (n < l && (isLabelStart(s.input[n]) || s.input[n] === '{')) {
+                        break;
+                    }
+                    continue;
+                case '{':
+                    if (n < l && s.input[n] === '$') {
+                        break;
+                    }
+                    continue;
+                case '\\':
+                    if (n < l && s.input[n] !== '\n' && s.input[n] !== '\r') {
+                        ++n;
+                    }
+                /* fall through */
+                default:
+                    continue;
+            }
+
+            --n;
+            break;
+        }
+
+        s.position = n;
+        return { tokenType: TokenType.EncapsulatedAndWhitespace, offset: start, length: s.position - start, modeStack: modeStack };
+    }
+
     function endHeredoc(s: LexerState) {
 
         let start = s.position;
@@ -950,7 +1051,7 @@ export namespace Lexer {
 
     }
 
-    function doubleQuotesDollar(s: LexerState): Token {
+    function encapsulatedDollar(s: LexerState): Token {
 
         let start = s.position;
         let l = s.input.length;
