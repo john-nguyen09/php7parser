@@ -541,6 +541,8 @@ export namespace Lexer {
         position: number;
         input: string;
         modeStack: LexerMode[];
+        doubleQuoteScannedLength: number;
+        heredocLabel: string
     }
 
     function isWhitespace(c: string) {
@@ -739,13 +741,13 @@ export namespace Lexer {
                 return scriptingBackslash(s);
 
             case '\'':
-                return scriptingSingleQuote(s);
+                return scriptingSingleQuote(s, start);
 
             case '"':
-                return scriptingDoubleQuote(s);
+                return scriptingDoubleQuote(s, start);
 
             default:
-                if(isLabelStart(c)) {
+                if (isLabelStart(c)) {
                     return scriptingLabelStart(s);
                 } else {
                     ++s.position;
@@ -756,31 +758,200 @@ export namespace Lexer {
 
     }
 
-    function scriptingDoubleQuote(s:LexerState) :Token {
+    function scriptingDoubleQuote(s: LexerState, start: number): Token {
+
+        //optional \ consumed
+        //consume until unescaped "
+        //if ${LABEL_START}, ${, {$ found or no match return " and consume none 
+        ++s.position;
+        let n = s.position;
+        let c: string;
+        let l = s.input.length;
+        let openingLength = s.position - start;
+
+        while (n < l) {
+            c = s.input[n++];
+            switch (c) {
+                case '"':
+                    s.position = n;
+                    return { tokenType: TokenType.StringLiteral, offset: start, length: s.position - start, modeStack: s.modeStack };
+                case '$':
+                    if (n < l && (isLabelStart(s.input[n]) || s.input[n] === '{')) {
+                        break;
+                    }
+                    continue;
+                case '{':
+                    if (n < l && s.input[n] === '$') {
+                        break;
+                    }
+                    continue;
+                case '\\':
+                    if (n < l) {
+                        ++n;
+                    }
+                /* fall through */
+                default:
+                    continue;
+            }
+
+            --n;
+            break;
+        }
+
+        s.doubleQuoteScannedLength = n;
+        let modestack = s.modeStack;
+        s.modeStack = s.modeStack.slice(0, -1);
+        s.modeStack.push(LexerMode.DoubleQuotes);
+        return { tokenType: TokenType.DoubleQuote, offset: start, length: s.position - start, modeStack: modeStack };
 
     }
 
-    function scriptingSingleQuote(s:LexerState): Token {
-        
+    function scriptingSingleQuote(s: LexerState, start: number): Token {
+        //optional \ already consumed
+        //find first unescaped '
+        let l = s.input.length;
+
+        while (true) {
+            ++s.position;
+            if (s.position < l) {
+                if (s.input[s.position] === '\'') {
+                    ++s.position;
+                    break;
+                } else if (s.input[s.position++] === '\\' && s.position < l) {
+                    ++s.position;
+                }
+            } else {
+                return { tokenType: TokenType.EncapsulatedAndWhitespace, offset: start, length: s.position - start, modeStack: s.modeStack };
+            }
+        }
+
+        return { tokenType: TokenType.StringLiteral, offset: start, length: s.position - start, modeStack: s.modeStack };
     }
 
-    function scriptingBackslash(s:LexerState) : Token {
+    function scriptingBackslash(s: LexerState): Token {
 
+        //single quote, double quote and heredoc open have optional \
+
+        let start = s.position;
+        ++s.position;
+        let t: Token;
+
+        if (s.position < s.input.length) {
+            switch (s.input[s.position]) {
+                case '\'':
+                    return scriptingSingleQuote(s, start);
+
+                case '"':
+                    return scriptingDoubleQuote(s, start);
+
+                case '<':
+                    t = scriptingHeredoc(s, start);
+                    if (t) {
+                        return t;
+                    }
+
+                default:
+                    break;
+            }
+        }
+
+        return { tokenType: TokenType.Backslash, offset: start, length: 1, modeStack: s.modeStack };
 
     }
 
-    function scriptingLabelStart(s:LexerState) : Token {
+    const endHeredocLabelRegExp = /^;?(?:\r\n|\n|\r)/;
+    function scriptingHeredoc(s: LexerState, start: number) {
+
+        //pos is on first <
+        let l = s.input.length;
+        let k = s.position;
+
+        let labelStart: number;
+        let labelEnd: number;
+
+        for (let kPlus3 = k + 3; k < kPlus3; ++k) {
+            if (k >= l || s.input[k] !== '<') {
+                return null;
+            }
+        }
+
+        while (k < l && (s.input[k] === ' ' || s.input[k] === '\t')) {
+            ++k;
+        }
+
+        let quote: string;
+        if (k < l && (s.input[k] === '\'' || s.input[k] === '"')) {
+            quote = s.input[k];
+            ++k;
+        }
+
+        labelStart = k;
+
+        if (k < l && isLabelStart(s.input[k])) {
+            while (++k < l && ((s.input[k] >= '0' && s.input[k] <= '9') || isLabelStart(s.input[k]))) { }
+        } else {
+            return null;
+        }
+
+        labelEnd = k;
+
+        if (quote) {
+            if (k < l && s.input[k] === quote) {
+                ++k;
+            } else {
+                return null;
+            }
+        }
+
+        if (k < l) {
+            if (s.input[k] === '\r') {
+                ++k;
+                if (s.input[k] === '\n') {
+                    ++k;
+                }
+            } else if (s.input[k] === '\n') {
+                ++k;
+            } else {
+                return null;
+            }
+        }
+
+        s.position = k;
+        s.heredocLabel = s.input.slice(labelStart, labelEnd);
+        let t = { tokenType: TokenType.StartHeredoc, offset: start, length: s.position - start, modeStack: s.modeStack };
+        s.modeStack = s.modeStack.slice(0, -1);
+
+        if (quote === '\'') {
+            s.modeStack.push(LexerMode.NowDoc);
+        } else {
+            s.modeStack.push(LexerMode.HereDoc);
+        }
+
+        //check for end on next line
+        if (
+            s.input.substr(s.position, s.heredocLabel.length) === s.heredocLabel &&
+            s.input.substr(s.position + s.heredocLabel.length, 3).search(endHeredocLabelRegExp) >= 0
+        ) {
+            s.modeStack.pop();
+            s.modeStack.push(LexerMode.EndHereDoc);
+        }
+
+        return t;
+
+    }
+
+    function scriptingLabelStart(s: LexerState): Token {
 
         let l = s.input.length;
         let start = s.position;
-        while(++s.position < l && ((s.input[s.position] >= '0' && s.input[s.position] <= '9') || isLabelStart(s.input[s.position]))) { }
+        while (++s.position < l && ((s.input[s.position] >= '0' && s.input[s.position] <= '9') || isLabelStart(s.input[s.position]))) { }
 
         let text = s.input.slice(start, s.position);
         let tokenType = 0;
 
-        if(text[0] === '_') {
-            
-            switch(text) {
+        if (text[0] === '_') {
+
+            switch (text) {
                 case '__CLASS__':
                     tokenType = TokenType.ClassConstant;
                     break;
@@ -809,14 +980,14 @@ export namespace Lexer {
                     break;
             }
 
-            if(tokenType > 0) {
+            if (tokenType > 0) {
                 return { tokenType: tokenType, offset: start, length: s.position - start, modeStack: s.modeStack };
             }
         }
 
         text = text.toLowerCase();
-        
-        switch(text) {
+
+        switch (text) {
             case 'exit':
                 tokenType = TokenType.Exit;
                 break;
@@ -975,7 +1146,7 @@ export namespace Lexer {
             case 'empty':
                 tokenType = TokenType.Empty;
                 break;
-            case '__halt_compiler': 
+            case '__halt_compiler':
                 tokenType = TokenType.HaltCompiler;
                 break;
             case 'static':
@@ -1021,7 +1192,7 @@ export namespace Lexer {
                 break;
         }
 
-        if(tokenType > 0) {
+        if (tokenType > 0) {
             return { tokenType: tokenType, offset: start, length: s.position - start, modeStack: s.modeStack };
         }
 
@@ -1029,16 +1200,16 @@ export namespace Lexer {
 
     }
 
-    function scriptingYield(s:LexerState, start:number) {
+    function scriptingYield(s: LexerState, start: number) {
         //pos will be after yield keyword
         //check for from
 
         let l = s.input.length;
         let k = s.position;
 
-        if(k < l && isWhitespace(s.input[k])) {
-            while(++k < l && isWhitespace(s.input[k])) { }
-            if(s.input.substr(k, 4).toLowerCase() === 'from') {
+        if (k < l && isWhitespace(s.input[k])) {
+            while (++k < l && isWhitespace(s.input[k])) { }
+            if (s.input.substr(k, 4).toLowerCase() === 'from') {
                 s.position = k + 4;
                 return { tokenType: TokenType.YieldFrom, offset: start, length: s.position - start, modeStack: s.modeStack };
             }
@@ -1056,21 +1227,21 @@ export namespace Lexer {
 
         ++s.position;
         if (s.position < l) {
-            if(s.input[s.position] === '?') {
+            if (s.input[s.position] === '?') {
                 ++s.position;
                 return { tokenType: TokenType.QuestionQuestion, offset: start, length: 2, modeStack: s.modeStack };
-            } else if(s.input[s.position] === '>') {
+            } else if (s.input[s.position] === '>') {
                 ++s.position;
-                if(s.position < l && s.input[s.position] === '\r') {
+                if (s.position < l && s.input[s.position] === '\r') {
                     ++s.position;
                 }
-                if(s.position < l && s.input[s.position] === '\n') {
+                if (s.position < l && s.input[s.position] === '\n') {
                     ++s.position;
                 }
                 let modeStack = s.modeStack;
                 s.modeStack = s.modeStack.slice(0, -1);
                 s.modeStack.push(LexerMode.Initial);
-                return { tokenType: TokenType.CloseTag, offset: start, length: s.position - start, modeStack: modeStack };        
+                return { tokenType: TokenType.CloseTag, offset: start, length: s.position - start, modeStack: modeStack };
             }
         }
         return { tokenType: TokenType.Question, offset: start, length: 1, modeStack: s.modeStack };
@@ -1434,7 +1605,12 @@ export namespace Lexer {
                             ++s.position;
                             return { tokenType: TokenType.LessThanLessThanEquals, offset: start, length: 3, modeStack: s.modeStack };
                         } else if (s.input[s.position] === '<') {
-                            return scriptingHeredoc(s);
+                            //go back to first <
+                            s.position -= 2;
+                            let heredoc = scriptingHeredoc(s, start);
+                            if (heredoc) {
+                                return heredoc;
+                            }
                         }
 
                     }
