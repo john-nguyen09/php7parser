@@ -954,6 +954,81 @@ export namespace Lexer {
 
     }
 
+    function lookingForVarName(s: LexerState) {
+
+        let start = s.position;
+        let c = s.input[s.position];
+        let l = s.input.length;
+        let modeStack = s.modeStack;
+
+        switch (s.input[s.position]) {
+
+            case '$':
+                if (s.position + 1 < l && isLabelStart(s.input[s.position + 1])) {
+                    ++s.position;
+                    while (++s.position < l && ((s.input[s.position] >= '0' && s.input[s.position] <= '9') || isLabelStart(s.input[s.position]))) { }
+                    return { tokenType: TokenType.VariableName, offset: start, length: s.position - start, modeStack: s.modeStack };
+                }
+                break;
+
+            case '[':
+                ++s.position;
+                return { tokenType: TokenType.OpenBracket, offset: start, length: 1, modeStack: s.modeStack };
+
+            case ']':
+                s.modeStack = s.modeStack.slice(0, -1);
+                ++s.position;
+                return { tokenType: TokenType.CloseBracket, offset: start, length: 1, modeStack: s.modeStack };
+
+            case '-':
+                ++s.position;
+                return { tokenType: TokenType.Minus, offset: start, length: 1, modeStack: s.modeStack };
+
+            default:
+                if (c >= '0' && c <= '9') {
+                    return lookingForVarNameNumeric(s);
+                } else if (isLabelStart(c)) {
+                    while (++s.position < l && ((s.input[s.position] >= '0' && s.input[s.position] <= '9') || isLabelStart(s.input[s.position]))) { }
+                    return { tokenType: TokenType.Name, offset: start, length: s.position - start, modeStack: s.modeStack };
+                }
+                break;
+
+        }
+
+        //unexpected char
+        s.modeStack = s.modeStack.slice(0, -1);
+        ++s.position;
+        return { tokenType: TokenType.Unknown, offset: start, length: 1, modeStack: modeStack };
+
+    }
+
+    function lookingForVarNameNumeric(s: LexerState) {
+
+        let start = s.position;
+        let c = s.input[s.position];
+        let l = s.input.length;
+
+        if (c === '0') {
+            let k = s.position + 1;
+            if (k < l && s.input[k] === 'b' && ++k < l && (s.input[k] === '1' || s.input[k] === '0')) {
+                while (++k < l && (s.input[k] === '1' || s.input[k] === '0')) { }
+                s.position = k;
+                return { tokenType: TokenType.IntegerLiteral, offset: start, length: s.position - start, modeStack: s.modeStack };
+            }
+
+            if (k < l && s.input[k] === 'x' && ++k < l && isHexDigit(s.input[k])) {
+                while (++k < l && isHexDigit(s.input[k])) { }
+                s.position = k;
+                return { tokenType: TokenType.IntegerLiteral, offset: start, length: s.position - start, modeStack: s.modeStack };
+            }
+        }
+
+        while (++s.position < l && s.input[s.position] >= '0' && s.input[s.position] <= '9') { }
+        return { tokenType: TokenType.IntegerLiteral, offset: start, length: s.position - start, modeStack: s.modeStack };
+
+
+    }
+
     function backtickAny(s: LexerState) {
 
         let n = s.position;
