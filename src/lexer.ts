@@ -829,6 +829,74 @@ export namespace Lexer {
         return doubleQuotesContent(s);
     }
 
+    function nowdoc(s: LexerState) {
+
+        //search for label
+        let start = s.position;
+        let n = start;
+        let l = s.input.length;
+        let c: string;
+        let modestack = s.modeStack;
+
+        while (n < l) {
+            c = s.input[n++];
+            switch (c) {
+                case '\r':
+                    if (n < l && s.input[n] === '\n') {
+                        ++n;
+                    }
+                /* fall through */
+                case '\n':
+                    /* Check for ending label on the next line */
+                    if (n < l && s.heredocLabel === s.input.substr(n, s.heredocLabel.length)) {
+                        let k = n + s.heredocLabel.length;
+
+                        if (k < l && s.input[k] === ';') {
+                            ++k;
+                        }
+
+                        if (k < l && (s.input[k] === '\n' || s.input[k] === '\r')) {
+
+                            //set position to whitespace before label
+                            let nl = s.input.slice(n - 2, n);
+                            if (nl === '\r\n') {
+                                n -= 2;
+                            } else {
+                                --n;
+                            }
+
+                            s.modeStack = s.modeStack.slice(0, -1);
+                            s.modeStack.push(LexerMode.EndHereDoc);
+                            break;
+
+                        }
+                    }
+                /* fall through */
+                default:
+                    continue;
+            }
+        }
+
+        s.position = n;
+        return { tokenType: TokenType.EncapsulatedAndWhitespace, offset: start, length: s.position - start, modeStack: modeStack };
+
+    }
+
+    function endHeredoc(s: LexerState) {
+
+        let start = s.position;
+        //consume ws
+        while (++s.position < s.input.length && (s.input[s.position] === '\r' || s.input[s.position] === '\n')) { }
+
+        s.position += s.heredocLabel.length;
+        s.heredocLabel = null;
+        let t = { tokenType: TokenType.EndHeredoc, offset: start, length: s.position - start, modeStack: s.modeStack };
+        s.modeStack = s.modeStack.slice(0, -1);
+        s.modeStack.push(LexerMode.Scripting);
+        return t;
+
+    }
+
     function doubleQuotesContent(s: LexerState) {
 
         let start = s.position;
