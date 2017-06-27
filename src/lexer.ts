@@ -530,8 +530,7 @@ export namespace Lexer {
     }
 
     function isLabelStart(chr: string) {
-        let cp = chr.charCodeAt(0);
-        return (cp >= 97 && cp <= 122) || (cp >= 65 && cp <= 90) || cp === 95 || cp > 0x7F;
+        return (chr >= 'a' && chr <= 'z') || (chr >= 'A' && chr <= 'Z') || chr === '_' || chr.charCodeAt(0) >= 0x80;
     }
 
     interface LexerAction {
@@ -599,6 +598,7 @@ export namespace Lexer {
         let c = s.input[s.position];
         let start = s.position;
         let l = s.input.length;
+        let modeStack = s.modeStack;
 
         switch (c) {
 
@@ -607,7 +607,7 @@ export namespace Lexer {
             case '\n':
             case '\r':
                 while (++s.position < l && (c === ' ' || c === '\n' || c === '\r' || c === '\t')) { }
-                return { tokenType: TokenType.Whitespace, offset: start, length: s.position - start, modeStack: s.modeStack };
+                return { tokenType: TokenType.Whitespace, offset: start, length: s.position - start, modeStack: modeStack };
 
             case '-':
                 return scriptingMinus(s);
@@ -615,9 +615,9 @@ export namespace Lexer {
             case ':':
                 if (++s.position < l && s.input[s.position] === ':') {
                     ++s.position;
-                    return { tokenType: TokenType.ColonColon, offset: start, length: 2, modeStack: s.modeStack };
+                    return { tokenType: TokenType.ColonColon, offset: start, length: 2, modeStack: modeStack };
                 }
-                return { tokenType: TokenType.Colon, offset: start, length: 1, modeStack: s.modeStack };
+                return { tokenType: TokenType.Colon, offset: start, length: 1, modeStack: modeStack };
 
             case '.':
                 return scriptingDot(s);
@@ -646,9 +646,9 @@ export namespace Lexer {
             case '%':
                 if (++s.position < l && s.input[s.position] === '=') {
                     ++s.position;
-                    return { tokenType: TokenType.PercentEquals, offset: start, length: 2, modeStack: s.modeStack };
+                    return { tokenType: TokenType.PercentEquals, offset: start, length: 2, modeStack: modeStack };
                 }
-                return { tokenType: TokenType.Percent, offset: start, length: 1, modeStack: s.modeStack };
+                return { tokenType: TokenType.Percent, offset: start, length: 1, modeStack: modeStack };
 
             case '&':
                 return scriptingAmpersand(s);
@@ -659,47 +659,43 @@ export namespace Lexer {
             case '^':
                 if (++s.position < l && s.input[s.position] === '=') {
                     ++s.position;
-                    return { tokenType: TokenType.CaretEquals, offset: start, length: 2, modeStack: s.modeStack };
+                    return { tokenType: TokenType.CaretEquals, offset: start, length: 2, modeStack: modeStack };
                 }
-                return { tokenType: TokenType.Caret, offset: start, length: 1, modeStack: s.modeStack };
-                
+                return { tokenType: TokenType.Caret, offset: start, length: 1, modeStack: modeStack };
+
             case ';':
                 ++s.position;
-                return { tokenType: TokenType.Semicolon, offset: start, length: 1, modeStack: s.modeStack };
+                return { tokenType: TokenType.Semicolon, offset: start, length: 1, modeStack: modeStack };
 
             case ',':
                 ++s.position;
-                return { tokenType: TokenType.Comma, offset: start, length: 1, modeStack: s.modeStack };
+                return { tokenType: TokenType.Comma, offset: start, length: 1, modeStack: modeStack };
 
             case '[':
                 ++s.position;
-                return { tokenType: TokenType.OpenBracket, offset: start, length: 1, modeStack: s.modeStack };
+                return { tokenType: TokenType.OpenBracket, offset: start, length: 1, modeStack: modeStack };
 
             case ']':
                 ++s.position;
-                return { tokenType: TokenType.CloseBracket, offset: start, length: 1, modeStack: s.modeStack };
+                return { tokenType: TokenType.CloseBracket, offset: start, length: 1, modeStack: modeStack };
 
             case '(':
                 return scriptingOpenParenthesis(s);
 
             case ')':
                 ++s.position;
-                return { tokenType: TokenType.CloseParenthesis, offset: start, length: 1, modeStack: s.modeStack };
+                return { tokenType: TokenType.CloseParenthesis, offset: start, length: 1, modeStack: modeStack };
 
             case '~':
                 ++s.position;
-                return { tokenType: TokenType.Tilde, offset: start, length: 1, modeStack: s.modeStack };
+                return { tokenType: TokenType.Tilde, offset: start, length: 1, modeStack: modeStack };
 
             case '?':
-                if (++s.position < l && s.input[s.position] === '?') {
-                    ++s.position;
-                    return { tokenType: TokenType.QuestionQuestion, offset: start, length: 2, modeStack: s.modeStack };
-                }
-                return { tokenType: TokenType.Question, offset: start, length: 1, modeStack: s.modeStack };
+                return scriptingQuestion(s);
 
             case '@':
                 ++s.position;
-                return { tokenType: TokenType.AtSymbol, offset: start, length: 1, modeStack: s.modeStack };
+                return { tokenType: TokenType.AtSymbol, offset: start, length: 1, modeStack: modeStack };
 
             case '$':
                 return scriptingDollar(s);
@@ -708,26 +704,390 @@ export namespace Lexer {
                 ++s.position;
                 return scriptingComment(s, start);
 
-            default:
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+                return scriptingNumeric(s);
+
+            case '{':
                 ++s.position;
-                return { tokenType: TokenType.Unknown, offset: start, length: 1, modeStack: s.modeStack };
+                s.modeStack = modeStack.slice(0);
+                s.modeStack.push(LexerMode.Scripting);
+                return { tokenType: TokenType.OpenBrace, offset: start, length: 1, modeStack: modeStack };
+
+            case '}':
+                ++s.position;
+                if (s.modeStack.length > 1) {
+                    s.modeStack = s.modeStack.slice(0, -1);
+                }
+                return { tokenType: TokenType.CloseBrace, offset: start, length: 1, modeStack: modeStack };
+
+            case '`':
+                ++s.position;
+                s.modeStack = s.modeStack.slice(0, -1);
+                s.modeStack.push(LexerMode.Backtick);
+                return { tokenType: TokenType.Backtick, offset: start, length: 1, modeStack: modeStack };
+
+            case '\\':
+                return scriptingBackslash(s);
+
+            case '\'':
+                return scriptingSingleQuote(s);
+
+            case '"':
+                return scriptingDoubleQuote(s);
+
+            default:
+                if(isLabelStart(c)) {
+                    return scriptingLabelStart(s);
+                } else {
+                    ++s.position;
+                    return { tokenType: TokenType.Unknown, offset: start, length: 1, modeStack: s.modeStack };
+                }
 
         }
 
     }
 
-    function scriptingDollar(s:LexerState) : Token {
+    function scriptingDoubleQuote(s:LexerState) :Token {
+
+    }
+
+    function scriptingSingleQuote(s:LexerState): Token {
+        
+    }
+
+    function scriptingBackslash(s:LexerState) : Token {
+
+
+    }
+
+    function scriptingLabelStart(s:LexerState) : Token {
+
+        let l = s.input.length;
+        let start = s.position;
+        while(++s.position < l && ((s.input[s.position] >= '0' && s.input[s.position] <= '9') || isLabelStart(s.input[s.position]))) { }
+
+        let text = s.input.slice(start, s.position);
+        let tokenType = 0;
+
+        if(text[0] === '_') {
+            
+            switch(text) {
+                case '__CLASS__':
+                    tokenType = TokenType.ClassConstant;
+                    break;
+                case '__TRAIT__':
+                    tokenType = TokenType.TraitConstant;
+                    break;
+                case '__FUNCTION__':
+                    tokenType = TokenType.FunctionConstant;
+                    break;
+                case '__METHOD__':
+                    tokenType = TokenType.MethodConstant;
+                    break;
+                case '__LINE__':
+                    tokenType = TokenType.LineConstant;
+                    break;
+                case '__FILE__':
+                    tokenType = TokenType.FileConstant;
+                    break;
+                case '__DIR__':
+                    tokenType = TokenType.DirectoryConstant;
+                    break;
+                case '__NAMESPACE__':
+                    tokenType = TokenType.NamespaceConstant;
+                    break;
+                default:
+                    break;
+            }
+
+            if(tokenType > 0) {
+                return { tokenType: tokenType, offset: start, length: s.position - start, modeStack: s.modeStack };
+            }
+        }
+
+        text = text.toLowerCase();
+        
+        switch(text) {
+            case 'exit':
+                tokenType = TokenType.Exit;
+                break;
+            case 'die':
+                tokenType = TokenType.Exit;
+                break;
+            case 'function':
+                tokenType = TokenType.Function;
+                break;
+            case 'const':
+                tokenType = TokenType.Const;
+                break;
+            case 'return':
+                tokenType = TokenType.Return;
+                break;
+            case 'yield':
+                return scriptingYield(s, start);
+            case 'try':
+                tokenType = TokenType.Try;
+                break;
+            case 'catch':
+                tokenType = TokenType.Catch;
+                break;
+            case 'finally':
+                tokenType = TokenType.Finally;
+                break;
+            case 'throw':
+                tokenType = TokenType.Throw;
+                break;
+            case 'if':
+                tokenType = TokenType.If;
+                break;
+            case 'elseif':
+                tokenType = TokenType.ElseIf;
+                break;
+            case 'endif':
+                tokenType = TokenType.EndIf;
+                break;
+            case 'else':
+                tokenType = TokenType.Else;
+                break;
+            case 'while':
+                tokenType = TokenType.While;
+                break;
+            case 'endwhile':
+                tokenType = TokenType.EndWhile;
+                break;
+            case 'do':
+                tokenType = TokenType.Do;
+                break;
+            case 'for':
+                tokenType = TokenType.For;
+                break;
+            case 'endfor':
+                tokenType = TokenType.EndFor;
+                break;
+            case 'foreach':
+                tokenType = TokenType.ForEach;
+                break;
+            case 'endforeach':
+                tokenType = TokenType.EndForeach;
+                break;
+            case 'declare':
+                tokenType = TokenType.Declare;
+                break;
+            case 'enddeclare':
+                tokenType = TokenType.EndDeclare;
+                break;
+            case 'instanceof':
+                tokenType = TokenType.InstanceOf;
+                break;
+            case 'as':
+                tokenType = TokenType.As;
+                break;
+            case 'switch':
+                tokenType = TokenType.Switch;
+                break;
+            case 'endswitch':
+                tokenType = TokenType.EndSwitch;
+                break;
+            case 'case':
+                tokenType = TokenType.Case;
+                break;
+            case 'default':
+                tokenType = TokenType.Default;
+                break;
+            case 'break':
+                tokenType = TokenType.Break;
+                break;
+            case 'continue':
+                tokenType = TokenType.Continue;
+                break;
+            case 'goto':
+                tokenType = TokenType.Goto;
+                break;
+            case 'echo':
+                tokenType = TokenType.Echo;
+                break;
+            case 'print':
+                tokenType = TokenType.Print;
+                break;
+            case 'class':
+                tokenType = TokenType.Class;
+                break;
+            case 'interface':
+                tokenType = TokenType.Interface;
+                break;
+            case 'trait':
+                tokenType = TokenType.Trait;
+                break;
+            case 'extends':
+                tokenType = TokenType.Extends;
+                break;
+            case 'implements':
+                tokenType = TokenType.Implements;
+                break;
+            case 'new':
+                tokenType = TokenType.New;
+                break;
+            case 'clone':
+                tokenType = TokenType.Clone;
+                break;
+            case 'var':
+                tokenType = TokenType.Var;
+                break;
+            case 'eval':
+                tokenType = TokenType.Eval;
+                break;
+            case 'include_once':
+                tokenType = TokenType.IncludeOnce;
+                break;
+            case 'include':
+                tokenType = TokenType.Include;
+                break;
+            case 'require_once':
+                tokenType = TokenType.RequireOnce;
+                break;
+            case 'require':
+                tokenType = TokenType.Require;
+                break;
+            case 'namespace':
+                tokenType = TokenType.Namespace;
+                break;
+            case 'use':
+                tokenType = TokenType.Use;
+                break;
+            case 'insteadof':
+                tokenType = TokenType.InsteadOf;
+                break;
+            case 'global':
+                tokenType = TokenType.Global;
+                break;
+            case 'isset':
+                tokenType = TokenType.Isset;
+                break;
+            case 'empty':
+                tokenType = TokenType.Empty;
+                break;
+            case '__halt_compiler': 
+                tokenType = TokenType.HaltCompiler;
+                break;
+            case 'static':
+                tokenType = TokenType.Static;
+                break;
+            case 'abstract':
+                tokenType = TokenType.Abstract;
+                break;
+            case 'final':
+                tokenType = TokenType.Final;
+                break;
+            case 'private':
+                tokenType = TokenType.Private;
+                break;
+            case 'protected':
+                tokenType = TokenType.Protected;
+                break;
+            case 'public':
+                tokenType = TokenType.Public;
+                break;
+            case 'unset':
+                tokenType = TokenType.Unset;
+                break;
+            case 'list':
+                tokenType = TokenType.List;
+                break;
+            case 'array':
+                tokenType = TokenType.Array;
+                break;
+            case 'callable':
+                tokenType = TokenType.Callable;
+                break;
+            case 'or':
+                tokenType = TokenType.Or;
+                break;
+            case 'and':
+                tokenType = TokenType.And;
+                break;
+            case 'xor':
+                tokenType = TokenType.Xor;
+                break;
+            default:
+                break;
+        }
+
+        if(tokenType > 0) {
+            return { tokenType: tokenType, offset: start, length: s.position - start, modeStack: s.modeStack };
+        }
+
+        return { tokenType: TokenType.Name, offset: start, length: s.position - start, modeStack: s.modeStack };
+
+    }
+
+    function scriptingYield(s:LexerState, start:number) {
+        //pos will be after yield keyword
+        //check for from
+
+        let l = s.input.length;
+        let k = s.position;
+
+        if(k < l && isWhitespace(s.input[k])) {
+            while(++k < l && isWhitespace(s.input[k])) { }
+            if(s.input.substr(k, 4).toLowerCase() === 'from') {
+                s.position = k + 4;
+                return { tokenType: TokenType.YieldFrom, offset: start, length: s.position - start, modeStack: s.modeStack };
+            }
+
+        }
+
+        return { tokenType: TokenType.Yield, offset: start, length: s.position - start, modeStack: s.modeStack };
+
+    }
+
+    function scriptingQuestion(s: LexerState): Token {
+
+        let l = s.input.length;
+        let start = s.position;
+
+        ++s.position;
+        if (s.position < l) {
+            if(s.input[s.position] === '?') {
+                ++s.position;
+                return { tokenType: TokenType.QuestionQuestion, offset: start, length: 2, modeStack: s.modeStack };
+            } else if(s.input[s.position] === '>') {
+                ++s.position;
+                if(s.position < l && s.input[s.position] === '\r') {
+                    ++s.position;
+                }
+                if(s.position < l && s.input[s.position] === '\n') {
+                    ++s.position;
+                }
+                let modeStack = s.modeStack;
+                s.modeStack = s.modeStack.slice(0, -1);
+                s.modeStack.push(LexerMode.Initial);
+                return { tokenType: TokenType.CloseTag, offset: start, length: s.position - start, modeStack: modeStack };        
+            }
+        }
+        return { tokenType: TokenType.Question, offset: start, length: 1, modeStack: s.modeStack };
+    }
+
+    function scriptingDollar(s: LexerState): Token {
         let start = s.position;
         let k = s.position;
         let l = s.input.length;
         ++k;
 
-        if(k < l && isLabelStart(s.input[k])) {
+        if (k < l && isLabelStart(s.input[k])) {
             ++k;
-            let cp:number;
-            while(k < l) {
+            let cp: number;
+            while (k < l) {
                 cp = s.input.charCodeAt(k);
-                if((cp >= 48 && cp <= 57) || (cp >= 97 && cp <= 122) || (cp >= 65 && cp <= 90) || cp === 95 || (cp >= 0x90 && cp <= 0xff)) {
+                if ((cp >= 48 && cp <= 57) || (cp >= 97 && cp <= 122) || (cp >= 65 && cp <= 90) || cp === 95 || (cp >= 0x90 && cp <= 0xff)) {
                     ++k;
                 }
             }
@@ -740,7 +1100,7 @@ export namespace Lexer {
         return { tokenType: TokenType.Dollar, offset: start, length: 1, modeStack: s.modeStack };
     }
 
-    function scriptingOpenParenthesis(s:LexerState) : Token{
+    function scriptingOpenParenthesis(s: LexerState): Token {
 
         let start = s.position;
         let k = start;
@@ -748,25 +1108,25 @@ export namespace Lexer {
 
         //check for cast tokens
         ++k;
-        while(k < l && (s.input[k] === ' ' || s.input[k] === '\t')) {
+        while (k < l && (s.input[k] === ' ' || s.input[k] === '\t')) {
             ++k;
         }
 
         let keywordStart = k;
-        while(k < l && ((s.input[k] >= 'A' && s.input <= 'Z') || (s.input[k] >= 'a' && s.input <= 'z'))) {
+        while (k < l && ((s.input[k] >= 'A' && s.input <= 'Z') || (s.input[k] >= 'a' && s.input <= 'z'))) {
             ++k;
         }
         let keywordEnd = k;
 
-        while(k < l && (s.input[k] === ' ' || s.input[k] === '\t')) { 
+        while (k < l && (s.input[k] === ' ' || s.input[k] === '\t')) {
             ++k;
         }
 
         //should have a ) here if valid cast token
-        if(k < l && s.input[k] === ')') {
+        if (k < l && s.input[k] === ')') {
             let keyword = s.input.slice(keywordStart, keywordEnd).toLowerCase();
             let tokenType = 0;
-            switch(keyword) {
+            switch (keyword) {
                 case 'int':
                 case 'integer':
                     tokenType = TokenType.IntegerCast;
@@ -804,7 +1164,7 @@ export namespace Lexer {
                     break;
             }
 
-            if(tokenType > 0) {
+            if (tokenType > 0) {
                 s.position = k + 1;
                 return { tokenType: tokenType, offset: start, length: s.position - start, modeStack: s.modeStack };
             }
@@ -816,12 +1176,72 @@ export namespace Lexer {
 
     }
 
+    function isHexDigit(c: string) {
+        return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+    }
+
+    function scriptingNumeric(s: LexerState): Token {
+
+        let start = s.position;
+        let l = s.input.length;
+        let k = s.position;
+
+        if (s.input[s.position] === '0' && ++k < l) {
+            if (s.input[k] === 'b' && ++k < l && (s.input[k] === '0' || s.input[k] === '1')) {
+                while (++k < l && (s.input[k] === '0' || s.input[k] === '1')) { }
+                s.position = k;
+                return { tokenType: TokenType.IntegerLiteral, offset: start, length: s.position - start, modeStack: s.modeStack };
+            }
+            k = s.position;
+            if (s.input[k] === 'x' && ++k < l && isHexDigit(s.input[k])) {
+                while (++k < l && isHexDigit(s.input[k])) { }
+                s.position = k;
+                return { tokenType: TokenType.IntegerLiteral, offset: start, length: s.position - start, modeStack: s.modeStack };
+            }
+        }
+
+        while (++s.position < l && s.input[s.position] >= '0' && s.input[s.position] <= '9') { }
+
+        if (s.input[s.position] === '.') {
+            ++s.position;
+            return scriptingNumericStartingWithDotOrE(s, start, true);
+        } else if (s.input[s.position] === 'e' || s.input[s.position] === 'E') {
+            return scriptingNumericStartingWithDotOrE(s, start, false);
+        }
+
+        return { tokenType: TokenType.IntegerLiteral, offset: start, length: s.position - start, modeStack: s.modeStack };
+
+    }
+
+    function scriptingNumericStartingWithDotOrE(s: LexerState, start: number, hasDot: boolean): Token {
+
+        let l = s.input.length;
+        while (s.position < l && s.input[s.position] >= '0' && s.input[s.position] <= '9') {
+            ++s.position;
+        }
+
+        if (s.position < l && (s.input[s.position] === 'e' || s.input[s.position] === 'E')) {
+            let k = s.position + 1;
+            if (k < l && (s.input[k] === '+' || s.input[k] === '-')) {
+                ++k;
+            }
+            if (k < l && s.input[k] >= '0' && s.input[k] <= '9') {
+                while (++k < l && s.input[k] >= '0' && s.input[k] <= '9') { }
+                s.position = k;
+                return { tokenType: TokenType.FloatingLiteral, offset: start, length: s.position - start, modeStack: s.modeStack };
+            }
+        }
+
+        return { tokenType: hasDot ? TokenType.FloatingLiteral : TokenType.IntegerLiteral, offset: start, length: s.position - start, modeStack: s.modeStack };
+
+    }
+
     function scriptingBar(s: LexerState): Token {
         let start = s.position;
         ++s.position;
 
         if (s.position < s.input.length) {
-            switch(s.input[s.position]) {
+            switch (s.input[s.position]) {
                 case '=':
                     ++s.position;
                     return { tokenType: TokenType.BarEquals, offset: start, length: 2, modeStack: s.modeStack };
@@ -829,6 +1249,9 @@ export namespace Lexer {
                 case '|':
                     ++s.position;
                     return { tokenType: TokenType.BarBar, offset: start, length: 2, modeStack: s.modeStack };
+
+                default:
+                    break;
             }
         }
 
@@ -918,22 +1341,22 @@ export namespace Lexer {
         return { tokenType: TokenType.ForwardSlash, offset: start, length: 1, modeStack: s.modeStack };
     }
 
-    function scriptingComment(s:LexerState, start:number) {
+    function scriptingComment(s: LexerState, start: number) {
         //s.position will be on first char after # or //
         //find first newline or closing tag
 
         let l = s.input.length;
-        let c:string;
+        let c: string;
 
-        while(s.position < l) {
+        while (s.position < l) {
             c = s.input[s.position];
             ++s.position;
-            if(c === '\n' || c === '\r') {
-                if(c === '\r' && s.position < l && s.input[s.position] === '\n') {
+            if (c === '\n' || c === '\r') {
+                if (c === '\r' && s.position < l && s.input[s.position] === '\n') {
                     ++s.position;
                 }
                 break;
-            } else if(c === '?' && s.input[s.position] === '>') {
+            } else if (c === '?' && s.input[s.position] === '>') {
                 ++s.position;
                 break;
             }
@@ -1109,6 +1532,7 @@ export namespace Lexer {
                 return { tokenType: TokenType.Ellipsis, offset: start, length: 3, modeStack: s.modeStack };
             } else if (c >= '0' && c <= '9') {
                 //float
+                return scriptingNumericStartingWithDotOrE(s, start, true);
             }
         }
         return { tokenType: TokenType.Dot, offset: start, length: 1, modeStack: s.modeStack };
@@ -1123,6 +1547,8 @@ export namespace Lexer {
             switch (s.input[s.position]) {
                 case '>':
                     ++s.position;
+                    modeStack = modeStack.slice(0);
+                    modeStack.push(LexerMode.LookingForProperty);
                     return { tokenType: TokenType.Arrow, offset: start, length: 2, modeStack: s.modeStack };
                 case '-':
                     ++s.position;
