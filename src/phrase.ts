@@ -4,7 +4,7 @@
 
 'use strict';
 
-import { Token } from './lexer';
+import { Token, TokenType } from './lexer';
 
 export const enum PhraseType {
     Unknown,
@@ -67,6 +67,7 @@ export const enum PhraseType {
     EncapsulatedVariable,
     EncapsulatedVariableList,
     EqualityExpression,
+    Error,
     ErrorClassMemberDeclaration,
     ErrorClassTypeDesignatorAtom,
     ErrorControlExpression,
@@ -199,10 +200,21 @@ export interface Phrase {
      * Phrase and token child nodes
      */
     children: (Phrase | Token)[];
+
+}
+
+export interface ParseError extends Phrase {
+
     /**
-     * Parse errors encountered whilst parsing phrase
+    * The token that prompted the parse error
+    */
+    unexpected: Token;
+
+    /**
+     * The expected token type
      */
-    errors?: ParseError[];
+    expected?: TokenType;
+
 }
 
 export interface BinaryExpression extends Phrase {
@@ -829,17 +841,6 @@ export interface YieldExpression extends Phrase {
 }
 export interface YieldFromExpression extends Phrase {
     expr: Phrase | Token;
-}
-
-export interface ParseError {
-    /**
-     * The token that prompted the parse error
-     */
-    unexpected: Token;
-    /**
-     * The number of tokens skipped to recover from this error
-     */
-    numberSkipped: number;
 }
 
 export function phraseTypeToString(type: PhraseType) {

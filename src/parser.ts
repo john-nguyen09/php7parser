@@ -438,7 +438,7 @@ export namespace Parser {
 
     var tokenBuffer: Token[];
     var phraseStack: Phrase[];
-    var errorPhrase: Phrase;
+    var errorPhrase: ParseError;
     var recoverSetStack: TokenType[][];
 
     export function parse(text: string): Phrase {
@@ -541,7 +541,7 @@ export namespace Parser {
             //implicit end statement
             return t;
         } else {
-            error();
+            error(tokenType);
             //test skipping a single token to sync
             if (peek(1).tokenType === tokenType) {
                 let predicate = (x: Token) => { return x.tokenType === tokenType; };
@@ -613,41 +613,34 @@ export namespace Parser {
     function skip(predicate: Predicate) {
 
         let t: Token;
-        let nSkipped = 0;
 
         while (true) {
             t = tokenBuffer.length ? tokenBuffer.shift() : Lexer.lex();
 
             if (predicate(t) || t.tokenType === TokenType.EndOfFile) {
                 tokenBuffer.unshift(t);
-                errorPhrase.errors[errorPhrase.errors.length - 1].numberSkipped = nSkipped;
                 break;
             } else {
-                ++nSkipped;
                 errorPhrase.children.push(t);
             }
         }
 
     }
 
-    function error() {
+    function error(expected?:TokenType) {
 
         //dont report errors if recovering from another
         if (errorPhrase) {
             return;
         }
 
-        errorPhrase = phraseStack[phraseStack.length - 1];
+        errorPhrase = {
+            phraseType : PhraseType.Error,
+            children:[],
+            unexpected: peek()
+        };
 
-        if (!errorPhrase.errors) {
-            errorPhrase.errors = [];
-        }
-
-        let t = peek();
-        errorPhrase.errors.push({
-            unexpected: t,
-            numberSkipped: 0
-        });
+        phraseStack[phraseStack.length - 1].children.push(errorPhrase);
 
     }
 
