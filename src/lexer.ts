@@ -1516,12 +1516,6 @@ export namespace Lexer {
                 return { tokenType: TokenType.QuestionQuestion, offset: start, length: 2, modeStack: s.modeStack };
             } else if (s.input[s.position] === '>') {
                 ++s.position;
-                if (s.position < l && s.input[s.position] === '\r') {
-                    ++s.position;
-                }
-                if (s.position < l && s.input[s.position] === '\n') {
-                    ++s.position;
-                }
                 let modeStack = s.modeStack;
                 s.modeStack = s.modeStack.slice(0, -1);
                 s.modeStack.push(LexerMode.Initial);
