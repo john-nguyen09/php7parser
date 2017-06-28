@@ -300,6 +300,8 @@ export namespace Lexer {
 
         }
 
+        console.log(JSON.stringify(t, null, 4));
+
         return t ? t : lex();
 
     }
@@ -638,6 +640,8 @@ export namespace Lexer {
                 default:
                     continue;
             }
+
+            break;
         }
 
         s.position = n;
@@ -880,7 +884,6 @@ export namespace Lexer {
                     /* Check for ending label on the next line */
                     if (n < l && s.input.slice(n, n + s.heredocLabel.length) === s.heredocLabel) {
                         let k = n + s.heredocLabel.length;
-                        let startLabel = n;
 
                         if (k < l && s.input[k] === ';') {
                             ++k;
@@ -955,8 +958,9 @@ export namespace Lexer {
             //find new pos
             let n = s.position;
             let l = s.input.length;
+            ++n;
 
-            if (s.input[n] === '\\' && n + 1 < l) {
+            if (s.input[s.position] === '\\' && n + 1 < l) {
                 ++n;
             }
 
@@ -1051,7 +1055,6 @@ export namespace Lexer {
         let n = s.position;
         let c: string;
         let l = s.input.length;
-        let openingLength = s.position - start;
 
         while (n < l) {
             c = s.input[n++];
