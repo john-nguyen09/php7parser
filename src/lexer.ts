@@ -346,12 +346,11 @@ export namespace Lexer {
             return t;
         }
 
-        while (s.position < l) {
+        while (++s.position < l) {
             c = s.input[s.position];
             if (c === '<' && s.position + 1 < l && s.input[s.position + 1] === '?') {
                 break;
             }
-            ++s.position;
         }
 
         return { tokenType: TokenType.Text, offset: start, length: s.position - start, modeStack: s.modeStack };
@@ -533,7 +532,7 @@ export namespace Lexer {
             case '\t':
             case '\n':
             case '\r':
-                while (++s.position < l && (c === ' ' || c === '\n' || c === '\r' || c === '\t')) { }
+                while (++s.position < l && isWhitespace(s.input[s.position])) { }
                 return { tokenType: TokenType.Whitespace, offset: start, length: s.position - start, modeStack: modeStack };
 
             default:
@@ -1796,8 +1795,8 @@ export namespace Lexer {
                     ++s.position;
                 }
                 break;
-            } else if (c === '?' && s.input[s.position] === '>') {
-                ++s.position;
+            } else if (c === '?' && s.position < l && s.input[s.position] === '>') {
+                --s.position;
                 break;
             }
         }

@@ -77,7 +77,7 @@ function parseRecurse(dir) {
                         if (count === done) {
                             console.log(count + ' files parsed');
                             console.log(errors + ' errors');
-                            console.log(JSON.stringify(errFiles));
+                            console.log(JSON.stringify(errFiles, null, 4));
                             console.log('elapsed: ' + Math.round(elapsed / 1000000) + ' ms');
                         }
                     });
