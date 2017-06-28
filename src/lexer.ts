@@ -300,8 +300,6 @@ export namespace Lexer {
 
         }
 
-        console.log(JSON.stringify(t, null, 4));
-
         return t ? t : lex();
 
     }
