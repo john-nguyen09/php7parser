@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.9.9]- 2017-07-03
+#### Fixed
+- Missing unset cast in precedence table
+
 ## [0.9.8] - 2017-06-22
 #### Fixed
 - Whitespace inside on namespace use decl
