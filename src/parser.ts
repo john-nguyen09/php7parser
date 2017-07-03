@@ -230,6 +230,8 @@ export namespace Parser {
                 return [47, Associativity.Right];
             case TokenType.BooleanCast:
                 return [47, Associativity.Right];
+            case TokenType.UnsetCast:
+                return [47, Associativity.Right];
             case TokenType.AtSymbol:
                 return [47, Associativity.Right];
             case TokenType.InstanceOf:
