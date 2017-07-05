@@ -230,15 +230,15 @@ export namespace Lexer {
         heredocLabel: string
     }
 
-    var state:LexerState;
+    var state: LexerState;
 
     export function setInput(text: string, lexerModeStack?: LexerMode[], position?: number) {
         state = {
             position: position ? position : 0,
-            input : text,
+            input: text,
             modeStack: lexerModeStack ? lexerModeStack : [LexerMode.Initial],
             doubleQuoteScannedLength: -1,
-            heredocLabel:null
+            heredocLabel: null
         };
     }
 
@@ -252,9 +252,9 @@ export namespace Lexer {
             };
         }
 
-        let t:Token;
+        let t: Token;
 
-        switch(state.modeStack[state.modeStack.length - 1]) {
+        switch (state.modeStack[state.modeStack.length - 1]) {
             case LexerMode.Initial:
                 t = initial(state);
                 break;
@@ -1790,12 +1790,11 @@ export namespace Lexer {
         while (s.position < l) {
             c = s.input[s.position];
             ++s.position;
-            if (c === '\n' || c === '\r') {
-                if (c === '\r' && s.position < l && s.input[s.position] === '\n') {
-                    ++s.position;
-                }
-                break;
-            } else if (c === '?' && s.position < l && s.input[s.position] === '>') {
+            if (
+                c === '\n' ||
+                c === '\r' ||
+                (c === '?' && s.position < l && s.input[s.position] === '>')
+            ) {
                 --s.position;
                 break;
             }
