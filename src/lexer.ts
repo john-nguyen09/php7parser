@@ -305,7 +305,13 @@ export namespace Lexer {
     }
 
     function isLabelStart(c: string) {
-        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c === '_' || <any>c >= 0x80;
+        let cp = c.charCodeAt(0);
+        return (cp > 0x40 && cp < 0x5b) || (cp > 0x60 && cp < 0x7b) || cp === 0x5f || (cp > 0x7f && cp < 0x100);
+    }
+
+    function isLabelChar(c: string) {
+        let cp = c.charCodeAt(0);
+        return (cp > 0x2f && cp < 0x3a) || (cp > 0x40 && cp < 0x5b) || (cp > 0x60 && cp < 0x7b) || cp === 0x5f || (cp > 0x7f && cp < 0x100);
     }
 
     function isWhitespace(c: string) {
@@ -537,7 +543,7 @@ export namespace Lexer {
 
             default:
                 if (isLabelStart(c)) {
-                    while (++s.position < l && ((s.input[s.position] >= '0' && s.input[s.position] <= '9') || isLabelStart(s.input[s.position]))) { }
+                    while (++s.position < l && isLabelChar(s.input[s.position])) { }
                     s.modeStack = s.modeStack.slice(0, -1);
                     return { tokenType: TokenType.Name, offset: start, length: s.position - start, modeStack: modeStack };
                 }
@@ -730,7 +736,7 @@ export namespace Lexer {
             case '$':
                 if (s.position + 1 < l && isLabelStart(s.input[s.position + 1])) {
                     ++s.position;
-                    while (++s.position < l && ((s.input[s.position] >= '0' && s.input[s.position] <= '9') || isLabelStart(s.input[s.position]))) { }
+                    while (++s.position < l && isLabelChar(s.input[s.position])) { }
                     return { tokenType: TokenType.VariableName, offset: start, length: s.position - start, modeStack: s.modeStack };
                 }
                 break;
@@ -752,7 +758,7 @@ export namespace Lexer {
                 if (c >= '0' && c <= '9') {
                     return varOffsetNumeric(s);
                 } else if (isLabelStart(c)) {
-                    while (++s.position < l && ((s.input[s.position] >= '0' && s.input[s.position] <= '9') || isLabelStart(s.input[s.position]))) { }
+                    while (++s.position < l && isLabelChar(s.input[s.position])) { }
                     return { tokenType: TokenType.Name, offset: start, length: s.position - start, modeStack: s.modeStack };
                 }
                 break;
@@ -774,7 +780,7 @@ export namespace Lexer {
 
         if (isLabelStart(s.input[s.position])) {
             let k = s.position + 1;
-            while (++k < l && ((s.input[k] >= '0' && s.input[k] <= '9') || isLabelStart(s.input[k]))) { }
+            while (++k < l && isLabelChar(s.input[k])) { }
             if (k < l && (s.input[k] === '[' || s.input[k] === '}')) {
                 s.modeStack = s.modeStack.slice(0, -1);
                 s.modeStack.push(LexerMode.Scripting);
@@ -1019,7 +1025,7 @@ export namespace Lexer {
             return null;
         }
 
-        while (++k < l && ((s.input[k] >= '0' && s.input[k] <= '9') || isLabelStart(s.input[k]))) { }
+        while (++k < l && isLabelChar(s.input[k])) { }
 
         if (k < l && s.input[k] === '[') {
             s.modeStack = s.modeStack.slice(0);
@@ -1171,7 +1177,7 @@ export namespace Lexer {
         labelStart = k;
 
         if (k < l && isLabelStart(s.input[k])) {
-            while (++k < l && ((s.input[k] >= '0' && s.input[k] <= '9') || isLabelStart(s.input[k]))) { }
+            while (++k < l && isLabelChar(s.input[k])) { }
         } else {
             return null;
         }
@@ -1227,7 +1233,7 @@ export namespace Lexer {
 
         let l = s.input.length;
         let start = s.position;
-        while (++s.position < l && ((s.input[s.position] >= '0' && s.input[s.position] <= '9') || isLabelStart(s.input[s.position]))) { }
+        while (++s.position < l && isLabelChar(s.input[s.position])) { }
 
         let text = s.input.slice(start, s.position);
         let tokenType = 0;
@@ -1531,7 +1537,7 @@ export namespace Lexer {
         ++k;
 
         if (k < l && isLabelStart(s.input[k])) {
-            while (++k < l && ((s.input[k] >= '0' && s.input[k] <= '9') || isLabelStart(s.input[k]))) { }
+            while (++k < l && isLabelChar(s.input[k])) { }
             s.position = k;
             return { tokenType: TokenType.VariableName, offset: start, length: s.position - start, modeStack: s.modeStack };
         }
