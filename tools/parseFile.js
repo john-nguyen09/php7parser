@@ -11,7 +11,7 @@ if (process.argv.length !== 3) {
     console.log('Usage: node parseFile.js PATH_TO_FILE');
     return;
 }
-
+/*
 let keys = ['tokenType', 'phraseType', 'errors', 'unexpected', 'offset', 'numberSkipped', 'children'];
 let replacer = (k, v) => { 
 
@@ -25,7 +25,7 @@ let replacer = (k, v) => {
 
     return isNaN(k) && keys.indexOf(k) < 0 ? undefined : v; 
 
-}
+}*/
 filepath = process.argv[2];
 
 fs.readFile(filepath, function (err, data) {
@@ -37,7 +37,7 @@ fs.readFile(filepath, function (err, data) {
     let hrtime = process.hrtime();
     tree = php.Parser.parse(dataString);
     let hrtimeDiff = process.hrtime(hrtime);
-    console.log(JSON.stringify(tree, replacer, 4));
+    //console.log(JSON.stringify(tree, replacer, 4));
     console.log(hrtimeDiff);
     console.log(process.memoryUsage());
 
