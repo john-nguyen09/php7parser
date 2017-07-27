@@ -1,5 +1,14 @@
 # Change Log
 
+## [1.0.0] - 2017-07-27
+#### Changed
+- Refactored lexer. No longer uses reg. exp.
+- 50%+ improved performance
+- Removed interface declarations for each node type
+- Parse errors now reported in tree as own nodes with skipped child tokens.
+#### Fixed
+- Single line comments don't consume trailing whitespace
+
 ## [0.9.9]- 2017-07-03
 #### Fixed
 - Missing unset cast in precedence table
