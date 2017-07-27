@@ -2,7 +2,7 @@
 
 A fast and forgiving PHP7 recursive descent parser implemented in Typescript. 
 
-The parser outputs a parse tree of phrases (branches) and tokens (leaves). The complete source code is represented by the tree including whitespace. Interfaces are defined for each phrase type (see typings in lib).
+The parser outputs a parse tree of phrases (branches) and tokens (leaves). The complete source code is represented by the tree including whitespace.
 
 ## Design Goals
 
@@ -37,10 +37,20 @@ The parser outputs a parse tree of phrases (branches) and tokens (leaves). The c
          * Phrase and token child nodes
          */
         children: (Phrase | Token)[];
+    }
+
+    export interface ParseError extends Phrase {
+
         /**
-         * Parse errors encountered whilst parsing phrase
+         * The token that prompted the parse error
          */
-        errors?: ParseError[];
+        unexpected: Token;
+
+        /**
+         * The expected token type
+         */
+        expected?: TokenType;
+
     }
 
     export interface Token {
@@ -60,17 +70,6 @@ The parser outputs a parse tree of phrases (branches) and tokens (leaves). The c
          * Lexer mode prior to this token being read.
          */
         modeStack: LexerMode[];
-    }
-
-    export interface ParseError {
-        /**
-         * The token that prompted the parse error
-         */
-        unexpected: Token;
-        /**
-         * The number of tokens skipped to recover from this error
-         */
-        numberSkipped: number;
     }
 
 ```
