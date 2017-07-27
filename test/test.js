@@ -7,16 +7,6 @@ var fs = require('fs');
 
 cp.execSync('npm run build');
 
-function isNumeric(n) {
-    return !isNaN(parseFloat(n)) && isFinite(n);
-}
-
-const keys = [
-    'tokenType', 'offset', 'length', 'modeStack',
-    'phraseType', 'children', 'errors', 'unexpected',
-    'numberSkipped'
-];
-
 describe("php7parser", function () {
 
     var list = fs.readdirSync(testDir);
@@ -26,10 +16,7 @@ describe("php7parser", function () {
             return;
         }
         var phpData = fs.readFileSync(filepath);
-        let tree = php7parser.Parser.parse(phpData.toString());
-        let actual = JSON.parse(JSON.stringify(tree, (k, v) => {
-            return k && !isNumeric(k) && keys.indexOf(k) < 0 ? undefined : v;
-        }, 4));
+        let actual = php7parser.Parser.parse(phpData.toString());
 
         let jsonData = fs.readFileSync(filepath + '.json');
         let expected = JSON.parse(jsonData.toString());

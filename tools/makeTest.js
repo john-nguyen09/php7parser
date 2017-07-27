@@ -18,20 +18,6 @@ if (!path.isAbsolute(filepath)) {
     filepath = path.resolve(filepath);
 }
 
-const keys = [
-    'tokenType', 'offset', 'length', 'modeStack',
-    'phraseType', 'children', 'errors', 'unexpected',
-    'numberSkipped'
-];
-
-function isNumeric(n) {
-    return !isNaN(parseFloat(n)) && isFinite(n);
-}
-
-function replacer(k, v) {
-    return k && !isNumeric(k) && keys.indexOf(k) < 0 ? undefined : v;
-}
-
 fs.readFile(filepath, function (err, data) {
     if (err) {
         throw err;
@@ -43,7 +29,7 @@ fs.readFile(filepath, function (err, data) {
     let hrtimeDiff = process.hrtime(hrtime);
     let testFilepath = filepath + '.json';
 
-    fs.writeFile(testFilepath, JSON.stringify(tree, replacer, 4), function (err) {
+    fs.writeFile(testFilepath, JSON.stringify(tree, null, 4), function (err) {
         if (err) {
             throw err;
         }

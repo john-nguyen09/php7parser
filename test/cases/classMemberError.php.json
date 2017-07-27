@@ -1,8 +1,8 @@
 {
-    "phraseType": 156,
+    "phraseType": 157,
     "children": [
         {
-            "phraseType": 98,
+            "phraseType": 99,
             "children": [
                 {
                     "tokenType": 156,
@@ -86,10 +86,10 @@
                             "phraseType": 32,
                             "children": [
                                 {
-                                    "phraseType": 60,
+                                    "phraseType": 61,
                                     "children": [
                                         {
-                                            "phraseType": 109,
+                                            "phraseType": 110,
                                             "children": [
                                                 {
                                                     "tokenType": 55,
@@ -101,10 +101,10 @@
                                                     ]
                                                 }
                                             ]
-                                        }
-                                    ],
-                                    "errors": [
+                                        },
                                         {
+                                            "phraseType": 60,
+                                            "children": [],
                                             "unexpected": {
                                                 "tokenType": 119,
                                                 "offset": 45,
@@ -113,8 +113,7 @@
                                                     1,
                                                     1
                                                 ]
-                                            },
-                                            "numberSkipped": 0
+                                            }
                                         }
                                     ]
                                 }
