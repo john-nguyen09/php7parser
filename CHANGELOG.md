@@ -3,7 +3,7 @@
 ## [1.0.0] - 2017-07-27
 #### Changed
 - Refactored lexer. No longer uses reg. exp.
-- 50%+ improved performance
+- Up to 4x improved performance
 - Removed interface declarations for each node type
 - Parse errors now reported in tree as own nodes with skipped child tokens.
 #### Fixed
