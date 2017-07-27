@@ -23,7 +23,7 @@ fs.readFile(filepath, function (err, data) {
     let hrtime = process.hrtime();
     tree = php.Parser.parse(dataString);
     let hrtimeDiff = process.hrtime(hrtime);
-    //console.log(JSON.stringify(tree, null, 4));
+    console.log(JSON.stringify(tree, null, 4));
     console.log(hrtimeDiff);
     console.log(process.memoryUsage());
 

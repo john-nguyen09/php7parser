@@ -23,11 +23,10 @@ if (!path.isAbsolute(pathToCodeRootDir)) {
 }
 
 function hasErrorRecurse(node, filepath) {
-    if (node.errors) {
-        let keys = ['tokenType', 'phraseType', 'errors', 'unexpected', 'offset', 'numberSkipped'];
+    if (node.phraseType === 60) {
         //throw new Error(JSON.stringify(node, function(k,v){ return isNaN(k) && keys.indexOf(k) < 0 ? undefined : v; }, 4));
         console.log('ERROR');
-        console.log(JSON.stringify(node, function (k, v) { return isNaN(k) && keys.indexOf(k) < 0 ? undefined : v; }, 4));
+        console.log(JSON.stringify(node, null, 4));
         errors++;
         errFiles.push(filepath);
     }
