@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.0.1] - TBA
+#### Fixed
+- Endless loop on error inside namespace use decl when namespace keyword is alias
+
 ## [1.0.0] - 2017-07-27
 #### Changed
 - Refactored lexer. No longer uses reg. exp.
@@ -7,7 +11,7 @@
 - Removed interface declarations for each node type
 - Parse errors now reported in tree as own nodes with skipped child tokens.
 #### Fixed
-- Single line comments don't consume trailing whitespace
+- Single line comments should not consume trailing whitespace
 
 ## [0.9.9]- 2017-07-03
 #### Fixed
