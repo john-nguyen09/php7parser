@@ -296,7 +296,7 @@ export namespace Parser {
         let t: Token;
 
         while (true) {
-
+            
             t = tokenBuffer.length ? tokenBuffer.shift() : Lexer.lex();
             if (t.tokenType < TokenType.Comment) {
                 tokenBuffer.unshift(t);
@@ -406,7 +406,7 @@ export namespace Parser {
         let t: Token;
 
         while (true) {
-
+            
             ++bufferPos;
             if (bufferPos === tokenBuffer.length) {
                 tokenBuffer.push(Lexer.lex());
@@ -481,9 +481,9 @@ export namespace Parser {
         recoverSetStack.push(listRecoverSet);
 
         while (true) {
-
+            
             t = peek();
-
+            
             if (elementStartPredicate(t)) {
                 recoveryAttempted = false;
                 p.children.push(elementFunction());
@@ -588,7 +588,7 @@ export namespace Parser {
         let binaryPhraseType: PhraseType;
 
         while (true) {
-
+            
             op = peek();
             binaryPhraseType = binaryOpToPhraseType(op);
 
@@ -1820,7 +1820,7 @@ export namespace Parser {
         caseBreakOn.push(breakOn);
 
         while (true) {
-
+            
             t = peek();
 
             if (t.tokenType === TokenType.Case) {
@@ -2530,7 +2530,7 @@ export namespace Parser {
         let part = classTypeDesignatorAtom();
 
         while (true) {
-
+            
             switch (peek().tokenType) {
                 case TokenType.OpenBracket:
                     part = subscriptExpression(part, TokenType.CloseBracket);
@@ -3027,7 +3027,7 @@ export namespace Parser {
         recoverSetStack.push(arrayInitialiserListRecoverSet);
 
         while (true) {
-
+            
             //an array can have empty elements
             if (isArrayElementStart(peek())) {
                 p.children.push(arrayElement());
@@ -3213,7 +3213,7 @@ export namespace Parser {
         p.children.push(delimitedList(
             PhraseType.NamespaceUseClauseList,
             namespaceUseClauseFunction(nsNameNode),
-            isQualifiedNameStart,
+            isNamespaceUseClauseStartToken,
             TokenType.Comma,
             [TokenType.Semicolon],
             true));
@@ -3221,6 +3221,10 @@ export namespace Parser {
         expect(TokenType.Semicolon);
         return end();
 
+    }
+
+    function isNamespaceUseClauseStartToken(t:Token) {
+        return t.tokenType === TokenType.Name || t.tokenType === TokenType.Backslash;
     }
 
     function namespaceUseClauseFunction(nsName: Phrase) {
@@ -3255,10 +3259,10 @@ export namespace Parser {
         recoverSetStack.push(delimitedListRecoverSet);
 
         while (true) {
-
+            
             p.children.push(elementFunction());
             t = peek();
-
+            
             if (t.tokenType === delimiter) {
                 next();
             } else if (!breakOn || breakOn.indexOf(t.tokenType) >= 0) {
@@ -3348,7 +3352,7 @@ export namespace Parser {
         expect(TokenType.Name);
 
         while (true) {
-
+            
             if (peek().tokenType === TokenType.Backslash &&
                 peek(1).tokenType === TokenType.Name) {
                 next();
