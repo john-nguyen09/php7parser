@@ -1,6 +1,6 @@
 {
   "name": "php7parser",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "PHP 7 Parser",
   "main": "./lib/php7parser.js",
   "types": "./lib/php7parser.d.ts",
@@ -24,10 +24,10 @@
     "url": "https://github.com/bmewburn/php7parser.git"
   },
   "devDependencies": {
-    "@types/chai": "^3.4.35",
-    "@types/mocha": "^2.2.39",
-    "chai": "^3.5.0",
-    "mocha": "^3.2.0",
-    "typescript": "^2.3.4"
+    "@types/chai": "^4.0.4",
+    "@types/mocha": "^2.2.43",
+    "chai": "^4.1.2",
+    "mocha": "^4.0.1",
+    "typescript": "^2.5.3"
   }
 }

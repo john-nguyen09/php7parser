@@ -1,8 +1,9 @@
 # Change Log
 
-## [1.0.1] - TBA
+## [1.0.1] - 2017-10-11
 #### Fixed
 - Endless loop on error inside namespace use decl when namespace keyword is alias
+- Trailing whitespace missing from parse tree
 
 ## [1.0.0] - 2017-07-27
 #### Changed
