@@ -261,8 +261,10 @@ export namespace Parser {
     export function parse(text: string): Phrase {
 
         init(text);
-        return statementList([TokenType.EndOfFile]);
-
+        let stmtList = statementList([TokenType.EndOfFile]);
+        //append trailing hidden tokens
+        hidden(stmtList);
+        return stmtList;
     }
 
     function init(text: string, lexerModeStack?: LexerMode[]) {
@@ -290,9 +292,12 @@ export namespace Parser {
         return phraseStack.pop();
     }
 
-    function hidden() {
+    function hidden(p?:Phrase) {
 
-        let p = phraseStack[phraseStack.length - 1];
+        if(!p) {
+            p = phraseStack[phraseStack.length - 1];
+        }
+        
         let t: Token;
 
         while (true) {
