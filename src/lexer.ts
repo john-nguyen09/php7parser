@@ -1738,7 +1738,7 @@ export namespace Lexer {
         let start = s.position - 2;
         let l = s.input.length;
 
-        if (s.position < l && s.input[s.position] === '*') {
+        if (s.position < l && s.input[s.position] === '*' && s.position + 1 < l && s.input[s.position + 1] !== '/') {
             ++s.position;
             tokenType = TokenType.DocumentComment;
         }
