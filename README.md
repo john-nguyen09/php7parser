@@ -10,6 +10,7 @@ The parser outputs a parse tree of phrases (branches) and tokens (leaves). The c
 * Error tolerant and high performance.
 * Output representative of full source code.
 * Adherance to the PHP language specifications.
+* Prefer error tolerance over enforcement of language constraints.
 
 ## Usage
 
