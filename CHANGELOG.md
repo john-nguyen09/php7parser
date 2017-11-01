@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.0.2] - 2017-11-01
+#### Fixed
+- Close tag on empty inline comment not being recognised 
+
 ## [1.0.1] - 2017-10-11
 #### Fixed
 - Endless loop on error inside namespace use decl when namespace keyword is alias
