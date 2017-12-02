@@ -1,6 +1,6 @@
 {
   "name": "php7parser",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "PHP 7 Parser",
   "main": "./lib/php7parser.js",
   "types": "./lib/php7parser.d.ts",
