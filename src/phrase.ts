@@ -340,6 +340,8 @@ export function phraseTypeToString(type: PhraseType) {
             return 'EncapsulatedVariableList';
         case PhraseType.EqualityExpression:
             return 'EqualityExpression';
+        case PhraseType.Error:
+            return 'Error';
         case PhraseType.ErrorClassMemberDeclaration:
             return 'ErrorClassMemberDeclaration';
         case PhraseType.ErrorClassTypeDesignatorAtom:
@@ -394,6 +396,8 @@ export function phraseTypeToString(type: PhraseType) {
             return 'FunctionDeclaration';
         case PhraseType.FunctionDeclarationHeader:
             return 'FunctionDeclarationHeader';
+        case PhraseType.FunctionDeclarationBody:
+            return 'FunctionDeclarationBody';
         case PhraseType.FunctionStaticDeclaration:
             return 'FunctionStaticDeclaration';
         case PhraseType.FunctionStaticInitialiser:

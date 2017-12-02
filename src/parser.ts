@@ -1601,7 +1601,18 @@ export namespace Parser {
             case TokenType.Const:
                 return constDeclaration();
             case TokenType.Function:
-                return functionDeclaration();
+                {
+                    let p1 = peek(1);
+                    if(
+                        p1.tokenType === TokenType.OpenParenthesis || 
+                        (p1.tokenType === TokenType.Ampersand && peek(2).tokenType === TokenType.OpenParenthesis)
+                    ) {
+                        //anon fn without assignment
+                        return expressionStatement();
+                    } else {
+                        return functionDeclaration();
+                    }
+                }
             case TokenType.Class:
             case TokenType.Abstract:
             case TokenType.Final:
