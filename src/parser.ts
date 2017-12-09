@@ -3170,9 +3170,7 @@ export namespace Parser {
         if (t && t.tokenType === TokenType.Dollar) {
             t = peek();
             if (t.tokenType === TokenType.OpenBrace) {
-                next();
-                p.children.push(expression(0));
-                expect(TokenType.CloseBrace);
+                p.children.push(encapsulatedExpression(TokenType.OpenBrace, TokenType.CloseBrace));
             } else if (t.tokenType === TokenType.Dollar || t.tokenType === TokenType.VariableName) {
                 p.children.push(simpleVariable());
             } else {
