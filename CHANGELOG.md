@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.0.4] - 2017-12-09
+#### Changed
+- Dynamic var use encaps expr child
+
 ## [1.0.3] - 2017-12-02
 #### Fixed
 - Incorrectly reporting parse error on anon. function expression statement.
