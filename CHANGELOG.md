@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.0.5] - 2017-12-16
+#### Changed
+- Allow utf8 names to match official php lexer implementation.
+
 ## [1.0.4] - 2017-12-09
 #### Changed
 - Dynamic var use encaps expr child
