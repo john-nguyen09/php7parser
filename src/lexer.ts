@@ -306,12 +306,14 @@ export namespace Lexer {
 
     function isLabelStart(c: string) {
         let cp = c.charCodeAt(0);
-        return (cp > 0x40 && cp < 0x5b) || (cp > 0x60 && cp < 0x7b) || cp === 0x5f || (cp > 0x7f && cp < 0x100);
+        //spec suggests that only extended ascii (cp > 0x7f && cp < 0x100) is valid but official lexer seems ok with all utf8
+        return (cp > 0x40 && cp < 0x5b) || (cp > 0x60 && cp < 0x7b) || cp === 0x5f || cp > 0x7f;
     }
 
     function isLabelChar(c: string) {
         let cp = c.charCodeAt(0);
-        return (cp > 0x2f && cp < 0x3a) || (cp > 0x40 && cp < 0x5b) || (cp > 0x60 && cp < 0x7b) || cp === 0x5f || (cp > 0x7f && cp < 0x100);
+        //spec suggests that only extended ascii (cp > 0x7f && cp < 0x100) is valid but official lexer seems ok with all utf8
+        return (cp > 0x2f && cp < 0x3a) || (cp > 0x40 && cp < 0x5b) || (cp > 0x60 && cp < 0x7b) || cp === 0x5f || cp > 0x7f;
     }
 
     function isWhitespace(c: string) {
