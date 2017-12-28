@@ -1915,7 +1915,7 @@ export namespace Lexer {
         if (++s.position < s.input.length && s.input[s.position] === '=') {
             if (++s.position < s.input.length && s.input[s.position] === '=') {
                 ++s.position;
-                return { tokenType: TokenType.ExclamationEqualsEquals, offset: start, length: 1, modeStack: s.modeStack };
+                return { tokenType: TokenType.ExclamationEqualsEquals, offset: start, length: 3, modeStack: s.modeStack };
             }
             return { tokenType: TokenType.ExclamationEquals, offset: start, length: 2, modeStack: s.modeStack };
         }
