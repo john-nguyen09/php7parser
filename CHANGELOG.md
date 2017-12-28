@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.0.6] - 2017-12-28
+#### Fixed
+- `!==` length
+
 ## [1.0.5] - 2017-12-16
 #### Changed
 - Allow utf8 names to match official php lexer implementation.
