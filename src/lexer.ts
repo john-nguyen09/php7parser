@@ -1885,6 +1885,8 @@ export namespace Lexer {
                             let heredoc = scriptingHeredoc(s, start);
                             if (heredoc) {
                                 return heredoc;
+                            } else {
+                                s.position += 2;
                             }
                         }
 
