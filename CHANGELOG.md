@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.0.7] - 2018-01-05
+#### Fixed
+- Inf. loop on merge conflict marker
+
 ## [1.0.6] - 2017-12-28
 #### Fixed
 - `!==` length
