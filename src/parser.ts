@@ -460,10 +460,11 @@ export namespace Parser {
             return;
         }
 
-        errorPhrase = {
+        errorPhrase = <ParseError>{
             phraseType : PhraseType.Error,
             children:[],
-            unexpected: peek()
+            unexpected: peek(),
+            expected: expected
         };
 
         phraseStack[phraseStack.length - 1].children.push(errorPhrase);
