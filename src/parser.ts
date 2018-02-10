@@ -466,9 +466,12 @@ export namespace Parser {
         errorPhrase = <ParseError>{
             phraseType : PhraseType.Error,
             children:[],
-            unexpected: peek(),
-            expected: expected
+            unexpected: peek()
         };
+
+        if(expected) {
+            errorPhrase.expected = expected;
+        }
 
         phraseStack[phraseStack.length - 1].children.push(errorPhrase);
 

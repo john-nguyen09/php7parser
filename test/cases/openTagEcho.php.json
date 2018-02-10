@@ -1,0 +1,170 @@
+{
+    "phraseType": 157,
+    "children": [
+        {
+            "phraseType": 51,
+            "children": [
+                {
+                    "tokenType": 157,
+                    "offset": 0,
+                    "length": 3,
+                    "modeStack": [
+                        0
+                    ]
+                },
+                {
+                    "tokenType": 161,
+                    "offset": 3,
+                    "length": 1,
+                    "modeStack": [
+                        1
+                    ]
+                },
+                {
+                    "phraseType": 72,
+                    "children": [
+                        {
+                            "phraseType": 156,
+                            "children": [
+                                {
+                                    "tokenType": 84,
+                                    "offset": 4,
+                                    "length": 2,
+                                    "modeStack": [
+                                        1
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "tokenType": 93,
+                            "offset": 6,
+                            "length": 1,
+                            "modeStack": [
+                                1
+                            ]
+                        },
+                        {
+                            "tokenType": 161,
+                            "offset": 7,
+                            "length": 1,
+                            "modeStack": [
+                                1
+                            ]
+                        },
+                        {
+                            "phraseType": 156,
+                            "children": [
+                                {
+                                    "tokenType": 84,
+                                    "offset": 8,
+                                    "length": 2,
+                                    "modeStack": [
+                                        1
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "tokenType": 88,
+                    "offset": 10,
+                    "length": 1,
+                    "modeStack": [
+                        1
+                    ]
+                }
+            ]
+        },
+        {
+            "tokenType": 161,
+            "offset": 11,
+            "length": 1,
+            "modeStack": [
+                1
+            ]
+        },
+        {
+            "phraseType": 73,
+            "children": [
+                {
+                    "phraseType": 155,
+                    "children": [
+                        {
+                            "phraseType": 156,
+                            "children": [
+                                {
+                                    "tokenType": 84,
+                                    "offset": 12,
+                                    "length": 2,
+                                    "modeStack": [
+                                        1
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "tokenType": 161,
+                            "offset": 14,
+                            "length": 1,
+                            "modeStack": [
+                                1
+                            ]
+                        },
+                        {
+                            "tokenType": 85,
+                            "offset": 15,
+                            "length": 1,
+                            "modeStack": [
+                                1
+                            ]
+                        },
+                        {
+                            "tokenType": 161,
+                            "offset": 16,
+                            "length": 1,
+                            "modeStack": [
+                                1
+                            ]
+                        },
+                        {
+                            "phraseType": 156,
+                            "children": [
+                                {
+                                    "tokenType": 84,
+                                    "offset": 17,
+                                    "length": 2,
+                                    "modeStack": [
+                                        1
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "tokenType": 161,
+            "offset": 19,
+            "length": 1,
+            "modeStack": [
+                1
+            ]
+        },
+        {
+            "phraseType": 99,
+            "children": [
+                {
+                    "tokenType": 158,
+                    "offset": 20,
+                    "length": 2,
+                    "modeStack": [
+                        1
+                    ]
+                }
+            ]
+        }
+    ]
+}

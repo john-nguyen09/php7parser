@@ -23,7 +23,7 @@ fs.readFile(filepath, function (err, data) {
     let replacer = (key, value) => {
         if(key === 'phraseType') {
             return php.phraseTypeToString(value);
-        } else if(key === 'tokenType' || key === 'unexpected' || key === 'expected') {
+        } else if(key === 'tokenType' || key === 'expected') {
             return php.tokenTypeToString(value);
         } else {
             return value;
