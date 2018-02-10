@@ -12,6 +12,6 @@
         "lib",
 		"test",
 		".vscode",
-		"tools"
+		"bin"
 	]
 }
