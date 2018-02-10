@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.0.8] - 2018-02-10
+#### Fixed
+- Treat OpenTagEcho as Echo
+- Dont skip src after halt compiler stmt
+- Add expected to parse error
+
 ## [1.0.7] - 2018-01-05
 #### Fixed
 - Inf. loop on merge conflict marker
