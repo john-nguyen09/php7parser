@@ -4,6 +4,6 @@
 
 'use strict';
 
-export { Lexer, LexerMode, Token, TokenType, tokenTypeToString } from './lexer';
+export { Lexer, LexerMode, Token, TokenKind, tokenKindToString } from './lexer';
 export { Parser } from './parser';
 export * from './phrase';

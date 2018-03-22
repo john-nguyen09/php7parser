@@ -8,7 +8,7 @@
     "test": "mocha",
     "build": "npm run clean && ./node_modules/.bin/tsc -p ./tsconfig.json",
     "clean": "rm -rf ./lib && mkdir ./lib",
-    "prepublish": "npm run build",
+    "prepublishOnly": "npm run build",
     "pretest": "npm run build"
   },
   "author": "Ben Mewburn <ben@mewburn.id.au>",
@@ -31,6 +31,6 @@
     "@types/mocha": "^2.2.48",
     "chai": "^4.1.2",
     "mocha": "^4.1.0",
-    "typescript": "^2.7.1"
+    "typescript": "^2.7.2"
   }
 }
