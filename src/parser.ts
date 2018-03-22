@@ -350,7 +350,7 @@ export namespace Parser {
         return t;
     }
 
-    function skip(until: Predicate) {
+    function skip(until: Predicate, includeUntilTokenInSkipped?:boolean) {
 
         let t: Token;
         let skipped: Token[] = [];
@@ -361,7 +361,9 @@ export namespace Parser {
         } while (!until(t) && t.kind !== TokenKind.EndOfFile);
 
         //last skipped token should go back on buffer
-        tokenBuffer.unshift(skipped.pop());
+        if(t.kind === TokenKind.EndOfFile || !includeUntilTokenInSkipped){
+            tokenBuffer.unshift(skipped.pop());
+        }
         return skipped;
 
     }
@@ -370,7 +372,7 @@ export namespace Parser {
     function list(phraseType: PhraseKind, elementFunction: () => Phrase | Token,
         elementStartPredicate: Predicate, breakOn?: TokenKind[], recoverSet?: TokenKind[], allowDocComment?: boolean) {
 
-        let t:Token;
+        let t: Token;
         let listRecoverSet = recoverSet ? recoverSet.slice(0) : [];
         let children: (Phrase | Token)[] = [];
 
@@ -383,7 +385,7 @@ export namespace Parser {
         while (true) {
 
             t = peek(0, allowDocComment);
-            
+
             if (elementStartPredicate(t)) {
                 children.push(elementFunction());
             } else if (!breakOn || breakOn.indexOf(t.kind) > -1) {
@@ -434,14 +436,14 @@ export namespace Parser {
         breakOn.push(TokenKind.HaltCompiler);
         const stmtList = statementList(breakOn);
         stmtList.kind = PhraseKind.TopStatementList;
-        if(peek().kind === TokenKind.HaltCompiler) {
+        if (peek().kind === TokenKind.HaltCompiler) {
             const halt = haltCompilerStatement();
             stmtList.children.push(halt);
         }
         return stmtList;
     }
 
-    function statementList(breakOn: TokenKind[]):Phrase {
+    function statementList(breakOn: TokenKind[]): Phrase {
         return list(
             PhraseKind.StatementList,
             statement,
@@ -480,7 +482,7 @@ export namespace Parser {
         return Phrase.create(PhraseKind.ConstElement, [name, equals, expr]);
     }
 
-    function expression(minPrecedence: number) :Phrase | Token {
+    function expression(minPrecedence: number): Phrase | Token {
 
         let precedence: number;
         let associativity: Associativity;
@@ -1407,7 +1409,7 @@ export namespace Parser {
             (peek1.kind === TokenKind.Ampersand && peek2.kind === TokenKind.OpenParenthesis);
     }
 
-    function statement() : Phrase {
+    function statement(): Phrase {
 
         let t = peek(0, true);
 
@@ -2545,7 +2547,7 @@ export namespace Parser {
         return Phrase.create(PhraseKind.ParameterDeclaration, children);
     }
 
-    function defaultArgumentSpecifier(){
+    function defaultArgumentSpecifier() {
         const equals = next();
         const expr = expression(0);
         return Phrase.create(PhraseKind.DefaultArgumentSpecifier, [equals, expr]);
@@ -2704,8 +2706,38 @@ export namespace Parser {
         return Phrase.create(PhraseKind.MemberName, [name]);
     }
 
+    function createSkipUntilMatchingBracePredicate() {
+        let openBraceCount = 1;
+        return (t: Token) => {
+            if (t.kind === TokenKind.OpenBrace) {
+                ++openBraceCount;
+            } else if (t.kind === TokenKind.CloseBrace && --openBraceCount === 0) {
+                return true;
+            }
+            return false;
+        }
+    }
+
     function subscriptExpression(lhs: Phrase | Token, closeTokenType: TokenKind) {
         const open = next(); // [ or {
+
+        if (open.kind === TokenKind.OpenBrace) {
+            const expr = expression(0);
+            const close = expect(closeTokenType);
+            if (close.kind === PhraseKind.Error) {
+
+                //errors within {} subscript can happen when a
+                //control construct keyword is mistaken for a member name
+                //eg 
+                //$this->
+                //if($bool) { stmtlist }
+                //skip until matching close brace to recover
+                const skipFn = createSkipUntilMatchingBracePredicate();
+                const skipped = skip(skipFn, true);
+                Array.prototype.push.apply(close.children, skipped);
+            }
+            return Phrase.create(PhraseKind.SubscriptExpression, [lhs, open, expr, close]);
+        }
 
         if (!isExpressionStart(peek())) {
             const close = expect(closeTokenType);
@@ -2920,7 +2952,7 @@ export namespace Parser {
 
     }
 
-    function simpleVariable() : Phrase {
+    function simpleVariable(): Phrase {
         const varNameOrDollar = expectOneOf([TokenKind.VariableName, TokenKind.Dollar]);
 
         if ((<Token>varNameOrDollar).kind !== TokenKind.Dollar) {
@@ -3091,9 +3123,9 @@ export namespace Parser {
     }
 
     function namespaceDefinition() {
-        
+
         const ns = next(); //namespace
-        let name:Phrase;
+        let name: Phrase;
 
         if (peek().kind === TokenKind.Name) {
             name = namespaceName();
@@ -3102,11 +3134,11 @@ export namespace Parser {
         const t = expectOneOf([TokenKind.Semicolon, TokenKind.OpenBrace]) as Token;
 
         if (t.kind === TokenKind.Semicolon) {
-            if(!name) {
+            if (!name) {
                 name = Phrase.createParseError([], peek(), TokenKind.OpenBrace);
             }
             return Phrase.create(PhraseKind.NamespaceDefinition, [ns, name, t]);
-        } else if(t.kind !== TokenKind.OpenBrace) {
+        } else if (t.kind !== TokenKind.OpenBrace) {
             const err = Phrase.createParseError([], peek());
             return Phrase.create(PhraseKind.NamespaceDefinition, name ? [ns, name, err] : [ns, err]);
         }
