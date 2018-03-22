@@ -21,10 +21,10 @@ fs.readFile(filepath, function (err, data) {
 
     tree = JSON.parse(data.toString());
     let replacer = (key, value) => {
-        if(key === 'phraseType') {
-            return php.phraseTypeToString(value);
-        } else if(key === 'tokenType' || key === 'expected') {
-            return php.tokenTypeToString(value);
+        if(key === 'kind' && value >= 1000) {
+            return php.phraseKindToString(value);
+        } else if(key === 'kind' || key === 'expected') {
+            return php.tokenKindToString(value);
         } else {
             return value;
         }

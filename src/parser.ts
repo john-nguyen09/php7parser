@@ -1534,8 +1534,13 @@ export namespace Parser {
                 catchClause,
                 isCatchClauseStart
             );
-        } else if (t.kind !== TokenKind.Finally) {
-            catchListOrFinally = Phrase.createParseError([], t);
+        } else {
+            if (t.kind === TokenKind.Finally) {
+                catchListOrFinally = finallyClause();
+            } else {
+                catchListOrFinally = Phrase.createParseError([], t);
+            }
+            return Phrase.create(PhraseKind.TryStatement, [tryToken, compound, catchListOrFinally]);
         }
 
         if (peek().kind !== TokenKind.Finally) {

@@ -23,16 +23,20 @@ if (!path.isAbsolute(pathToCodeRootDir)) {
 }
 
 function hasErrorRecurse(node, filepath) {
-    if (node.phraseType === 60) {
+    if (node.kind === 1062) {
         //throw new Error(JSON.stringify(node, function(k,v){ return isNaN(k) && keys.indexOf(k) < 0 ? undefined : v; }, 4));
         console.log('ERROR');
         console.log(JSON.stringify(node, null, 4));
+        throw new Error();
         errors++;
         errFiles.push(filepath);
     }
 
     if (node.children) {
         for (let n = 0; n < node.children.length; ++n) {
+            if(!node.children[n]) {
+                //console.log(JSON.stringify(node, null, 4));
+            }
             hasErrorRecurse(node.children[n], filepath);
         }
     }

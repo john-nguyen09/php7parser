@@ -1012,7 +1012,6 @@ export namespace Lexer {
 
         if (s.input[k] === '{') {
             s.position += 2;
-            s.modeStack.pop();
             s.modeStack.push(LexerMode.LookingForVarName);
             return { kind: TokenKind.DollarCurlyOpen, offset: start, length: 2 };
         }
