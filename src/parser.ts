@@ -141,7 +141,6 @@ export namespace Parser {
 
     const statementListRecoverSet = [
         TokenKind.Use,
-        TokenKind.HaltCompiler,
         TokenKind.Const,
         TokenKind.Function,
         TokenKind.Class,
@@ -263,7 +262,7 @@ export namespace Parser {
 
     export function parse(text: string): Phrase {
         init(text);
-        return statementList([TokenKind.EndOfFile]);
+        return topStatementList([TokenKind.EndOfFile]);
     }
 
     function init(text: string, lexerModeStack?: LexerMode[]) {
@@ -432,8 +431,13 @@ export namespace Parser {
 
     function topStatementList(breakOn: TokenKind[]) {
         //@todo restrict some statements to top stmt list only
+        breakOn.push(TokenKind.HaltCompiler);
         const stmtList = statementList(breakOn);
         stmtList.kind = PhraseKind.TopStatementList;
+        if(peek().kind === TokenKind.HaltCompiler) {
+            const halt = haltCompilerStatement();
+            stmtList.children.push(halt);
+        }
         return stmtList;
     }
 
@@ -1414,8 +1418,6 @@ export namespace Parser {
                 return namespaceDefinition();
             case TokenKind.Use:
                 return namespaceUseDeclaration();
-            case TokenKind.HaltCompiler:
-                return haltCompilerStatement();
             case TokenKind.Const:
                 return constDeclaration();
             case TokenKind.Function:
@@ -3220,7 +3222,6 @@ export namespace Parser {
         switch (t.kind) {
             case TokenKind.Namespace:
             case TokenKind.Use:
-            case TokenKind.HaltCompiler:
             case TokenKind.Const:
             case TokenKind.Function:
             case TokenKind.Class:

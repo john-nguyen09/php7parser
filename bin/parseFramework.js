@@ -27,7 +27,7 @@ function hasErrorRecurse(node, filepath) {
         //throw new Error(JSON.stringify(node, function(k,v){ return isNaN(k) && keys.indexOf(k) < 0 ? undefined : v; }, 4));
         console.log('ERROR');
         console.log(JSON.stringify(node, null, 4));
-        throw new Error();
+        //throw new Error();
         errors++;
         errFiles.push(filepath);
     }
