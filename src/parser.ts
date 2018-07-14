@@ -2750,13 +2750,49 @@ export namespace Parser {
     }
 
     function argumentList() {
-        return delimitedList(
-            PhraseKind.ArgumentExpressionList,
-            argumentExpression,
-            isArgumentStart,
-            TokenKind.Comma,
-            [TokenKind.CloseParenthesis]
-        );
+
+        let t:Token;
+        const children: (Phrase | Token)[] = [];
+        let arrayInitialiserListRecoverSet = [TokenKind.CloseParenthesis, TokenKind.Comma];
+        
+        recoverSetStack.push(arrayInitialiserListRecoverSet);
+
+        while(true) {
+
+            children.push(argumentExpression());
+            t = peek();
+
+            if (t.kind === TokenKind.Comma) {
+                children.push(next());
+
+                //7.3 trailing comma
+                if(peek().kind === TokenKind.CloseParenthesis) {
+                    break;
+                }
+
+            } else if (t.kind !== TokenKind.CloseParenthesis) {
+                //error
+                //check for missing delimeter
+                if (isArgumentStart(t)) {
+                    children.push(Phrase.createParseError([], t));
+                    continue;
+                } else {
+                    //skip until recover token
+                    const skipped = defaultSyncStrategy();
+                    children.push(Phrase.createParseError(skipped, t));
+                    if (peek().kind === TokenKind.Comma) {
+                        continue;
+                    }
+                }
+
+                break;
+            }
+
+        }
+
+        recoverSetStack.pop();
+        return Phrase.create(PhraseKind.ArgumentExpressionList, children);
+
     }
 
     function isArgumentStart(t: Token) {
