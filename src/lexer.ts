@@ -630,7 +630,7 @@ export namespace Lexer {
                                 --n;
                             }
 
-                            s.modeStack = s.modeStack.slice(0, -1);
+                            s.modeStack.pop();
                             s.modeStack.push(LexerMode.EndHereDoc);
                             break;
 
@@ -889,7 +889,7 @@ export namespace Lexer {
                             }
 
                             s.position = n;
-                            s.modeStack = s.modeStack.slice(0, -1);
+                            s.modeStack.pop();
                             s.modeStack.push(LexerMode.EndHereDoc);
                             return { kind: TokenKind.EncapsulatedAndWhitespace, offset: start, length: s.position - start };
                         }
@@ -931,7 +931,7 @@ export namespace Lexer {
         s.position += s.heredocLabel.length;
         s.heredocLabel = null;
         let t = { kind: TokenKind.EndHeredoc, offset: start, length: s.position - start, modeStack: s.modeStack };
-        s.modeStack = s.modeStack.slice(0, -1);
+        s.modeStack.pop();
         s.modeStack.push(LexerMode.Scripting);
         return t;
 
