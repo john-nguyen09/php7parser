@@ -371,7 +371,6 @@ export namespace Lexer {
         let c = s.input[s.position];
         let start = s.position;
         let l = s.input.length;
-        let modeStack = s.modeStack;
 
         switch (c) {
 
@@ -533,7 +532,6 @@ export namespace Lexer {
         let start = s.position;
         let c = s.input[s.position];
         let l = s.input.length;
-        let modeStack = s.modeStack;
 
         switch (c) {
             case ' ':
@@ -566,7 +564,6 @@ export namespace Lexer {
         let l = s.input.length;
         let c = s.input[s.position];
         let start = s.position;
-        let modeStack = s.modeStack;
         let t: Token;
 
         switch (c) {
@@ -657,7 +654,6 @@ export namespace Lexer {
         let l = s.input.length;
         let c = s.input[s.position];
         let start = s.position;
-        let modeStack = s.modeStack;
         let t: Token;
 
         switch (c) {
@@ -689,7 +685,6 @@ export namespace Lexer {
         let l = s.input.length;
         let c = s.input[s.position];
         let start = s.position;
-        let modeStack = s.modeStack;
         let t: Token;
 
         switch (c) {
@@ -727,7 +722,6 @@ export namespace Lexer {
         let start = s.position;
         let c = s.input[s.position];
         let l = s.input.length;
-        let modeStack = s.modeStack;
 
         switch (s.input[s.position]) {
 
@@ -774,7 +768,6 @@ export namespace Lexer {
 
         let start = s.position;
         let l = s.input.length;
-        let modeStack = s.modeStack;
 
         if (isLabelStart(s.input[s.position])) {
             let k = s.position + 1;
@@ -869,7 +862,6 @@ export namespace Lexer {
         let n = start;
         let c: string;
         let l = s.input.length;
-        let modeStack = s.modeStack;
 
         while (n < l) {
             c = s.input[n++];
@@ -1004,7 +996,6 @@ export namespace Lexer {
         let start = s.position;
         let l = s.input.length;
         let k = s.position + 1;
-        let modeStack = s.modeStack;
 
         if (k >= l) {
             return undefined;
@@ -1082,7 +1073,6 @@ export namespace Lexer {
         }
 
         s.doubleQuoteScannedLength = n;
-        let modeStack = s.modeStack;
         s.modeStack.pop();
         s.modeStack.push(LexerMode.DoubleQuotes);
         return { kind: TokenKind.DoubleQuote, offset: start, length: s.position - start };
@@ -1511,7 +1501,6 @@ export namespace Lexer {
                 return { kind: TokenKind.QuestionQuestion, offset: start, length: 2 };
             } else if (s.input[s.position] === '>') {
                 ++s.position;
-                let modeStack = s.modeStack;
                 s.modeStack.pop();
                 s.modeStack.push(LexerMode.Initial);
                 return { kind: TokenKind.CloseTag, offset: start, length: s.position - start };
@@ -1983,7 +1972,6 @@ export namespace Lexer {
     function scriptingMinus(s: LexerState) {
 
         let start = s.position;
-        let modeStack = s.modeStack;
 
         if (++s.position < s.input.length) {
 
