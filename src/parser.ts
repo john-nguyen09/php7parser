@@ -256,8 +256,6 @@ export namespace Parser {
     }
 
     var tokenBuffer: Token[];
-    var phraseStack: Phrase[];
-    var errorPhrase: ParseError;
     var recoverSetStack: TokenKind[][];
 
     export function parse(text: string): Phrase {
@@ -267,10 +265,8 @@ export namespace Parser {
 
     function init(text: string, lexerModeStack?: LexerMode[]) {
         Lexer.setInput(text, lexerModeStack);
-        phraseStack = [];
         tokenBuffer = [];
         recoverSetStack = [];
-        errorPhrase = null;
     }
 
     function optional(tokenType: TokenKind) {
