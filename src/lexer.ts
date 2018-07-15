@@ -211,7 +211,7 @@ export interface Token {
 }
 
 export namespace Token {
-    export function create(type: TokenKind, offset: number, length: number, modeStack: LexerMode[]): Token {
+    export function create(type: TokenKind, offset: number, length: number): Token {
         return { kind: type, offset: offset, length: length };
     }
 }
@@ -223,7 +223,9 @@ export namespace Lexer {
         input: string;
         modeStack: LexerMode[];
         doubleQuoteScannedLength: number;
-        heredocLabel: string
+        heredocLabel: string;
+        heredocEndNewLineLength:number;
+        heredocEndIndent: number;
     }
 
     var state: LexerState;
@@ -234,7 +236,9 @@ export namespace Lexer {
             input: text,
             modeStack: lexerModeStack ? lexerModeStack : [LexerMode.Initial],
             doubleQuoteScannedLength: -1,
-            heredocLabel: null
+            heredocLabel: null,
+            heredocEndNewLineLength: 0,
+            heredocEndIndent: 0
         };
     }
 
@@ -612,30 +616,39 @@ export namespace Lexer {
                     }
                 /* fall through */
                 case '\n':
-                    /* Check for ending label on the next line */
-                    if (n < l && s.heredocLabel === s.input.substr(n, s.heredocLabel.length)) {
-                        let k = n + s.heredocLabel.length;
 
-                        if (k < l && s.input[k] === ';') {
+                    {
+                        let k = n;
+
+                        //7.3 end heredoc indent
+                        while (k < l && (s.input[k] === ' ' || s.input[k] === '\t')) {
                             ++k;
                         }
+                        s.heredocEndIndent = k - n;
 
-                        if (k < l && (s.input[k] === '\n' || s.input[k] === '\r')) {
+                        /* Check for ending label on the next line */
+                        if (k < l && s.heredocLabel === s.input.substr(k, s.heredocLabel.length)) {
 
-                            //set position to whitespace before label
-                            let nl = s.input.slice(n - 2, n);
-                            if (nl === '\r\n') {
+                            if (k + s.heredocLabel.length < l && isLabelStart(s.input[k + s.heredocLabel.length])) {
+                                //end label has not been found
+                                continue;
+                            }
+
+                            //set position to nl before end label
+                            if (s.input[n - 2] === '\r' && s.input[n - 1] === '\n') {
                                 n -= 2;
+                                s.heredocEndNewLineLength = 2;
                             } else {
                                 --n;
+                                s.heredocEndNewLineLength = 1;
                             }
 
                             s.modeStack.pop();
                             s.modeStack.push(LexerMode.EndHereDoc);
                             break;
-
                         }
                     }
+
                 /* fall through */
                 default:
                     continue;
@@ -872,20 +885,32 @@ export namespace Lexer {
                     }
                 /* fall through */
                 case '\n':
-                    /* Check for ending label on the next line */
-                    if (n < l && s.input.slice(n, n + s.heredocLabel.length) === s.heredocLabel) {
-                        let k = n + s.heredocLabel.length;
 
-                        if (k < l && s.input[k] === ';') {
+                    {
+                        let k = n;
+
+                        //7.3 end heredoc indent
+                        while (k < l && (s.input[k] === ' ' || s.input[k] === '\t')) {
                             ++k;
                         }
 
-                        if (k < l && (s.input[k] === '\n' || s.input[k] === '\r')) {
-                            let nl = s.input.slice(n - 2, n);
-                            if (nl === '\r\n') {
-                                n -= 2
+                        s.heredocEndIndent = k - n;
+
+                        /* Check for ending label on the next line */
+                        if (k < l && s.heredocLabel === s.input.substr(k, s.heredocLabel.length)) {
+
+                            if (k + s.heredocLabel.length < l && isLabelStart(s.input[k + s.heredocLabel.length])) {
+                                //end label has not been found
+                                continue;
+                            }
+
+                            //set position to nl before end label
+                            if (s.input[n - 2] === '\r' && s.input[n - 1] === '\n') {
+                                n -= 2;
+                                s.heredocEndNewLineLength = 2;
                             } else {
                                 --n;
+                                s.heredocEndNewLineLength = 1;
                             }
 
                             s.position = n;
@@ -894,6 +919,7 @@ export namespace Lexer {
                             return { kind: TokenKind.EncapsulatedAndWhitespace, offset: start, length: s.position - start };
                         }
                     }
+
                     continue;
                 case '$':
                     if (n < l && (isLabelStart(s.input[n]) || s.input[n] === '{')) {
@@ -925,15 +951,13 @@ export namespace Lexer {
     function endHeredoc(s: LexerState) {
 
         let start = s.position;
-        //consume ws
-        while (++s.position < s.input.length && (s.input[s.position] === '\r' || s.input[s.position] === '\n')) { }
-
-        s.position += s.heredocLabel.length;
+        s.position += s.heredocEndNewLineLength + s.heredocEndIndent + s.heredocLabel.length;
         s.heredocLabel = null;
-        let t = { kind: TokenKind.EndHeredoc, offset: start, length: s.position - start, modeStack: s.modeStack };
+        s.heredocEndIndent = 0;
+        s.heredocEndNewLineLength = 0;
         s.modeStack.pop();
         s.modeStack.push(LexerMode.Scripting);
-        return t;
+        return { kind: TokenKind.EndHeredoc, offset: start, length: s.position - start };
 
     }
 
