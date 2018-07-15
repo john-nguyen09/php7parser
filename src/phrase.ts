@@ -590,6 +590,8 @@ export function phraseKindToString(type: PhraseKind) {
             return 'YieldFromExpression';
         case PhraseKind.DocBlock:
             return 'DocBlock';
+        case PhraseKind.TopStatementList:
+            return 'TopStatementList';
         default:
             return '';
     }
