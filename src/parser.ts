@@ -353,7 +353,9 @@ export namespace Parser {
 
         do {
             t = tokenBuffer.length ? tokenBuffer.shift() : Lexer.lex();
-            skipped.push(t);
+            if(t.kind < TokenKind.Comment) {
+                skipped.push(t);
+            }
         } while (!until(t) && t.kind !== TokenKind.EndOfFile);
 
         //last skipped token should go back on buffer
@@ -2665,7 +2667,7 @@ export namespace Parser {
         const op = next(); //->
         const name = memberName();
         const open = optional(TokenKind.OpenParenthesis);
-
+        
         if (!open) {
             return Phrase.create(PhraseKind.PropertyAccessExpression, [lhs, op, name]);
         }
@@ -2781,6 +2783,8 @@ export namespace Parser {
                     }
                 }
 
+                break;
+            } else {
                 break;
             }
 

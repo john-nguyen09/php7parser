@@ -1,46 +1,34 @@
 {
-    "phraseType": 157,
+    "kind": 1177,
     "children": [
         {
-            "phraseType": 99,
+            "kind": 1094,
             "children": [
                 {
-                    "tokenType": 156,
+                    "kind": 156,
                     "offset": 0,
-                    "length": 6,
-                    "modeStack": [
-                        0
-                    ]
+                    "length": 6
                 }
             ]
         },
         {
-            "phraseType": 60,
+            "kind": 1062,
             "children": [
                 {
-                    "tokenType": 120,
+                    "kind": 120,
                     "offset": 6,
-                    "length": 1,
-                    "modeStack": [
-                        1
-                    ]
+                    "length": 1
                 },
                 {
-                    "tokenType": 93,
+                    "kind": 93,
                     "offset": 7,
-                    "length": 1,
-                    "modeStack": [
-                        1
-                    ]
+                    "length": 1
                 }
             ],
             "unexpected": {
-                "tokenType": 120,
+                "kind": 120,
                 "offset": 6,
-                "length": 1,
-                "modeStack": [
-                    1
-                ]
+                "length": 1
             }
         }
     ]

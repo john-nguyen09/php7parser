@@ -1,78 +1,50 @@
 {
-    "phraseType": 157,
+    "kind": 1177,
     "children": [
         {
-            "phraseType": 99,
+            "kind": 1094,
             "children": [
                 {
-                    "tokenType": 156,
+                    "kind": 156,
                     "offset": 0,
-                    "length": 6,
-                    "modeStack": [
-                        0
-                    ]
+                    "length": 6
                 }
             ]
         },
         {
-            "phraseType": 73,
+            "kind": 1068,
             "children": [
                 {
-                    "phraseType": 100,
+                    "kind": 1095,
                     "children": [
                         {
-                            "phraseType": 156,
+                            "kind": 1151,
                             "children": [
                                 {
-                                    "tokenType": 84,
+                                    "kind": 84,
                                     "offset": 6,
-                                    "length": 4,
-                                    "modeStack": [
-                                        1
-                                    ]
+                                    "length": 4
                                 }
                             ]
                         },
                         {
-                            "tokenType": 161,
-                            "offset": 10,
-                            "length": 1,
-                            "modeStack": [
-                                1
-                            ]
-                        },
-                        {
-                            "tokenType": 43,
+                            "kind": 43,
                             "offset": 11,
-                            "length": 10,
-                            "modeStack": [
-                                1
-                            ]
+                            "length": 10
                         },
                         {
-                            "tokenType": 161,
-                            "offset": 21,
-                            "length": 1,
-                            "modeStack": [
-                                1
-                            ]
-                        },
-                        {
-                            "phraseType": 101,
+                            "kind": 1096,
                             "children": [
                                 {
-                                    "phraseType": 141,
+                                    "kind": 1136,
                                     "children": [
                                         {
-                                            "phraseType": 121,
+                                            "kind": 1116,
                                             "children": [
                                                 {
-                                                    "tokenType": 83,
+                                                    "kind": 83,
                                                     "offset": 22,
-                                                    "length": 3,
-                                                    "modeStack": [
-                                                        1
-                                                    ]
+                                                    "length": 3
                                                 }
                                             ]
                                         }
@@ -83,12 +55,9 @@
                     ]
                 },
                 {
-                    "tokenType": 88,
+                    "kind": 88,
                     "offset": 25,
-                    "length": 1,
-                    "modeStack": [
-                        1
-                    ]
+                    "length": 1
                 }
             ]
         }

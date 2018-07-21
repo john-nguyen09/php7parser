@@ -1,94 +1,64 @@
 {
-    "phraseType": 157,
+    "kind": 1177,
     "children": [
         {
-            "phraseType": 99,
+            "kind": 1094,
             "children": [
                 {
-                    "tokenType": 156,
+                    "kind": 156,
                     "offset": 0,
-                    "length": 6,
-                    "modeStack": [
-                        0
-                    ]
+                    "length": 6
                 }
             ]
         },
         {
-            "phraseType": 60,
+            "kind": 1062,
             "children": [
                 {
-                    "tokenType": 161,
+                    "kind": 161,
                     "offset": 6,
-                    "length": 1,
-                    "modeStack": [
-                        1
-                    ]
+                    "length": 1
                 },
                 {
-                    "tokenType": 106,
+                    "kind": 106,
                     "offset": 7,
-                    "length": 2,
-                    "modeStack": [
-                        1
-                    ]
+                    "length": 2
                 },
                 {
-                    "tokenType": 106,
+                    "kind": 106,
                     "offset": 9,
-                    "length": 2,
-                    "modeStack": [
-                        1
-                    ]
+                    "length": 2
                 },
                 {
-                    "tokenType": 154,
+                    "kind": 154,
                     "offset": 11,
-                    "length": 9,
-                    "modeStack": [
-                        1
-                    ]
+                    "length": 9
                 },
                 {
-                    "tokenType": 84,
+                    "kind": 84,
                     "offset": 20,
-                    "length": 4,
-                    "modeStack": [
-                        5
-                    ]
+                    "length": 4
                 },
                 {
-                    "tokenType": 80,
+                    "kind": 80,
                     "offset": 24,
-                    "length": 14,
-                    "modeStack": [
-                        5
-                    ]
+                    "length": 14
                 },
                 {
-                    "tokenType": 84,
+                    "kind": 84,
                     "offset": 38,
-                    "length": 4,
-                    "modeStack": [
-                        5
-                    ]
+                    "length": 4
                 },
                 {
-                    "tokenType": 80,
+                    "kind": 80,
                     "offset": 42,
-                    "length": 24,
-                    "modeStack": [
-                        5
-                    ]
+                    "length": 24
                 }
             ],
             "unexpected": {
-                "tokenType": 106,
+                "kind": 106,
                 "offset": 7,
-                "length": 2,
-                "modeStack": [
-                    1
-                ]
+                "length": 2
             }
         }
     ]

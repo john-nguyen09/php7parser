@@ -1,38 +1,32 @@
 {
-    "phraseType": 157,
+    "kind": 1177,
     "children": [
         {
-            "phraseType": 99,
+            "kind": 1094,
             "children": [
                 {
-                    "tokenType": 156,
+                    "kind": 156,
                     "offset": 0,
-                    "length": 2,
-                    "modeStack": [
-                        0
-                    ]
+                    "length": 2
                 }
             ]
         },
         {
-            "phraseType": 73,
+            "kind": 1068,
             "children": [
                 {
-                    "phraseType": 41,
+                    "kind": 1041,
                     "children": [
                         {
-                            "phraseType": 141,
+                            "kind": 1136,
                             "children": [
                                 {
-                                    "phraseType": 121,
+                                    "kind": 1116,
                                     "children": [
                                         {
-                                            "tokenType": 83,
+                                            "kind": 83,
                                             "offset": 2,
-                                            "length": 1,
-                                            "modeStack": [
-                                                1
-                                            ]
+                                            "length": 1
                                         }
                                     ]
                                 }
@@ -41,15 +35,12 @@
                     ]
                 },
                 {
-                    "phraseType": 60,
+                    "kind": 1062,
                     "children": [],
                     "unexpected": {
-                        "tokenType": 1,
+                        "kind": 1,
                         "offset": 3,
-                        "length": 0,
-                        "modeStack": [
-                            1
-                        ]
+                        "length": 0
                     },
                     "expected": 88
                 }
