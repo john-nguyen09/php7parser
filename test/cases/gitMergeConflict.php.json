@@ -15,11 +15,6 @@
             "kind": 1062,
             "children": [
                 {
-                    "kind": 161,
-                    "offset": 6,
-                    "length": 1
-                },
-                {
                     "kind": 106,
                     "offset": 7,
                     "length": 2
