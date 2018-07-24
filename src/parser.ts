@@ -282,10 +282,10 @@ export namespace Parser {
      * @param allowDocComment doc comments returned when true
      */
     function next(allowDocComment?: boolean): Token {
-        const t = tokenBuffer.length > 0 ? tokenBuffer.shift() : Lexer.lex();
-        if (t.kind >= TokenKind.Comment && (!allowDocComment || t.kind !== TokenKind.DocumentComment)) {
-            return next(allowDocComment);
-        }
+        let t:Token;
+        do {
+            t = tokenBuffer.length > 0 ? tokenBuffer.shift() : Lexer.lex();
+        } while (t.kind >= TokenKind.Comment);
         return t;
     }
 
