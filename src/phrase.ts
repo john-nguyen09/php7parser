@@ -57,7 +57,6 @@ export const enum PhraseKind {
     DeclareStatement,
     DefaultArgumentSpecifier,
     DefaultStatement,
-    DocBlock,
     DoStatement,
     DoubleQuotedStringLiteral,
     EchoIntrinsic,
@@ -588,8 +587,6 @@ export function phraseKindToString(type: PhraseKind) {
             return 'YieldExpression';
         case PhraseKind.YieldFromExpression:
             return 'YieldFromExpression';
-        case PhraseKind.DocBlock:
-            return 'DocBlock';
         case PhraseKind.TopStatementList:
             return 'TopStatementList';
         default:

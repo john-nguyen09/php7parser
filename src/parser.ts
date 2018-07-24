@@ -281,7 +281,7 @@ export namespace Parser {
      * skips over whitespace, comments and doc comments
      * @param allowDocComment doc comments returned when true
      */
-    function next(allowDocComment?: boolean): Token {
+    function next(): Token {
         let t:Token;
         do {
             t = tokenBuffer.length > 0 ? tokenBuffer.shift() : Lexer.lex();
@@ -997,18 +997,11 @@ export namespace Parser {
         }
     }
 
-    function docBlock() {
-        const t = next(true); //DocumentComment
-        return Phrase.create(PhraseKind.DocBlock, [t]);
-    }
-
     function classMemberDeclaration() {
 
         let t = peek(0, true);
 
         switch (t.kind) {
-            case TokenKind.DocumentComment:
-                return docBlock();
             case TokenKind.Public:
             case TokenKind.Protected:
             case TokenKind.Private:
@@ -1412,8 +1405,6 @@ export namespace Parser {
         let t = peek(0, true);
 
         switch (t.kind) {
-            case TokenKind.DocumentComment:
-                return docBlock();
             case TokenKind.Namespace:
                 return namespaceDefinition();
             case TokenKind.Use:
