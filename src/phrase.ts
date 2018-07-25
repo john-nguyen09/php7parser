@@ -5,6 +5,7 @@
 'use strict';
 
 import { Token, TokenKind } from './lexer';
+import { Node } from './node';
 
 export const enum PhraseKind {
     Unknown = 1000,
@@ -186,17 +187,11 @@ export const enum PhraseKind {
     TopStatementList
 }
 
-export interface Phrase {
-    /**
-     * Phrase type
-     */
-    kind: PhraseKind;
-
+export interface Phrase extends Node {
     /**
      * Phrase and token child nodes
      */
-    children: (Phrase | Token)[];
-
+    children: Node[];
 }
 
 export interface ParseError extends Phrase {
@@ -214,13 +209,14 @@ export interface ParseError extends Phrase {
 }
 
 export namespace Phrase {
-    export function create(type: PhraseKind, children: (Phrase | Token)[]) {
-        return <Phrase>{ kind: type, children: children }
+    export function create(type: PhraseKind, length: number, children: (Phrase | Token)[]) {
+        return <Phrase>{ kind: type, length: length, children: children }
     }
 
-    export function createParseError(children: (Phrase | Token)[], unexpected: Token, expected?: TokenKind) {
+    export function createParseError(children: (Phrase | Token)[], unexpected: Token, expected?: TokenKind, length?: number) {
         const err = <ParseError>{
             kind: PhraseKind.Error,
+            length: length || 0,
             children: children,
             unexpected: unexpected
         }

@@ -257,6 +257,8 @@ export namespace Parser {
 
     var tokenBuffer: Token[];
     var recoverSetStack: TokenKind[][];
+    //offset is always set to the next token start even if it is trivia
+    var offset = 0;
 
     export function parse(text: string): Phrase {
         init(text);
@@ -285,8 +287,25 @@ export namespace Parser {
         let t:Token;
         do {
             t = tokenBuffer.length > 0 ? tokenBuffer.shift() : Lexer.lex();
+            offset += t.length;
         } while (t.kind >= TokenKind.Comment);
         return t;
+    }
+
+    function startOffset() {
+        return offset + triviaLength(peek());
+    }
+
+    function triviaLength(t:Token) {
+        let l = 0;
+        while((t = t.previous) && t.kind >= TokenKind.DocumentComment) {
+            l += t.length;
+        }
+        return l;
+    }
+
+    function lengthFrom(start:number) {
+        return offset - start;
     }
 
     function expect(tokenType: TokenKind) {
@@ -299,7 +318,8 @@ export namespace Parser {
         } else {
             //test skipping a single token to sync
             if (peek(1).kind === tokenType) {
-                return Phrase.createParseError([next(), next()], t, tokenType);
+                const start = startOffset();
+                return Phrase.createParseError([next(), next()], t, tokenType, lengthFrom(start));
             }
             return Phrase.createParseError([], t, tokenType);
         }
@@ -315,7 +335,8 @@ export namespace Parser {
         } else {
             //test skipping single token to sync
             if (tokenTypes.indexOf(peek(1).kind) > -1) {
-                return Phrase.createParseError([next(), next()], t);
+                const start = startOffset();
+                return Phrase.createParseError([next(), next()], t, undefined, lengthFrom(start));
             }
             return Phrase.createParseError([], t);
         }
@@ -369,7 +390,7 @@ export namespace Parser {
 
     function list(phraseType: PhraseKind, elementFunction: () => Phrase | Token,
         elementStartPredicate: Predicate, breakOn?: TokenKind[], recoverSet?: TokenKind[], allowDocComment?: boolean) {
-
+        const start = startOffset();
         let t: Token;
         let listRecoverSet = recoverSet ? recoverSet.slice(0) : [];
         let children: (Phrase | Token)[] = [];
@@ -392,11 +413,12 @@ export namespace Parser {
                 //error
                 //attempt to skip single token to sync
                 let t1 = peek(1);
+                let errStart = startOffset();
                 if (elementStartPredicate(t1) || (breakOn && breakOn.indexOf(t1.kind) > -1)) {
-                    children.push(Phrase.createParseError([next()], t));
+                    children.push(Phrase.createParseError([next()], t, undefined, lengthFrom(errStart)));
                 } else {
                     //skip many to sync
-                    children.push(Phrase.createParseError(defaultSyncStrategy(), t));
+                    children.push(Phrase.createParseError(defaultSyncStrategy(), t, undefined, lengthFrom(errStart)));
                     //only continue if recovered on a token in the listRecoverSet
                     t = peek(0);
                     if (listRecoverSet.indexOf(t.kind) < 0) {
@@ -408,7 +430,7 @@ export namespace Parser {
         }
 
         recoverSetStack.pop();
-        return Phrase.create(phraseType, children);
+        return Phrase.create(phraseType, lengthFrom(start), children);
 
     }
 
@@ -453,6 +475,7 @@ export namespace Parser {
     }
 
     function constDeclaration() {
+        const start = startOffset();
         const keyword = next();
         const list = delimitedList(
             PhraseKind.ConstElementList,
@@ -462,7 +485,7 @@ export namespace Parser {
             [TokenKind.Semicolon]
         );
         const semicolon = expect(TokenKind.Semicolon);
-        return Phrase.create(PhraseKind.ConstDeclaration, [keyword, list, semicolon]);
+        return Phrase.create(PhraseKind.ConstDeclaration, lengthFrom(start), [keyword, list, semicolon]);
     }
 
     function isClassConstElementStartToken(t: Token) {
@@ -474,16 +497,18 @@ export namespace Parser {
     }
 
     function constElement() {
+        const start = startOffset();
         const name = expect(TokenKind.Name);
         const equals = expect(TokenKind.Equals);
         const expr = expression(0);
-        return Phrase.create(PhraseKind.ConstElement, [name, equals, expr]);
+        return Phrase.create(PhraseKind.ConstElement, lengthFrom(start), [name, equals, expr]);
     }
 
     function expression(minPrecedence: number): Phrase | Token {
 
         let precedence: number;
         let associativity: Associativity;
+        const start = startOffset();
         let lhs = expressionAtom();
         let p: Phrase;
         let rhs: Phrase | Token;
@@ -503,7 +528,7 @@ export namespace Parser {
             }
 
             if (binaryPhraseType === PhraseKind.TernaryExpression) {
-                lhs = ternaryExpression(lhs);
+                lhs = ternaryExpression(start, lhs);
                 op = peek();
                 binaryPhraseType = binaryOpToPhraseType(op);
                 continue;
@@ -513,17 +538,17 @@ export namespace Parser {
 
             if (binaryPhraseType === PhraseKind.InstanceOfExpression) {
                 rhs = typeDesignator(PhraseKind.InstanceofTypeDesignator);
-                lhs = Phrase.create(binaryPhraseType, [lhs, op, rhs]);
+                lhs = Phrase.create(binaryPhraseType, lengthFrom(start), [lhs, op, rhs]);
             } else if (
                 binaryPhraseType === PhraseKind.SimpleAssignmentExpression &&
                 peek().kind === TokenKind.Ampersand
             ) {
                 const ampersand = next();
                 rhs = expression(precedence);
-                lhs = Phrase.create(PhraseKind.ByRefAssignmentExpression, [lhs, op, ampersand, rhs]);
+                lhs = Phrase.create(PhraseKind.ByRefAssignmentExpression, lengthFrom(start), [lhs, op, ampersand, rhs]);
             } else {
                 rhs = expression(precedence);
-                lhs = Phrase.create(binaryPhraseType, [lhs, op, rhs]);
+                lhs = Phrase.create(binaryPhraseType, lengthFrom(start), [lhs, op, rhs]);
             }
 
             op = peek();
@@ -535,7 +560,7 @@ export namespace Parser {
 
     }
 
-    function ternaryExpression(testExpr: Phrase | Token) {
+    function ternaryExpression(start:number, testExpr: Phrase | Token) {
 
         const question = next();
         let colon: Token | ParseError = optional(TokenKind.Colon);
@@ -544,22 +569,22 @@ export namespace Parser {
         if (colon) {
             //short form
             falseExpr = expression(0);
-            return Phrase.create(PhraseKind.TernaryExpression, [testExpr, question, colon, falseExpr]);
+            return Phrase.create(PhraseKind.TernaryExpression, lengthFrom(start), [testExpr, question, colon, falseExpr]);
         }
 
         const trueExpr = expression(0);
         colon = expect(TokenKind.Colon);
         falseExpr = expression(0);
-        return Phrase.create(PhraseKind.TernaryExpression, [testExpr, question, trueExpr, colon, falseExpr]);
+        return Phrase.create(PhraseKind.TernaryExpression, lengthFrom(start), [testExpr, question, trueExpr, colon, falseExpr]);
     }
 
     function variableOrExpression() {
-
+        const start = startOffset();
         let part = variableAtom();
         let isVariable = (<Phrase>part).kind === PhraseKind.SimpleVariable;
 
         if (isDereferenceOperator(peek())) {
-            part = variable(part);
+            part = variable(start, part);
             isVariable = true;
         } else {
 
@@ -567,7 +592,7 @@ export namespace Parser {
                 case PhraseKind.QualifiedName:
                 case PhraseKind.FullyQualifiedName:
                 case PhraseKind.RelativeQualifiedName:
-                    part = constantAccessExpression(part);
+                    part = constantAccessExpression(start, part);
                     break;
                 default:
                     break;
@@ -582,22 +607,22 @@ export namespace Parser {
         //check for post increment/decrement
         let t = peek();
         if (t.kind === TokenKind.PlusPlus) {
-            return postfixExpression(PhraseKind.PostfixIncrementExpression, <Phrase>part);
+            return postfixExpression(start, PhraseKind.PostfixIncrementExpression, <Phrase>part);
         } else if (t.kind === TokenKind.MinusMinus) {
-            return postfixExpression(PhraseKind.PostfixDecrementExpression, <Phrase>part);
+            return postfixExpression(start, PhraseKind.PostfixDecrementExpression, <Phrase>part);
         } else {
             return part;
         }
 
     }
 
-    function constantAccessExpression(qName: Phrase | Token) {
-        return Phrase.create(PhraseKind.ConstantAccessExpression, [qName]);
+    function constantAccessExpression(start:number, qName: Phrase | Token) {
+        return Phrase.create(PhraseKind.ConstantAccessExpression, lengthFrom(start), [qName]);
     }
 
-    function postfixExpression(phraseType: PhraseKind, variableNode: Phrase) {
+    function postfixExpression(start:number, phraseType: PhraseKind, variableNode: Phrase) {
         const op = next();
-        return Phrase.create(phraseType, [variableNode, op]);
+        return Phrase.create(phraseType, lengthFrom(start), [variableNode, op]);
     }
 
     function isDereferenceOperator(t: Token) {
@@ -712,94 +737,104 @@ export namespace Parser {
     }
 
     function exitIntrinsic() {
+        const start = startOffset();
         const keyword = next(); //exit or die
         const open = optional(TokenKind.OpenParenthesis);
 
         if (!open) {
-            return Phrase.create(PhraseKind.ExitIntrinsic, [keyword]);
+            return Phrase.create(PhraseKind.ExitIntrinsic, lengthFrom(start), [keyword]);
         }
 
         if (!isExpressionStart(peek())) {
             const close = expect(TokenKind.CloseParenthesis);
-            return Phrase.create(PhraseKind.ExitIntrinsic, [keyword, open, close]);
+            return Phrase.create(PhraseKind.ExitIntrinsic, lengthFrom(start), [keyword, open, close]);
         }
         const expr = expression(0);
         const close = expect(TokenKind.CloseParenthesis);
-        return Phrase.create(PhraseKind.ExitIntrinsic, [keyword, open, expr, close]);
+        return Phrase.create(PhraseKind.ExitIntrinsic, lengthFrom(start), [keyword, open, expr, close]);
     }
 
     function issetIntrinsic() {
+        const start = startOffset();
         const keyword = next(); //isset
         const open = expect(TokenKind.OpenParenthesis);
         const list = variableList([TokenKind.CloseParenthesis]);
         const close = expect(TokenKind.CloseParenthesis);
-        return Phrase.create(PhraseKind.IssetIntrinsic, [keyword, open, list, close]);
+        return Phrase.create(PhraseKind.IssetIntrinsic, lengthFrom(start), [keyword, open, list, close]);
     }
 
     function emptyIntrinsic() {
+        const start = startOffset();
         const keyword = next(); //empty
         const open = expect(TokenKind.OpenParenthesis);
         const expr = expression(0);
         const close = expect(TokenKind.CloseParenthesis);
-        return Phrase.create(PhraseKind.EmptyIntrinsic, [keyword, open, expr, close]);
+        return Phrase.create(PhraseKind.EmptyIntrinsic, lengthFrom(start), [keyword, open, expr, close]);
     }
 
     function evalIntrinsic() {
+        const start = startOffset();
         const keyword = next(); //eval
         const open = expect(TokenKind.OpenParenthesis);
         const expr = expression(0);
         const close = expect(TokenKind.CloseParenthesis);
-        return Phrase.create(PhraseKind.EvalIntrinsic, [keyword, open, expr, close]);
+        return Phrase.create(PhraseKind.EvalIntrinsic, lengthFrom(start), [keyword, open, expr, close]);
     }
 
     function scriptInclusion(phraseType: PhraseKind) {
+        const start = startOffset();
         const keyword = next();
         const expr = expression(0);
-        return Phrase.create(phraseType, [keyword, expr]);
+        return Phrase.create(phraseType, lengthFrom(start), [keyword, expr]);
     }
 
     function printIntrinsic() {
+        const start = startOffset();
         const keyword = next();
         const expr = expression(0);
-        return Phrase.create(PhraseKind.PrintIntrinsic, [keyword, expr]);
+        return Phrase.create(PhraseKind.PrintIntrinsic, lengthFrom(start), [keyword, expr]);
     }
 
     function yieldFromExpression() {
+        const start = startOffset();
         const keyword = next();
         const expr = expression(0);
-        return Phrase.create(PhraseKind.YieldFromExpression, [keyword, expr]);
+        return Phrase.create(PhraseKind.YieldFromExpression, lengthFrom(start), [keyword, expr]);
     }
 
     function yieldExpression() {
+        const start = startOffset();
         const keyword = next();
 
         if (!isExpressionStart(peek())) {
-            return Phrase.create(PhraseKind.YieldExpression, [keyword]);
+            return Phrase.create(PhraseKind.YieldExpression, lengthFrom(start), [keyword]);
         }
 
         const keyOrValue = expression(0);
         const arrow = optional(TokenKind.FatArrow);
 
         if (!arrow) {
-            return Phrase.create(PhraseKind.YieldExpression, [keyword, keyOrValue]);
+            return Phrase.create(PhraseKind.YieldExpression, lengthFrom(start), [keyword, keyOrValue]);
         }
 
         const value = expression(0);
-        return Phrase.create(PhraseKind.YieldExpression, [keyword, keyOrValue, arrow, value]);
+        return Phrase.create(PhraseKind.YieldExpression, lengthFrom(start), [keyword, keyOrValue, arrow, value]);
     }
 
     function shellCommandExpression() {
+        const start = startOffset();
         const open = next(); //`
         const list = encapsulatedVariableList(TokenKind.Backtick);
         const close = expect(TokenKind.Backtick);
-        return Phrase.create(PhraseKind.ShellCommandExpression, [open, list, close]);
+        return Phrase.create(PhraseKind.ShellCommandExpression, lengthFrom(start), [open, list, close]);
     }
 
     function doubleQuotedStringLiteral() {
+        const start = startOffset();
         const open = next(); //"
         const list = encapsulatedVariableList(TokenKind.DoubleQuote);
         const close = expect(TokenKind.DoubleQuote);
-        return Phrase.create(PhraseKind.DoubleQuotedStringLiteral, [open, list, close]);
+        return Phrase.create(PhraseKind.DoubleQuotedStringLiteral, lengthFrom(start), [open, list, close]);
     }
 
     function encapsulatedVariableList(breakOn: TokenKind) {
@@ -849,13 +884,15 @@ export namespace Parser {
     }
 
     function curlyOpenEncapsulatedVariable() {
+        const start = startOffset();
         const open = next(); //{
-        const vble = variable(variableAtom());
+        const vble = variable(start, variableAtom());
         const close = expect(TokenKind.CloseBrace);
-        return Phrase.create(PhraseKind.EncapsulatedVariable, [open, vble, close]);
+        return Phrase.create(PhraseKind.EncapsulatedVariable, lengthFrom(start), [open, vble, close]);
     }
 
     function dollarCurlyOpenEncapsulatedVariable() {
+        const start = startOffset();
         const open = next(); //${
         const t = peek();
         let expr: Phrase | Token;
@@ -864,8 +901,9 @@ export namespace Parser {
             if (peek(1).kind === TokenKind.OpenBracket) {
                 expr = dollarCurlyEncapsulatedDimension();
             } else {
+                const varStart = startOffset();
                 const varName = next();
-                expr = Phrase.create(PhraseKind.SimpleVariable, [varName]);
+                expr = Phrase.create(PhraseKind.SimpleVariable, lengthFrom(varStart), [varName]);
             }
         } else if (isExpressionStart(t)) {
             expr = expression(0);
@@ -874,18 +912,20 @@ export namespace Parser {
         }
 
         const close = expect(TokenKind.CloseBrace);
-        return Phrase.create(PhraseKind.EncapsulatedVariable, [open, expr, close]);
+        return Phrase.create(PhraseKind.EncapsulatedVariable, lengthFrom(start), [open, expr, close]);
     }
 
     function dollarCurlyEncapsulatedDimension() {
+        const start = startOffset();
         const varName = next();
         const open = next(); // [
         const expr = expression(0);
         const close = expect(TokenKind.CloseBracket);
-        return Phrase.create(PhraseKind.SubscriptExpression, [varName, open, expr, close]);
+        return Phrase.create(PhraseKind.SubscriptExpression, lengthFrom(start), [varName, open, expr, close]);
     }
 
     function encapsulatedDimension() {
+        const start = startOffset();
         const sv = simpleVariable(); //T_VARIABLE
         const open = next(); //[
         let expr: Phrase | Token;
@@ -900,9 +940,10 @@ export namespace Parser {
                 break;
             case TokenKind.Minus:
                 {
+                    const exprStart = startOffset();
                     const minus = next();
                     const intLiteral = expect(TokenKind.IntegerLiteral);
-                    expr = Phrase.create(PhraseKind.UnaryOpExpression, [minus, intLiteral]);
+                    expr = Phrase.create(PhraseKind.UnaryOpExpression, lengthFrom(exprStart), [minus, intLiteral]);
                 }
                 break;
             default:
@@ -912,32 +953,36 @@ export namespace Parser {
         }
 
         const close = expect(TokenKind.CloseBracket);
-        return Phrase.create(PhraseKind.SubscriptExpression, [sv, open, expr, close]);
+        return Phrase.create(PhraseKind.SubscriptExpression, lengthFrom(start), [sv, open, expr, close]);
     }
 
     function encapsulatedProperty() {
+        const start = startOffset();
         const sv = simpleVariable();
         const arrow = next(); //->
         const name = expect(TokenKind.Name);
-        return Phrase.create(PhraseKind.PropertyAccessExpression, [sv, arrow, name]);
+        return Phrase.create(PhraseKind.PropertyAccessExpression, lengthFrom(start), [sv, arrow, name]);
     }
 
     function heredocStringLiteral() {
+        const start = startOffset();
         const startHeredoc = next();
         const list = encapsulatedVariableList(TokenKind.EndHeredoc);
         const endHeredoc = expect(TokenKind.EndHeredoc);
-        return Phrase.create(PhraseKind.HeredocStringLiteral, [startHeredoc, list, endHeredoc]);
+        return Phrase.create(PhraseKind.HeredocStringLiteral, lengthFrom(start), [startHeredoc, list, endHeredoc]);
     }
 
     function anonymousClassDeclaration() {
+        const start = startOffset();
         const header = anonymousClassDeclarationHeader();
         const body = typeDeclarationBody(
             PhraseKind.ClassDeclarationBody, isClassMemberStart, classMemberDeclarationList
         );
-        return Phrase.create(PhraseKind.AnonymousClassDeclaration, [header, body]);
+        return Phrase.create(PhraseKind.AnonymousClassDeclaration, lengthFrom(start), [header, body]);
     }
 
     function anonymousClassDeclarationHeader() {
+        const start = startOffset();
         const children: (Phrase | Token)[] = [];
         children.push(next()); //class
         const open = optional(TokenKind.OpenParenthesis);
@@ -958,13 +1003,14 @@ export namespace Parser {
             children.push(classInterfaceClause());
         }
 
-        return Phrase.create(PhraseKind.AnonymousClassDeclarationHeader, children);
+        return Phrase.create(PhraseKind.AnonymousClassDeclarationHeader, lengthFrom(start), children);
     }
 
     function classInterfaceClause() {
+        const start = startOffset();
         const keyword = next(); //implements
         const list = qualifiedNameList([TokenKind.OpenBrace]);
-        return Phrase.create(PhraseKind.ClassInterfaceClause, [keyword, list]);
+        return Phrase.create(PhraseKind.ClassInterfaceClause, lengthFrom(start), [keyword, list]);
     }
 
     function classMemberDeclarationList() {
@@ -998,6 +1044,7 @@ export namespace Parser {
 
     function classMemberDeclaration() {
 
+        const start = startOffset();
         let t = peek();
 
         switch (t.kind) {
@@ -1013,16 +1060,16 @@ export namespace Parser {
                     if (t.kind === TokenKind.VariableName) {
                         return propertyDeclaration(modifiers);
                     } else if (t.kind === TokenKind.Function) {
-                        return methodDeclaration(modifiers);
+                        return methodDeclaration(start, modifiers);
                     } else if (t.kind === TokenKind.Const) {
                         return classConstDeclaration(modifiers);
                     } else {
                         //error
-                        return Phrase.createParseError([modifiers], t);
+                        return Phrase.createParseError([modifiers], t, undefined, lengthFrom(start));
                     }
                 }
             case TokenKind.Function:
-                return methodDeclaration();
+                return methodDeclaration(start);
             case TokenKind.Var:
                 return propertyDeclaration(next());
             case TokenKind.Const:
@@ -1041,27 +1088,29 @@ export namespace Parser {
     }
 
     function traitUseClause() {
+        const start = startOffset();
         const use = next();
         const nameList = qualifiedNameList([TokenKind.Semicolon, TokenKind.OpenBrace]);
         const spec = traitUseSpecification();
-        return Phrase.create(PhraseKind.TraitUseClause, [use, nameList, spec]);
+        return Phrase.create(PhraseKind.TraitUseClause, lengthFrom(start), [use, nameList, spec]);
     }
 
     function traitUseSpecification() {
+        const start = startOffset();
         const t = expectOneOf([TokenKind.Semicolon, TokenKind.OpenBrace]) as Token;
 
         if (t.kind !== TokenKind.OpenBrace) {
-            return Phrase.create(PhraseKind.TraitUseSpecification, [t]);
+            return Phrase.create(PhraseKind.TraitUseSpecification, lengthFrom(start), [t]);
         }
 
         if (!isTraitAdaptationStart(peek())) {
             const close = expect(TokenKind.CloseBrace);
-            return Phrase.create(PhraseKind.TraitUseSpecification, [t, close]);
+            return Phrase.create(PhraseKind.TraitUseSpecification, lengthFrom(start), [t, close]);
         }
 
         const adaptList = traitAdaptationList();
         const close = expect(TokenKind.CloseBrace);
-        return Phrase.create(PhraseKind.TraitUseSpecification, [t, adaptList, close]);
+        return Phrase.create(PhraseKind.TraitUseSpecification, lengthFrom(start), [t, adaptList, close]);
     }
 
     function traitAdaptationList() {
@@ -1086,6 +1135,7 @@ export namespace Parser {
 
     function traitAdaptation() {
 
+        const start = startOffset();
         const children: (Phrase | Token)[] = [];
         let t = peek();
         let t2 = peek(1);
@@ -1099,21 +1149,22 @@ export namespace Parser {
 
             if (peek().kind === TokenKind.InsteadOf) {
                 children.push(next());
-                return traitPrecedence(children);
+                return traitPrecedence(start, children);
             }
 
         } else if (t.kind === TokenKind.Name || isSemiReservedToken(t)) {
+            const methodRefStart = startOffset();
             const ident = identifier();
-            children.push(Phrase.create(PhraseKind.MethodReference, [ident]));
+            children.push(Phrase.create(PhraseKind.MethodReference, lengthFrom(methodRefStart), [ident]));
         } else {
             //error
             return Phrase.createParseError([], t);
         }
 
-        return traitAlias(children);
+        return traitAlias(start, children);
     }
 
-    function traitAlias(children: (Phrase | Token)[]) {
+    function traitAlias(start:number, children: (Phrase | Token)[]) {
         children.push(expect(TokenKind.As));
         let t = peek();
 
@@ -1130,23 +1181,24 @@ export namespace Parser {
         }
 
         children.push(expect(TokenKind.Semicolon));
-        return Phrase.create(PhraseKind.TraitAlias, children);
+        return Phrase.create(PhraseKind.TraitAlias, lengthFrom(start), children);
     }
 
-    function traitPrecedence(children: (Phrase | Token)[]) {
+    function traitPrecedence(start:number, children: (Phrase | Token)[]) {
         children.push(qualifiedNameList([TokenKind.Semicolon]));
         children.push(expect(TokenKind.Semicolon));
-        return Phrase.create(PhraseKind.TraitPrecedence, children);
+        return Phrase.create(PhraseKind.TraitPrecedence, lengthFrom(start), children);
     }
 
     function methodReference() {
+        const start = startOffset();
         const name = qualifiedName();
         const op = expect(TokenKind.ColonColon);
         const ident = identifier();
-        return Phrase.create(PhraseKind.MethodReference, [name, op, ident]);
+        return Phrase.create(PhraseKind.MethodReference, lengthFrom(start), [name, op, ident]);
     }
 
-    function methodDeclarationHeader(memberModifers?: Phrase) {
+    function methodDeclarationHeader(start:number, memberModifers?: Phrase) {
         const children: (Phrase | Token)[] = [];
         if (memberModifers) {
             children.push(memberModifers);
@@ -1175,16 +1227,17 @@ export namespace Parser {
             children.push(returnType());
         }
 
-        return Phrase.create(PhraseKind.MethodDeclarationHeader, children);
+        return Phrase.create(PhraseKind.MethodDeclarationHeader, lengthFrom(start), children);
     }
 
-    function methodDeclaration(memberModifers?: Phrase) {
-        const header = methodDeclarationHeader(memberModifers);
+    function methodDeclaration(start:number, memberModifers?: Phrase) {
+        const header = methodDeclarationHeader(start, memberModifers);
         const body = methodDeclarationBody();
-        return Phrase.create(PhraseKind.MethodDeclaration, [header, body]);
+        return Phrase.create(PhraseKind.MethodDeclaration, lengthFrom(start), [header, body]);
     }
 
     function methodDeclarationBody() {
+        const start = startOffset();
         let body: Phrase | Token;
 
         if (peek().kind === TokenKind.Semicolon) {
@@ -1193,10 +1246,11 @@ export namespace Parser {
             body = compoundStatement();
         }
 
-        return Phrase.create(PhraseKind.MethodDeclarationBody, [body]);
+        return Phrase.create(PhraseKind.MethodDeclarationBody, lengthFrom(start), [body]);
     }
 
     function identifier() {
+        const start = startOffset();
         let ident: Phrase | Token = peek();
 
         if (ident.kind === TokenKind.Name || isSemiReservedToken(ident)) {
@@ -1205,28 +1259,30 @@ export namespace Parser {
             ident = Phrase.createParseError([], ident);
         }
 
-        return Phrase.create(PhraseKind.Identifier, [ident]);
+        return Phrase.create(PhraseKind.Identifier, lengthFrom(start), [ident]);
     }
 
     function interfaceDeclaration() {
+        const start = startOffset();
         const header = interfaceDeclarationHeader();
         const body = typeDeclarationBody(
             PhraseKind.InterfaceDeclarationBody, isClassMemberStart, interfaceMemberDeclarations
         );
-        return Phrase.create(PhraseKind.InterfaceDeclaration, [header, body]);
+        return Phrase.create(PhraseKind.InterfaceDeclaration, lengthFrom(start), [header, body]);
     }
 
     function typeDeclarationBody<T extends Phrase>(phraseType: PhraseKind, elementStartPredicate: Predicate, listFunction: () => T) {
+        const start = startOffset();
         const open = expect(TokenKind.OpenBrace);
 
         if (!elementStartPredicate(peek())) {
             const close = expect(TokenKind.CloseBrace);
-            return Phrase.create(phraseType, [open, close]);
+            return Phrase.create(phraseType, lengthFrom(start), [open, close]);
         }
 
         const l = listFunction();
         const close = expect(TokenKind.CloseBrace);
-        return Phrase.create(phraseType, [open, l, close]);
+        return Phrase.create(phraseType, lengthFrom(start), [open, l, close]);
     }
 
     function interfaceMemberDeclarations() {
@@ -1241,35 +1297,39 @@ export namespace Parser {
     }
 
     function interfaceDeclarationHeader() {
+        const start = startOffset();
         const interfaceToken = next();
         const name = expect(TokenKind.Name);
 
         if (peek().kind !== TokenKind.Extends) {
-            return Phrase.create(PhraseKind.InterfaceDeclarationHeader, [interfaceToken, name]);
+            return Phrase.create(PhraseKind.InterfaceDeclarationHeader, lengthFrom(start), [interfaceToken, name]);
         }
 
         const base = interfaceBaseClause();
-        return Phrase.create(PhraseKind.InterfaceDeclarationHeader, [interfaceToken, name, base]);
+        return Phrase.create(PhraseKind.InterfaceDeclarationHeader, lengthFrom(start), [interfaceToken, name, base]);
     }
 
     function interfaceBaseClause() {
+        const start = startOffset();
         const ext = next(); //extends
         const list = qualifiedNameList([TokenKind.OpenBrace]);
-        return Phrase.create(PhraseKind.InterfaceBaseClause, [ext, list]);
+        return Phrase.create(PhraseKind.InterfaceBaseClause, lengthFrom(start), [ext, list]);
     }
 
     function traitDeclaration() {
+        const start = startOffset();
         const header = traitDeclarationHeader();
         const body = typeDeclarationBody(
             PhraseKind.TraitDeclarationBody, isClassMemberStart, traitMemberDeclarations
         );
-        return Phrase.create(PhraseKind.TraitDeclaration, [header, body]);
+        return Phrase.create(PhraseKind.TraitDeclaration, lengthFrom(start), [header, body]);
     }
 
     function traitDeclarationHeader() {
+        const start = startOffset();
         const traitToken = next(); //trait
         const name = expect(TokenKind.Name);
-        return Phrase.create(PhraseKind.TraitDeclarationHeader, [traitToken, name]);
+        return Phrase.create(PhraseKind.TraitDeclarationHeader, lengthFrom(start), [traitToken, name]);
     }
 
     function traitMemberDeclarations() {
@@ -1284,9 +1344,10 @@ export namespace Parser {
     }
 
     function functionDeclaration() {
+        const start = startOffset();
         const header = functionDeclarationHeader();
         const body = functionDeclarationBody();
-        return Phrase.create(PhraseKind.FunctionDeclaration, [header, body]);
+        return Phrase.create(PhraseKind.FunctionDeclaration, lengthFrom(start), [header, body]);
     }
 
     function functionDeclarationBody() {
@@ -1296,6 +1357,7 @@ export namespace Parser {
     }
 
     function functionDeclarationHeader() {
+        const start = startOffset();
         const children: (Phrase | Token)[] = [];
         children.push(next()); //function
         const amp = optional(TokenKind.Ampersand);
@@ -1323,7 +1385,7 @@ export namespace Parser {
             children.push(returnType());
         }
 
-        return Phrase.create(PhraseKind.FunctionDeclarationHeader, children);
+        return Phrase.create(PhraseKind.FunctionDeclarationHeader, lengthFrom(start), children);
     }
 
     function isParameterStart(t: Token) {
@@ -1338,14 +1400,16 @@ export namespace Parser {
     }
 
     function classDeclaration() {
+        const start = startOffset();
         const header = classDeclarationHeader();
         const body = typeDeclarationBody(
             PhraseKind.ClassDeclarationBody, isClassMemberStart, classMemberDeclarationList
         );
-        return Phrase.create(PhraseKind.ClassDeclaration, [header, body]);
+        return Phrase.create(PhraseKind.ClassDeclaration, lengthFrom(start), [header, body]);
     }
 
     function classDeclarationHeader() {
+        const start = startOffset();
         const children: (Phrase | Token)[] = [];
         const mod = optionalOneOf([TokenKind.Abstract, TokenKind.Final]);
 
@@ -1364,26 +1428,28 @@ export namespace Parser {
             children.push(classInterfaceClause());
         }
 
-        return Phrase.create(PhraseKind.ClassDeclarationHeader, children);
+        return Phrase.create(PhraseKind.ClassDeclarationHeader, lengthFrom(start), children);
     }
 
     function classBaseClause() {
+        const start = startOffset();
         const ext = next(); //extends
         const name = qualifiedName();
-        return Phrase.create(PhraseKind.ClassBaseClause, [ext, name]);
+        return Phrase.create(PhraseKind.ClassBaseClause, lengthFrom(start), [ext, name]);
     }
 
     function compoundStatement() {
+        const start = startOffset();
         const open = expect(TokenKind.OpenBrace);
 
         if (!isStatementStart(peek())) {
             const close = expect(TokenKind.CloseBrace);
-            return Phrase.create(PhraseKind.CompoundStatement, [open, close]);
+            return Phrase.create(PhraseKind.CompoundStatement, lengthFrom(start), [open, close]);
         }
 
         const stmtList = statementList([TokenKind.CloseBrace]);
         const close = expect(TokenKind.CloseBrace);
-        return Phrase.create(PhraseKind.CompoundStatement, [open, stmtList, close]);
+        return Phrase.create(PhraseKind.CompoundStatement, lengthFrom(start), [open, stmtList, close]);
     }
 
     function isFunctionStatic(peek1: Token, peek2: Token) {
@@ -1484,6 +1550,7 @@ export namespace Parser {
     }
 
     function inlineText() {
+        const start = startOffset();
         const children: (Phrase | Token)[] = [];
         const close = optional(TokenKind.CloseTag);
         const text = optional(TokenKind.Text);
@@ -1501,12 +1568,13 @@ export namespace Parser {
             children.push(open);
         }
 
-        return Phrase.create(PhraseKind.InlineText, children);
+        return Phrase.create(PhraseKind.InlineText, lengthFrom(start), children);
     }
 
     function nullStatement() {
+        const start = startOffset();
         const semicolon = next(); //;
-        return Phrase.create(PhraseKind.NullStatement, [semicolon]);
+        return Phrase.create(PhraseKind.NullStatement, lengthFrom(start), [semicolon]);
     }
 
     function isCatchClauseStart(t: Token) {
@@ -1514,6 +1582,7 @@ export namespace Parser {
     }
 
     function tryStatement() {
+        const start = startOffset();
         const tryToken = next();
         const compound = compoundStatement();
 
@@ -1532,24 +1601,26 @@ export namespace Parser {
             } else {
                 catchListOrFinally = Phrase.createParseError([], t);
             }
-            return Phrase.create(PhraseKind.TryStatement, [tryToken, compound, catchListOrFinally]);
+            return Phrase.create(PhraseKind.TryStatement, lengthFrom(start), [tryToken, compound, catchListOrFinally]);
         }
 
         if (peek().kind !== TokenKind.Finally) {
-            return Phrase.create(PhraseKind.TryStatement, [tryToken, compound, catchListOrFinally]);
+            return Phrase.create(PhraseKind.TryStatement, lengthFrom(start), [tryToken, compound, catchListOrFinally]);
         }
 
         const finClause = finallyClause();
-        return Phrase.create(PhraseKind.TryStatement, [tryToken, compound, catchListOrFinally, finClause]);
+        return Phrase.create(PhraseKind.TryStatement, lengthFrom(start), [tryToken, compound, catchListOrFinally, finClause]);
     }
 
     function finallyClause() {
+        const start = startOffset();
         const fin = next(); //finally
         const stmt = compoundStatement();
-        return Phrase.create(PhraseKind.FinallyClause, [fin, stmt]);
+        return Phrase.create(PhraseKind.FinallyClause, lengthFrom(start), [fin, stmt]);
     }
 
     function catchClause() {
+        const start = startOffset();
         const catchToken = next();
         const open = expect(TokenKind.OpenParenthesis);
         const delimList = delimitedList(
@@ -1562,18 +1633,19 @@ export namespace Parser {
         const varName = expect(TokenKind.VariableName);
         const close = expect(TokenKind.CloseParenthesis);
         const stmt = compoundStatement();
-        return Phrase.create(PhraseKind.CatchClause, [catchToken, open, delimList, varName, close, stmt]);
+        return Phrase.create(PhraseKind.CatchClause, lengthFrom(start), [catchToken, open, delimList, varName, close, stmt]);
     }
 
     function declareDirective() {
+        const start = startOffset();
         const name = expect(TokenKind.Name);
         const equals = expect(TokenKind.Equals);
         const literal = expectOneOf([TokenKind.IntegerLiteral, TokenKind.FloatingLiteral, TokenKind.StringLiteral]);
-        return Phrase.create(PhraseKind.DeclareDirective, [name, equals, literal]);
+        return Phrase.create(PhraseKind.DeclareDirective, lengthFrom(start), [name, equals, literal]);
     }
 
     function declareStatement() {
-
+        const start = startOffset();
         const declareToken = next();
         const open = expect(TokenKind.OpenParenthesis);
         const directive = declareDirective();
@@ -1586,20 +1658,21 @@ export namespace Parser {
             const stmtList = statementList([TokenKind.EndDeclare]);
             const end = expect(TokenKind.EndDeclare);
             const semicolon = expect(TokenKind.Semicolon);
-            return Phrase.create(PhraseKind.DeclareStatement, [declareToken, open, directive, close, colon, stmtList, end, semicolon]);
+            return Phrase.create(PhraseKind.DeclareStatement, lengthFrom(start), [declareToken, open, directive, close, colon, stmtList, end, semicolon]);
         } else if (isStatementStart(t)) {
             const stmt = statement();
-            return Phrase.create(PhraseKind.DeclareStatement, [declareToken, open, directive, close, stmt]);
+            return Phrase.create(PhraseKind.DeclareStatement, lengthFrom(start), [declareToken, open, directive, close, stmt]);
         } else if (t.kind === TokenKind.Semicolon) {
             const semicolon = next();
-            return Phrase.create(PhraseKind.DeclareStatement, [declareToken, open, directive, close, semicolon]);
+            return Phrase.create(PhraseKind.DeclareStatement, lengthFrom(start), [declareToken, open, directive, close, semicolon]);
         } else {
             const err = Phrase.createParseError([], t);
-            return Phrase.create(PhraseKind.DeclareStatement, [declareToken, open, directive, close, err]);
+            return Phrase.create(PhraseKind.DeclareStatement, lengthFrom(start), [declareToken, open, directive, close, err]);
         }
     }
 
     function switchStatement() {
+        const start = startOffset();
         const keyword = next(); //switch
         const open = expect(TokenKind.OpenParenthesis);
         const expr = expression(0);
@@ -1619,7 +1692,8 @@ export namespace Parser {
             const endSwitch = expect(TokenKind.EndSwitch);
             const semicolon = expect(TokenKind.Semicolon);
             return Phrase.create(
-                PhraseKind.SwitchStatement,
+                PhraseKind.SwitchStatement, 
+                lengthFrom(start),
                 stmtList ? [keyword, open, expr, close, colonOrBrace, stmtList, endSwitch, semicolon] :
                     [keyword, open, expr, close, colonOrBrace, endSwitch, semicolon],
             );
@@ -1627,6 +1701,7 @@ export namespace Parser {
             const braceClose = expect(TokenKind.CloseBrace);
             return Phrase.create(
                 PhraseKind.SwitchStatement,
+                lengthFrom(start),
                 stmtList ? [keyword, open, expr, close, colonOrBrace, stmtList, braceClose] :
                     [keyword, open, expr, close, colonOrBrace, braceClose],
             );
@@ -1634,6 +1709,7 @@ export namespace Parser {
     }
 
     function caseStatements(breakOn: TokenKind) {
+        const start = startOffset();
         let t: Token;
         const children: (Phrase | Token)[] = [];
         const caseBreakOn = [TokenKind.Case, TokenKind.Default];
@@ -1652,7 +1728,8 @@ export namespace Parser {
                 break;
             } else {
                 let skipped = defaultSyncStrategy();
-                children.push(Phrase.createParseError(skipped, t));
+                let errStart = startOffset();
+                children.push(Phrase.createParseError(skipped, t, undefined, lengthFrom(errStart)));
                 if (caseBreakOn.indexOf(peek().kind) > -1) {
                     continue;
                 }
@@ -1662,74 +1739,83 @@ export namespace Parser {
         }
 
         recoverSetStack.pop();
-        return Phrase.create(PhraseKind.CaseStatementList, children);
+        return Phrase.create(PhraseKind.CaseStatementList, lengthFrom(start), children);
     }
 
     function caseStatement(breakOn: TokenKind[]) {
+        const start = startOffset();
         const keyword = next(); //case
         const expr = expression(0);
         const colonOrSemicolon = expectOneOf([TokenKind.Colon, TokenKind.Semicolon]);
 
         if (!isStatementStart(peek())) {
-            return Phrase.create(PhraseKind.CaseStatement, [keyword, expr, colonOrSemicolon]);
+            return Phrase.create(PhraseKind.CaseStatement, lengthFrom(start), [keyword, expr, colonOrSemicolon]);
         }
 
         const stmtList = statementList(breakOn);
-        return Phrase.create(PhraseKind.CaseStatement, [keyword, expr, colonOrSemicolon, stmtList]);
+        return Phrase.create(PhraseKind.CaseStatement, lengthFrom(start), [keyword, expr, colonOrSemicolon, stmtList]);
     }
 
     function defaultStatement(breakOn: TokenKind[]) {
+        const start = startOffset();
         const keyword = next(); //default
         const colonOrSemicolon = expectOneOf([TokenKind.Colon, TokenKind.Semicolon]);
         if (!isStatementStart(peek())) {
-            return Phrase.create(PhraseKind.CaseStatement, [keyword, colonOrSemicolon]);
+            return Phrase.create(PhraseKind.CaseStatement, lengthFrom(start), [keyword, colonOrSemicolon]);
         }
 
         const stmtList = statementList(breakOn);
-        return Phrase.create(PhraseKind.CaseStatement, [keyword, colonOrSemicolon, stmtList]);
+        return Phrase.create(PhraseKind.CaseStatement, lengthFrom(start), [keyword, colonOrSemicolon, stmtList]);
     }
 
     function namedLabelStatement() {
+        const start = startOffset();
         const name = next();
         const colon = next();
-        return Phrase.create(PhraseKind.NamedLabelStatement, [name, colon]);
+        return Phrase.create(PhraseKind.NamedLabelStatement, lengthFrom(start), [name, colon]);
     }
 
     function gotoStatement() {
+        const start = startOffset();
         const keyword = next(); //goto
         const name = expect(TokenKind.Name);
         const semicolon = expect(TokenKind.Semicolon);
-        return Phrase.create(PhraseKind.GotoStatement, [keyword, name, semicolon]);
+        return Phrase.create(PhraseKind.GotoStatement, lengthFrom(start), [keyword, name, semicolon]);
     }
 
     function throwStatement() {
+        const start = startOffset();
         const keyword = next(); //throw
         const expr = expression(0);
         const semicolon = expect(TokenKind.Semicolon);
-        return Phrase.create(PhraseKind.ThrowStatement, [keyword, expr, semicolon]);
+        return Phrase.create(PhraseKind.ThrowStatement, lengthFrom(start), [keyword, expr, semicolon]);
     }
 
     function foreachCollection() {
+        const start = startOffset();
         let expr = expression(0);
-        return Phrase.create(PhraseKind.ForeachCollection, [expr]);
+        return Phrase.create(PhraseKind.ForeachCollection, lengthFrom(start), [expr]);
     }
 
     function foreachKeyOrValue() {
+        const start = startOffset();
         const expr = expression(0);
         const arrow = optional(TokenKind.FatArrow);
         if (!arrow) {
-            return Phrase.create(PhraseKind.ForeachValue, [expr]);
+            return Phrase.create(PhraseKind.ForeachValue, lengthFrom(start), [expr]);
         }
-        return Phrase.create(PhraseKind.ForeachKey, [expr, arrow]);
+        return Phrase.create(PhraseKind.ForeachKey, lengthFrom(start), [expr, arrow]);
     }
 
     function foreachValue() {
+        const start = startOffset();
         const amp = optional(TokenKind.Ampersand);
         const expr = expression(0);
-        return Phrase.create(PhraseKind.ForeachValue, amp ? [amp, expr] : [expr]);
+        return Phrase.create(PhraseKind.ForeachValue, lengthFrom(start), amp ? [amp, expr] : [expr]);
     }
 
     function foreachStatement() {
+        const start = startOffset();
         const foreachToken = next(); //foreach
         const open = expect(TokenKind.OpenParenthesis);
         const collection = foreachCollection();
@@ -1751,6 +1837,7 @@ export namespace Parser {
             const semicolon = expect(TokenKind.Semicolon);
             return Phrase.create(
                 PhraseKind.ForeachStatement,
+                lengthFrom(start),
                 val ? [foreachToken, open, collection, asToken, keyOrValue, val, close, colon, stmtList, endForeach, semicolon] :
                     [foreachToken, open, collection, asToken, keyOrValue, close, colon, stmtList, endForeach, semicolon],
             );
@@ -1758,6 +1845,7 @@ export namespace Parser {
             const stmt = statement();
             return Phrase.create(
                 PhraseKind.ForeachStatement,
+                lengthFrom(start),
                 val ? [foreachToken, open, collection, asToken, keyOrValue, val, close, stmt] :
                     [foreachToken, open, collection, asToken, keyOrValue, close, stmt],
             );
@@ -1765,6 +1853,7 @@ export namespace Parser {
             const err = Phrase.createParseError([], t);
             return Phrase.create(
                 PhraseKind.ForeachStatement,
+                lengthFrom(start),
                 val ? [foreachToken, open, collection, asToken, keyOrValue, val, close, err] :
                     [foreachToken, open, collection, asToken, keyOrValue, close, err],
             );
@@ -1792,7 +1881,7 @@ export namespace Parser {
     }
 
     function variableInitial() {
-        return variable(variableAtom());
+        return variable(startOffset(), variableAtom());
     }
 
     function variableList(breakOn?: TokenKind[]) {
@@ -1806,12 +1895,13 @@ export namespace Parser {
     }
 
     function unsetIntrinsic() {
+        const start = startOffset();
         const keyword = next(); //unset
         const open = expect(TokenKind.OpenParenthesis);
         const varList = variableList([TokenKind.CloseParenthesis]);
         const close = expect(TokenKind.CloseParenthesis);
         const semicolon = expect(TokenKind.Semicolon);
-        return Phrase.create(PhraseKind.UnsetIntrinsic, [keyword, open, varList, close, semicolon]);
+        return Phrase.create(PhraseKind.UnsetIntrinsic, lengthFrom(start), [keyword, open, varList, close, semicolon]);
     }
 
     function expressionInitial() {
@@ -1819,6 +1909,7 @@ export namespace Parser {
     }
 
     function echoIntrinsic() {
+        const start = startOffset();
         const keyword = next(); //echo or <?=
         const exprList = delimitedList(
             PhraseKind.ExpressionList,
@@ -1827,7 +1918,7 @@ export namespace Parser {
             TokenKind.Comma
         );
         const semicolon = expect(TokenKind.Semicolon);
-        return Phrase.create(PhraseKind.EchoIntrinsic, [keyword, exprList, semicolon]);
+        return Phrase.create(PhraseKind.EchoIntrinsic, lengthFrom(start), [keyword, exprList, semicolon]);
     }
 
     function isStaticVariableDclarationStart(t: Token) {
@@ -1835,6 +1926,7 @@ export namespace Parser {
     }
 
     function functionStaticDeclaration() {
+        const start = startOffset();
         const keyword = next(); //static
         const varList = delimitedList(
             PhraseKind.StaticVariableDeclarationList,
@@ -1844,10 +1936,11 @@ export namespace Parser {
             [TokenKind.Semicolon]
         );
         const semicolon = expect(TokenKind.Semicolon);
-        return Phrase.create(PhraseKind.FunctionStaticDeclaration, [keyword, varList, semicolon]);
+        return Phrase.create(PhraseKind.FunctionStaticDeclaration, lengthFrom(start), [keyword, varList, semicolon]);
     }
 
     function globalDeclaration() {
+        const start = startOffset();
         const keyword = next(); //global
         const varList = delimitedList(
             PhraseKind.VariableNameList,
@@ -1857,7 +1950,7 @@ export namespace Parser {
             [TokenKind.Semicolon]
         );
         const semicolon = expect(TokenKind.Semicolon);
-        return Phrase.create(PhraseKind.GlobalDeclaration, [keyword, varList, semicolon]);
+        return Phrase.create(PhraseKind.GlobalDeclaration, lengthFrom(start), [keyword, varList, semicolon]);
     }
 
     function isSimpleVariableStart(t: Token) {
@@ -1865,60 +1958,65 @@ export namespace Parser {
     }
 
     function staticVariableDeclaration() {
+        const start = startOffset();
         const varName = expect(TokenKind.VariableName);
 
         if (peek().kind !== TokenKind.Equals) {
-            return Phrase.create(PhraseKind.StaticVariableDeclaration, [varName]);
+            return Phrase.create(PhraseKind.StaticVariableDeclaration, lengthFrom(start), [varName]);
         }
 
         const init = functionStaticInitialiser();
-        return Phrase.create(PhraseKind.StaticVariableDeclaration, [varName, init]);
+        return Phrase.create(PhraseKind.StaticVariableDeclaration, lengthFrom(start), [varName, init]);
 
     }
 
     function functionStaticInitialiser() {
+        const start = startOffset();
         const equals = next();
         const expr = expression(0);
-        return Phrase.create(PhraseKind.FunctionStaticInitialiser, [equals, expr]);
+        return Phrase.create(PhraseKind.FunctionStaticInitialiser, lengthFrom(start), [equals, expr]);
     }
 
     function continueStatement() {
+        const start = startOffset();
         const keyword = next(); //break/continue
         if (!isExpressionStart(peek())) {
             const semicolon = expect(TokenKind.Semicolon);
-            return Phrase.create(PhraseKind.ContinueStatement, [keyword, semicolon]);
+            return Phrase.create(PhraseKind.ContinueStatement, lengthFrom(start), [keyword, semicolon]);
         }
 
         const expr = expression(0);
         const semicolon = expect(TokenKind.Semicolon);
-        return Phrase.create(PhraseKind.ContinueStatement, [keyword, expr, semicolon]);
+        return Phrase.create(PhraseKind.ContinueStatement, lengthFrom(start), [keyword, expr, semicolon]);
 
     }
 
     function breakStatement() {
+        const start = startOffset();
         const keyword = next(); //break/continue
 
         if (!isExpressionStart(peek())) {
             const semicolon = expect(TokenKind.Semicolon);
-            return Phrase.create(PhraseKind.BreakStatement, [keyword, semicolon]);
+            return Phrase.create(PhraseKind.BreakStatement, lengthFrom(start), [keyword, semicolon]);
         }
 
         const expr = expression(0);
         const semicolon = expect(TokenKind.Semicolon);
-        return Phrase.create(PhraseKind.BreakStatement, [keyword, expr, semicolon]);
+        return Phrase.create(PhraseKind.BreakStatement, lengthFrom(start), [keyword, expr, semicolon]);
     }
 
     function returnStatement() {
+        const start = startOffset();
         const keyword = next(); //return
 
         if (!isExpressionStart(peek())) {
             const semicolon = expect(TokenKind.Semicolon);
-            return Phrase.create(PhraseKind.ReturnStatement, [keyword, semicolon]);
+            return Phrase.create(PhraseKind.ReturnStatement, lengthFrom(start), [keyword, semicolon]);
         }
 
         const expr = expression(0);
         const semicolon = expect(TokenKind.Semicolon);
-        return Phrase.create(PhraseKind.ReturnStatement, [keyword, expr, semicolon]);
+        return Phrase.create(PhraseKind.ReturnStatement, lengthFrom(start), [keyword, expr, semicolon]);
     }
 
     function forExpressionGroup(phraseType: PhraseKind, breakOn: TokenKind[]) {
@@ -1932,6 +2030,7 @@ export namespace Parser {
     }
 
     function forStatement() {
+        const start = startOffset();
         const children: (Phrase | Token)[] = [];
         const forToken = next();
         children.push(forToken);
@@ -1968,10 +2067,11 @@ export namespace Parser {
             children.push(Phrase.createParseError([], t));
         }
 
-        return Phrase.create(PhraseKind.ForStatement, children);
+        return Phrase.create(PhraseKind.ForStatement, lengthFrom(start), children);
     }
 
     function doStatement() {
+        const start = startOffset();
         const doToken = next(); // do
         const stmt = statement();
         const whileToken = expect(TokenKind.While);
@@ -1979,10 +2079,11 @@ export namespace Parser {
         const expr = expression(0);
         const close = expect(TokenKind.CloseParenthesis);
         const semicolon = expect(TokenKind.Semicolon);
-        return Phrase.create(PhraseKind.DoStatement, [doToken, stmt, whileToken, open, expr, close, semicolon]);
+        return Phrase.create(PhraseKind.DoStatement, lengthFrom(start), [doToken, stmt, whileToken, open, expr, close, semicolon]);
     }
 
     function whileStatement() {
+        const start = startOffset();
         const whileToken = next(); //while
         const open = expect(TokenKind.OpenParenthesis);
         const expr = expression(0);
@@ -1997,12 +2098,14 @@ export namespace Parser {
             const semicolon = expect(TokenKind.Semicolon);
             return Phrase.create(
                 PhraseKind.WhileStatement,
+                lengthFrom(start),
                 [whileToken, open, expr, close, colon, stmtList, endWhile, semicolon],
             );
         } else if (isStatementStart(t)) {
             const stmt = statement();
             return Phrase.create(
                 PhraseKind.WhileStatement,
+                lengthFrom(start),
                 [whileToken, open, expr, close, stmt],
             );
         } else {
@@ -2010,41 +2113,46 @@ export namespace Parser {
             const err = Phrase.createParseError([], t);
             return Phrase.create(
                 PhraseKind.WhileStatement,
+                lengthFrom(start),
                 [whileToken, open, expr, close, err],
             );
         }
     }
 
     function elseIfClause1() {
+        const start = startOffset();
         const keyword = next(); //elseif
         const open = expect(TokenKind.OpenParenthesis);
         const expr = expression(0);
         const close = expect(TokenKind.CloseParenthesis);
         const stmt = statement();
-        return Phrase.create(PhraseKind.ElseIfClause, [keyword, open, expr, close, stmt]);
+        return Phrase.create(PhraseKind.ElseIfClause, lengthFrom(start), [keyword, open, expr, close, stmt]);
     }
 
     function elseIfClause2() {
+        const start = startOffset();
         const keyword = next(); //elseif
         const open = expect(TokenKind.OpenParenthesis);
         const expr = expression(0);
         const close = expect(TokenKind.CloseParenthesis);
         const colon = expect(TokenKind.Colon);
         const stmtList = statementList([TokenKind.EndIf, TokenKind.Else, TokenKind.ElseIf]);
-        return Phrase.create(PhraseKind.ElseIfClause, [keyword, open, expr, close, colon, stmtList]);
+        return Phrase.create(PhraseKind.ElseIfClause, lengthFrom(start), [keyword, open, expr, close, colon, stmtList]);
     }
 
     function elseClause1() {
+        const start = startOffset();
         const keyword = next(); //else
         const stmt = statement();
-        return Phrase.create(PhraseKind.ElseClause, [keyword, stmt]);
+        return Phrase.create(PhraseKind.ElseClause, lengthFrom(start), [keyword, stmt]);
     }
 
     function elseClause2() {
+        const start = startOffset();
         const keyword = next(); //else
         const colon = expect(TokenKind.Colon);
         const stmtList = statementList([TokenKind.EndIf]);
-        return Phrase.create(PhraseKind.ElseClause, [keyword, colon, stmtList]);
+        return Phrase.create(PhraseKind.ElseClause, lengthFrom(start), [keyword, colon, stmtList]);
     }
 
     function isElseIfClauseStart(t: Token) {
@@ -2052,7 +2160,7 @@ export namespace Parser {
     }
 
     function ifStatement() {
-
+        const start = startOffset();
         const children: (Phrase | Token)[] = [];
         const ifToken = next();
         children.push(ifToken);
@@ -2094,22 +2202,25 @@ export namespace Parser {
             children.push(expect(TokenKind.Semicolon));
         }
 
-        return Phrase.create(PhraseKind.IfStatement, children);
+        return Phrase.create(PhraseKind.IfStatement, lengthFrom(start), children);
     }
 
     function expressionStatement() {
+        const start = startOffset();
         const expr = expression(0);
         const semicolon = expect(TokenKind.Semicolon);
-        return Phrase.create(PhraseKind.ExpressionStatement, [expr, semicolon]);
+        return Phrase.create(PhraseKind.ExpressionStatement, lengthFrom(start), [expr, semicolon]);
     }
 
     function returnType() {
+        const start = startOffset();
         const colon = next(); //:
         const typeDecl = typeDeclaration();
-        return Phrase.create(PhraseKind.ReturnType, [colon, typeDecl]);
+        return Phrase.create(PhraseKind.ReturnType, lengthFrom(start), [colon, typeDecl]);
     }
 
     function typeDeclaration() {
+        const start = startOffset();
         const question = optional(TokenKind.Question);
         let decl: Phrase | Token;
 
@@ -2128,10 +2239,11 @@ export namespace Parser {
                 break;
         }
 
-        return Phrase.create(PhraseKind.TypeDeclaration, question ? [question, decl] : [decl]);
+        return Phrase.create(PhraseKind.TypeDeclaration, lengthFrom(start), question ? [question, decl] : [decl]);
     }
 
     function classConstDeclaration(modifiers?: Phrase) {
+        const start = startOffset();
         const constToken = next();
         const delimList = delimitedList(
             PhraseKind.ClassConstElementList,
@@ -2143,6 +2255,7 @@ export namespace Parser {
         const semicolon = expect(TokenKind.Semicolon);
         return Phrase.create(
             PhraseKind.ClassConstDeclaration,
+            lengthFrom(start),
             modifiers ? [modifiers, constToken, delimList, semicolon] : [constToken, delimList, semicolon]
         );
     }
@@ -2210,10 +2323,11 @@ export namespace Parser {
     }
 
     function classConstElement() {
+        const start = startOffset();
         const ident = identifier();
         const equals = expect(TokenKind.Equals);
         const expr = expression(0);
-        return Phrase.create(PhraseKind.ClassConstElement, [ident, equals, expr]);
+        return Phrase.create(PhraseKind.ClassConstElement, lengthFrom(start), [ident, equals, expr]);
     }
 
     function isPropertyElementStart(t: Token) {
@@ -2221,6 +2335,7 @@ export namespace Parser {
     }
 
     function propertyDeclaration(modifiersOrVar: Phrase | Token) {
+        const start = startOffset();
         const delimList = delimitedList(
             PhraseKind.PropertyElementList,
             propertyElement,
@@ -2229,32 +2344,35 @@ export namespace Parser {
             [TokenKind.Semicolon]
         );
         const semicolon = expect(TokenKind.Semicolon);
-        return Phrase.create(PhraseKind.PropertyDeclaration, [modifiersOrVar, delimList, semicolon]);
+        return Phrase.create(PhraseKind.PropertyDeclaration, lengthFrom(start), [modifiersOrVar, delimList, semicolon]);
     }
 
     function propertyElement() {
+        const start = startOffset();
         const varName = expect(TokenKind.VariableName);
 
         if (peek().kind !== TokenKind.Equals) {
-            return Phrase.create(PhraseKind.PropertyElement, [varName]);
+            return Phrase.create(PhraseKind.PropertyElement, lengthFrom(start), [varName]);
         }
 
         const initialiser = propertyInitialiser();
-        return Phrase.create(PhraseKind.PropertyElement, [varName, initialiser]);
+        return Phrase.create(PhraseKind.PropertyElement, lengthFrom(start), [varName, initialiser]);
     }
 
     function propertyInitialiser() {
+        const start = startOffset();
         const equals = next();
         const expr = expression(0);
-        return Phrase.create(PhraseKind.PropertyInitialiser, [equals, expr]);
+        return Phrase.create(PhraseKind.PropertyInitialiser, lengthFrom(start), [equals, expr]);
     }
 
     function memberModifierList() {
+        const start = startOffset();
         let children: (Phrase | Token)[] = [];
         while (isMemberModifier(peek())) {
             children.push(next());
         }
-        return Phrase.create(PhraseKind.MemberModifierList, children);
+        return Phrase.create(PhraseKind.MemberModifierList, lengthFrom(start), children);
     }
 
     function isMemberModifier(t: Token) {
@@ -2283,28 +2401,30 @@ export namespace Parser {
     }
 
     function objectCreationExpression() {
+        const start = startOffset();
         const newToken = next();
         if (peek().kind === TokenKind.Class) {
             const anonClass = anonymousClassDeclaration();
-            return Phrase.create(PhraseKind.ObjectCreationExpression, [newToken, anonClass]);
+            return Phrase.create(PhraseKind.ObjectCreationExpression, lengthFrom(start), [newToken, anonClass]);
         }
 
         const typeDes = typeDesignator(PhraseKind.ClassTypeDesignator);
         const open = optional(TokenKind.OpenParenthesis);
 
         if (!open) {
-            return Phrase.create(PhraseKind.ObjectCreationExpression, [newToken, typeDes]);
+            return Phrase.create(PhraseKind.ObjectCreationExpression, lengthFrom(start), [newToken, typeDes]);
         }
 
         if (!isArgumentStart(peek())) {
             const close = expect(TokenKind.CloseParenthesis);
-            return Phrase.create(PhraseKind.ObjectCreationExpression, [newToken, typeDes, open, close]);
+            return Phrase.create(PhraseKind.ObjectCreationExpression, lengthFrom(start), [newToken, typeDes, open, close]);
         }
 
         const argList = argumentList();
         const close = expect(TokenKind.CloseParenthesis);
         return Phrase.create(
             PhraseKind.ObjectCreationExpression,
+            lengthFrom(start),
             [newToken, typeDes, open, argList, close]
         );
 
@@ -2312,25 +2432,26 @@ export namespace Parser {
 
     function typeDesignator(phraseType: PhraseKind) {
 
+        const start = startOffset();
         let part = classTypeDesignatorAtom();
 
         while (true) {
 
             switch (peek().kind) {
                 case TokenKind.OpenBracket:
-                    part = subscriptExpression(part, TokenKind.CloseBracket);
+                    part = subscriptExpression(start, part, TokenKind.CloseBracket);
                     continue;
                 case TokenKind.OpenBrace:
-                    part = subscriptExpression(part, TokenKind.CloseBrace);
+                    part = subscriptExpression(start, part, TokenKind.CloseBrace);
                     continue;
                 case TokenKind.Arrow:
-                    part = propertyAccessExpression(part);
+                    part = propertyAccessExpression(start, part);
                     continue;
                 case TokenKind.ColonColon:
                     {
                         const op = next(); //::
                         const name = restrictedScopedMemberName();
-                        part = Phrase.create(PhraseKind.ScopedPropertyAccessExpression, [part, op, name]);
+                        part = Phrase.create(PhraseKind.ScopedPropertyAccessExpression, lengthFrom(start), [part, op, name]);
                     }
                     continue;
                 default:
@@ -2340,11 +2461,11 @@ export namespace Parser {
             break;
         }
 
-        return Phrase.create(phraseType, [part]);
+        return Phrase.create(phraseType, lengthFrom(start), [part]);
     }
 
     function restrictedScopedMemberName() {
-
+        const start = startOffset();
         let t = peek();
         let name: Phrase | Token;
 
@@ -2363,7 +2484,7 @@ export namespace Parser {
                 break;
         }
 
-        return Phrase.create(PhraseKind.ScopedMemberName, [name]);
+        return Phrase.create(PhraseKind.ScopedMemberName, lengthFrom(start), [name]);
 
     }
 
@@ -2388,9 +2509,10 @@ export namespace Parser {
     }
 
     function cloneExpression() {
+        const start = startOffset();
         const keyword = next(); //clone
         const expr = expression(0);
-        return Phrase.create(PhraseKind.CloneExpression, [keyword, expr]);
+        return Phrase.create(PhraseKind.CloneExpression, lengthFrom(start), [keyword, expr]);
     }
 
     function isArrayElementStartOrComma(t: Token) {
@@ -2398,39 +2520,41 @@ export namespace Parser {
     }
 
     function listIntrinsic() {
+        const start = startOffset();
         const keyword = next(); //list
         const open = expect(TokenKind.OpenParenthesis);
         //list must not be empty in php7+ but allow it for backwards compatibility
         if (!isArrayElementStartOrComma(peek())) {
             const close = expect(TokenKind.CloseParenthesis);
-            return Phrase.create(PhraseKind.ListIntrinsic, [keyword, open, close]);
+            return Phrase.create(PhraseKind.ListIntrinsic, lengthFrom(start), [keyword, open, close]);
         }
 
         const arrayList = arrayInitialiserList(TokenKind.CloseParenthesis);
         const close = expect(TokenKind.CloseParenthesis);
-        return Phrase.create(PhraseKind.ListIntrinsic, [keyword, open, arrayList, close]);
+        return Phrase.create(PhraseKind.ListIntrinsic, lengthFrom(start), [keyword, open, arrayList, close]);
     }
 
     function unaryExpression(phraseType: PhraseKind) {
-
+        const start = startOffset();
         const op = next();
         let vbl: Phrase | Token;
 
         switch (phraseType) {
             case PhraseKind.PrefixDecrementExpression:
             case PhraseKind.PrefixIncrementExpression:
-                vbl = variable(variableAtom());
+                vbl = variable(start, variableAtom());
                 break;
             default:
                 vbl = expression(precedenceAssociativityTuple(op)[0]);
                 break;
         }
 
-        return Phrase.create(phraseType, [op, vbl]);
+        return Phrase.create(phraseType, lengthFrom(start), [op, vbl]);
 
     }
 
     function anonymousFunctionHeader() {
+        const start = startOffset();
         const children: (Phrase | Token)[] = [];
         const stat = optional(TokenKind.Static);
         if (stat) {
@@ -2463,14 +2587,15 @@ export namespace Parser {
             children.push(returnType());
         }
 
-        return Phrase.create(PhraseKind.AnonymousFunctionHeader, children);
+        return Phrase.create(PhraseKind.AnonymousFunctionHeader, lengthFrom(start), children);
 
     }
 
     function anonymousFunctionCreationExpression() {
+        const start = startOffset();
         const header = anonymousFunctionHeader();
         const body = functionDeclarationBody();
-        return Phrase.create(PhraseKind.AnonymousFunctionCreationExpression, [header, body]);
+        return Phrase.create(PhraseKind.AnonymousFunctionCreationExpression, lengthFrom(start), [header, body]);
     }
 
     function isAnonymousFunctionUseVariableStart(t: Token) {
@@ -2478,6 +2603,7 @@ export namespace Parser {
     }
 
     function anonymousFunctionUseClause() {
+        const start = startOffset();
         const use = next();
         const open = expect(TokenKind.OpenParenthesis);
         const delimList = delimitedList(
@@ -2488,13 +2614,14 @@ export namespace Parser {
             [TokenKind.CloseParenthesis]
         );
         const close = expect(TokenKind.CloseParenthesis);
-        return Phrase.create(PhraseKind.AnonymousFunctionUseClause, [use, open, delimList, close]);
+        return Phrase.create(PhraseKind.AnonymousFunctionUseClause, lengthFrom(start), [use, open, delimList, close]);
     }
 
     function anonymousFunctionUseVariable() {
+        const start = startOffset();
         const amp = optional(TokenKind.Ampersand);
         const varName = expect(TokenKind.VariableName);
-        return Phrase.create(PhraseKind.AnonymousFunctionUseVariable, amp ? [amp, varName] : [varName]);
+        return Phrase.create(PhraseKind.AnonymousFunctionUseVariable, lengthFrom(start), amp ? [amp, varName] : [varName]);
     }
 
     function isTypeDeclarationStart(t: Token) {
@@ -2512,6 +2639,7 @@ export namespace Parser {
     }
 
     function parameterDeclaration() {
+        const start = startOffset();
         const children: (Phrase | Token)[] = [];
 
         if (isTypeDeclarationStart(peek())) {
@@ -2532,16 +2660,17 @@ export namespace Parser {
             children.push(defaultArgumentSpecifier());
         }
 
-        return Phrase.create(PhraseKind.ParameterDeclaration, children);
+        return Phrase.create(PhraseKind.ParameterDeclaration, lengthFrom(start), children);
     }
 
     function defaultArgumentSpecifier() {
+        const start = startOffset();
         const equals = next();
         const expr = expression(0);
-        return Phrase.create(PhraseKind.DefaultArgumentSpecifier, [equals, expr]);
+        return Phrase.create(PhraseKind.DefaultArgumentSpecifier, lengthFrom(start), [equals, expr]);
     }
 
-    function variable(variableAtomNode: Phrase | Token) {
+    function variable(start:number, variableAtomNode: Phrase | Token) {
 
         let count = 0;
 
@@ -2549,24 +2678,24 @@ export namespace Parser {
             ++count;
             switch (peek().kind) {
                 case TokenKind.ColonColon:
-                    variableAtomNode = scopedAccessExpression(variableAtomNode);
+                    variableAtomNode = scopedAccessExpression(start, variableAtomNode);
                     continue;
                 case TokenKind.Arrow:
-                    variableAtomNode = propertyOrMethodAccessExpression(variableAtomNode);
+                    variableAtomNode = propertyOrMethodAccessExpression(start, variableAtomNode);
                     continue;
                 case TokenKind.OpenBracket:
-                    variableAtomNode = subscriptExpression(variableAtomNode, TokenKind.CloseBracket);
+                    variableAtomNode = subscriptExpression(start, variableAtomNode, TokenKind.CloseBracket);
                     continue;
                 case TokenKind.OpenBrace:
-                    variableAtomNode = subscriptExpression(variableAtomNode, TokenKind.CloseBrace);
+                    variableAtomNode = subscriptExpression(start, variableAtomNode, TokenKind.CloseBrace);
                     continue;
                 case TokenKind.OpenParenthesis:
-                    variableAtomNode = functionCallExpression(variableAtomNode);
+                    variableAtomNode = functionCallExpression(start, variableAtomNode);
                     continue;
                 default:
                     //only simple variable atoms qualify as variables on their own
                     if (count === 1 && (<Phrase>variableAtomNode).kind !== PhraseKind.SimpleVariable) {
-                        variableAtomNode = Phrase.createParseError([variableAtomNode], peek());
+                        variableAtomNode = Phrase.createParseError([variableAtomNode], peek(), undefined, lengthFrom(start));
                     }
                     break;
             }
@@ -2577,18 +2706,18 @@ export namespace Parser {
         return variableAtomNode;
     }
 
-    function functionCallExpression(lhs: Phrase | Token) {
+    function functionCallExpression(start:number, lhs: Phrase | Token) {
         const open = expect(TokenKind.OpenParenthesis);
         if (!isArgumentStart(peek())) {
             const close = expect(TokenKind.CloseParenthesis);
-            return Phrase.create(PhraseKind.FunctionCallExpression, [lhs, open, close]);
+            return Phrase.create(PhraseKind.FunctionCallExpression, lengthFrom(start), [lhs, open, close]);
         }
         const argList = argumentList();
         const close = expect(TokenKind.CloseParenthesis);
-        return Phrase.create(PhraseKind.FunctionCallExpression, [lhs, open, argList, close]);
+        return Phrase.create(PhraseKind.FunctionCallExpression, lengthFrom(start), [lhs, open, argList, close]);
     }
 
-    function scopedAccessExpression(lhs: Phrase | Token) {
+    function scopedAccessExpression(start:number, lhs: Phrase | Token) {
         const op = next() //::
         const memberNamePhraseTypeTuple = scopedMemberName();
         const open = optional(TokenKind.OpenParenthesis);
@@ -2596,22 +2725,23 @@ export namespace Parser {
         if (open) {
             if (!isArgumentStart(peek())) {
                 const close = expect(TokenKind.CloseParenthesis);
-                return Phrase.create(PhraseKind.ScopedCallExpression, [lhs, op, memberNamePhraseTypeTuple[0], open, close]);
+                return Phrase.create(PhraseKind.ScopedCallExpression, lengthFrom(start), [lhs, op, memberNamePhraseTypeTuple[0], open, close]);
             }
 
             const argList = argumentList();
             const close = expect(TokenKind.CloseParenthesis);
-            return Phrase.create(PhraseKind.ScopedCallExpression, [lhs, op, memberNamePhraseTypeTuple[0], open, argList, close]);
+            return Phrase.create(PhraseKind.ScopedCallExpression, lengthFrom(start), [lhs, op, memberNamePhraseTypeTuple[0], open, argList, close]);
         } else if (memberNamePhraseTypeTuple[1] === PhraseKind.ScopedCallExpression) {
             //error
             let err = Phrase.createParseError([], peek(), TokenKind.OpenParenthesis);
-            return Phrase.create(PhraseKind.ScopedCallExpression, [lhs, op, memberNamePhraseTypeTuple[0], err]);
+            return Phrase.create(PhraseKind.ScopedCallExpression, lengthFrom(start), [lhs, op, memberNamePhraseTypeTuple[0], err]);
         }
 
-        return Phrase.create(memberNamePhraseTypeTuple[1], [lhs, op, memberNamePhraseTypeTuple[0]]);
+        return Phrase.create(memberNamePhraseTypeTuple[1], lengthFrom(start), [lhs, op, memberNamePhraseTypeTuple[0]]);
     }
 
     function scopedMemberName(): [Phrase | Token, PhraseKind] {
+        const start = startOffset();
         let t = peek();
         const tup: [Phrase, PhraseKind] = [undefined, PhraseKind.ScopedCallExpression];
         let name: Phrase | Token;
@@ -2643,36 +2773,37 @@ export namespace Parser {
                 break;
         }
 
-        tup[0] = Phrase.create(PhraseKind.ScopedMemberName, [name]);
+        tup[0] = Phrase.create(PhraseKind.ScopedMemberName, lengthFrom(start), [name]);
         return tup;
     }
 
-    function propertyAccessExpression(lhs: Phrase | Token) {
+    function propertyAccessExpression(start:number, lhs: Phrase | Token) {
         const op = next(); //->
         const name = memberName();
-        return Phrase.create(PhraseKind.PropertyAccessExpression, [lhs, op, name]);
+        return Phrase.create(PhraseKind.PropertyAccessExpression, lengthFrom(start), [lhs, op, name]);
     }
 
-    function propertyOrMethodAccessExpression(lhs: Phrase | Token) {
+    function propertyOrMethodAccessExpression(start: number, lhs: Phrase | Token) {
         const op = next(); //->
         const name = memberName();
         const open = optional(TokenKind.OpenParenthesis);
         
         if (!open) {
-            return Phrase.create(PhraseKind.PropertyAccessExpression, [lhs, op, name]);
+            return Phrase.create(PhraseKind.PropertyAccessExpression, lengthFrom(start), [lhs, op, name]);
         }
 
         if (!isArgumentStart(peek())) {
             const close = expect(TokenKind.CloseParenthesis);
-            return Phrase.create(PhraseKind.MethodCallExpression, [lhs, op, name, open, close]);
+            return Phrase.create(PhraseKind.MethodCallExpression, lengthFrom(start), [lhs, op, name, open, close]);
         }
 
         const argList = argumentList();
         const close = expect(TokenKind.CloseParenthesis);
-        return Phrase.create(PhraseKind.MethodCallExpression, [lhs, op, name, open, argList, close]);
+        return Phrase.create(PhraseKind.MethodCallExpression, lengthFrom(start), [lhs, op, name, open, argList, close]);
     }
 
     function memberName() {
+        const start = startOffset();
         let name: Phrase | Token;
 
         switch (peek().kind) {
@@ -2691,7 +2822,7 @@ export namespace Parser {
                 break;
         }
 
-        return Phrase.create(PhraseKind.MemberName, [name]);
+        return Phrase.create(PhraseKind.MemberName, lengthFrom(start), [name]);
     }
 
     function createSkipUntilMatchingBracePredicate() {
@@ -2706,7 +2837,7 @@ export namespace Parser {
         }
     }
 
-    function subscriptExpression(lhs: Phrase | Token, closeTokenType: TokenKind) {
+    function subscriptExpression(start:number, lhs: Phrase | Token, closeTokenType: TokenKind) {
         const open = next(); // [ or {
 
         if (open.kind === TokenKind.OpenBrace) {
@@ -2720,25 +2851,27 @@ export namespace Parser {
                 //$this->
                 //if($bool) { stmtlist }
                 //skip until matching close brace to recover
+                const errStart = startOffset();
                 const skipFn = createSkipUntilMatchingBracePredicate();
                 const skipped = skip(skipFn, true);
-                Array.prototype.push.apply(close.children, skipped);
+                Array.prototype.push.apply((<Phrase>close).children, skipped);
+                (<Phrase>close).length = lengthFrom(errStart);
             }
-            return Phrase.create(PhraseKind.SubscriptExpression, [lhs, open, expr, close]);
+            return Phrase.create(PhraseKind.SubscriptExpression, lengthFrom(start), [lhs, open, expr, close]);
         }
 
         if (!isExpressionStart(peek())) {
             const close = expect(closeTokenType);
-            return Phrase.create(PhraseKind.SubscriptExpression, [lhs, open, close]);
+            return Phrase.create(PhraseKind.SubscriptExpression, lengthFrom(start), [lhs, open, close]);
         }
 
         const expr = expression(0);
         const close = expect(closeTokenType);
-        return Phrase.create(PhraseKind.SubscriptExpression, [lhs, open, expr, close]);
+        return Phrase.create(PhraseKind.SubscriptExpression, lengthFrom(start), [lhs, open, expr, close]);
     }
 
     function argumentList() {
-
+        const start = startOffset();
         let t:Token;
         const children: (Phrase | Token)[] = [];
         let arrayInitialiserListRecoverSet = [TokenKind.CloseParenthesis, TokenKind.Comma];
@@ -2766,8 +2899,9 @@ export namespace Parser {
                     continue;
                 } else {
                     //skip until recover token
+                    const errStart = startOffset();
                     const skipped = defaultSyncStrategy();
-                    children.push(Phrase.createParseError(skipped, t));
+                    children.push(Phrase.createParseError(skipped, t, undefined, lengthFrom(errStart)));
                     if (peek().kind === TokenKind.Comma) {
                         continue;
                     }
@@ -2781,7 +2915,7 @@ export namespace Parser {
         }
 
         recoverSetStack.pop();
-        return Phrase.create(PhraseKind.ArgumentExpressionList, children);
+        return Phrase.create(PhraseKind.ArgumentExpressionList, lengthFrom(start), children);
 
     }
 
@@ -2790,9 +2924,10 @@ export namespace Parser {
     }
 
     function variadicUnpacking() {
+        const start = startOffset();
         const op = next(); //...
         const expr = expression(0);
-        return Phrase.create(PhraseKind.VariadicUnpacking, [op, expr]);
+        return Phrase.create(PhraseKind.VariadicUnpacking, lengthFrom(start), [op, expr]);
     }
 
     function argumentExpression() {
@@ -2800,21 +2935,22 @@ export namespace Parser {
     }
 
     function qualifiedName() {
+        const start = startOffset();
         let t = peek();
         let name: Phrase;
 
         if (t.kind === TokenKind.Backslash) {
             t = next();
             name = namespaceName();
-            return Phrase.create(PhraseKind.FullyQualifiedName, [t, name]);
+            return Phrase.create(PhraseKind.FullyQualifiedName, lengthFrom(start), [t, name]);
         } else if (t.kind === TokenKind.Namespace) {
             t = next();
             const bslash = expect(TokenKind.Backslash);
             name = namespaceName();
-            return Phrase.create(PhraseKind.RelativeQualifiedName, [t, bslash, name]);
+            return Phrase.create(PhraseKind.RelativeQualifiedName, lengthFrom(start),  [t, bslash, name]);
         } else {
             name = namespaceName();
-            return Phrase.create(PhraseKind.QualifiedName, [name]);
+            return Phrase.create(PhraseKind.QualifiedName, lengthFrom(start), [name]);
         }
     }
 
@@ -2830,28 +2966,30 @@ export namespace Parser {
     }
 
     function shortArrayCreationExpression() {
+        const start = startOffset();
         const open = next(); //[
         if (!isArrayElementStartOrComma(peek())) {
             const close = expect(TokenKind.CloseBracket);
-            return Phrase.create(PhraseKind.ArrayCreationExpression, [open, close]);
+            return Phrase.create(PhraseKind.ArrayCreationExpression, lengthFrom(start), [open, close]);
         }
         const initList = arrayInitialiserList(TokenKind.CloseBracket);
         const close = expect(TokenKind.CloseBracket);
-        return Phrase.create(PhraseKind.ArrayCreationExpression, [open, initList, close]);
+        return Phrase.create(PhraseKind.ArrayCreationExpression, lengthFrom(start), [open, initList, close]);
     }
 
     function longArrayCreationExpression() {
+        const start = startOffset();
         const keyword = next(); //array
         const open = expect(TokenKind.OpenParenthesis);
 
         if (!isArrayElementStartOrComma(peek())) {
             const close = expect(TokenKind.CloseParenthesis);
-            return Phrase.create(PhraseKind.ArrayCreationExpression, [keyword, open, close]);
+            return Phrase.create(PhraseKind.ArrayCreationExpression, lengthFrom(start), [keyword, open, close]);
         }
 
         const initList = arrayInitialiserList(TokenKind.CloseParenthesis);
         const close = expect(TokenKind.CloseParenthesis);
-        return Phrase.create(PhraseKind.ArrayCreationExpression, [keyword, open, initList, close]);
+        return Phrase.create(PhraseKind.ArrayCreationExpression, lengthFrom(start), [keyword, open, initList, close]);
     }
 
     function isArrayElementStart(t: Token) {
@@ -2863,7 +3001,7 @@ export namespace Parser {
      * @param breakOn 
      */
     function arrayInitialiserList(breakOn: TokenKind) {
-
+        const start = startOffset();
         let t = peek();
         const children: (Phrase | Token)[] = [];
 
@@ -2889,8 +3027,9 @@ export namespace Parser {
                     continue;
                 } else {
                     //skip until recover token
+                    const errStart = startOffset();
                     const skipped = defaultSyncStrategy();
-                    children.push(Phrase.createParseError(skipped, t));
+                    children.push(Phrase.createParseError(skipped, t, undefined, lengthFrom(errStart)));
                     t = peek();
                     if (t.kind === TokenKind.Comma) {
                         continue;
@@ -2903,26 +3042,29 @@ export namespace Parser {
         } while (t.kind !== breakOn);
 
         recoverSetStack.pop();
-        return Phrase.create(PhraseKind.ArrayInitialiserList, children);
+        return Phrase.create(PhraseKind.ArrayInitialiserList, lengthFrom(start), children);
 
     }
 
     function arrayValue() {
+        const start = startOffset();
         const amp = optional(TokenKind.Ampersand)
         const expr = expression(0);
-        return Phrase.create(PhraseKind.ArrayValue, amp ? [amp, expr] : [expr]);
+        return Phrase.create(PhraseKind.ArrayValue, lengthFrom(start),  amp ? [amp, expr] : [expr]);
     }
 
     function arrayKey() {
+        const start = startOffset();
         const expr = expression(0);
-        return Phrase.create(PhraseKind.ArrayKey, [expr]);
+        return Phrase.create(PhraseKind.ArrayKey, lengthFrom(start), [expr]);
     }
 
     function arrayElement() {
 
+        const start = startOffset();
         if (peek().kind === TokenKind.Ampersand) {
             const val = arrayValue();
-            return Phrase.create(PhraseKind.ArrayElement, [val]);
+            return Phrase.create(PhraseKind.ArrayElement, lengthFrom(start), [val]);
         }
 
         let keyOrValue = arrayKey();
@@ -2930,24 +3072,26 @@ export namespace Parser {
 
         if (!arrow) {
             keyOrValue.kind = PhraseKind.ArrayValue;
-            return Phrase.create(PhraseKind.ArrayElement, [keyOrValue]);
+            return Phrase.create(PhraseKind.ArrayElement, lengthFrom(start), [keyOrValue]);
         }
 
         const val = arrayValue();
-        return Phrase.create(PhraseKind.ArrayElement, [keyOrValue, arrow, val]);
+        return Phrase.create(PhraseKind.ArrayElement, lengthFrom(start), [keyOrValue, arrow, val]);
 
     }
 
     function encapsulatedExpression(openTokenType: TokenKind, closeTokenType: TokenKind) {
+        const start = startOffset();
         const open = expect(openTokenType);
         const expr = expression(0);
         const close = expect(closeTokenType);
-        return Phrase.create(PhraseKind.EncapsulatedExpression, [open, expr, close]);
+        return Phrase.create(PhraseKind.EncapsulatedExpression, lengthFrom(start), [open, expr, close]);
     }
 
     function relativeScope() {
+        const start = startOffset();
         const keyword = next();
-        return Phrase.create(PhraseKind.RelativeScope, [keyword]);
+        return Phrase.create(PhraseKind.RelativeScope, lengthFrom(start), [keyword]);
     }
 
     function variableAtom(): Phrase | Token {
@@ -2979,10 +3123,11 @@ export namespace Parser {
     }
 
     function simpleVariable(): Phrase {
+        const start = startOffset();
         const varNameOrDollar = expectOneOf([TokenKind.VariableName, TokenKind.Dollar]);
 
         if ((<Token>varNameOrDollar).kind !== TokenKind.Dollar) {
-            return Phrase.create(PhraseKind.SimpleVariable, [varNameOrDollar]);
+            return Phrase.create(PhraseKind.SimpleVariable, lengthFrom(start), [varNameOrDollar]);
         }
 
         const t = peek();
@@ -2995,19 +3140,21 @@ export namespace Parser {
             varOrExpr = Phrase.createParseError([], t);
         }
 
-        return Phrase.create(PhraseKind.SimpleVariable, [varNameOrDollar, varOrExpr]);
+        return Phrase.create(PhraseKind.SimpleVariable, lengthFrom(start), [varNameOrDollar, varOrExpr]);
 
     }
 
     function haltCompilerStatement() {
+        const start = startOffset();
         const keyword = next(); // __halt_compiler
         const open = expect(TokenKind.OpenParenthesis);
         const close = expect(TokenKind.CloseParenthesis);
         const semicolon = expect(TokenKind.Semicolon);
-        return Phrase.create(PhraseKind.HaltCompilerStatement, [keyword, open, close, semicolon]);
+        return Phrase.create(PhraseKind.HaltCompilerStatement, lengthFrom(start), [keyword, open, close, semicolon]);
     }
 
     function namespaceUseDeclaration() {
+        const start = startOffset();
         const children: (Phrase | Token)[] = [];
         children.push(next()); //use
         const kind = optionalOneOf([TokenKind.Function, TokenKind.Const]);
@@ -3035,26 +3182,26 @@ export namespace Parser {
             ));
             children.push(expect(TokenKind.CloseBrace));
             children.push(expect(TokenKind.Semicolon));
-            return Phrase.create(PhraseKind.NamespaceUseDeclaration, children);
+            return Phrase.create(PhraseKind.NamespaceUseDeclaration, lengthFrom(start), children);
         }
 
         children.push(delimitedList(
             PhraseKind.NamespaceUseClauseList,
-            namespaceUseClauseFunction(nsNameNode, leadingBackslash),
+            namespaceUseClauseFunction(start, nsNameNode, leadingBackslash),
             isNamespaceUseClauseStartToken,
             TokenKind.Comma,
             [TokenKind.Semicolon],
         ));
 
         children.push(expect(TokenKind.Semicolon));
-        return Phrase.create(PhraseKind.NamespaceUseDeclaration, children);
+        return Phrase.create(PhraseKind.NamespaceUseDeclaration, lengthFrom(start), children);
     }
 
     function isNamespaceUseClauseStartToken(t: Token) {
         return t.kind === TokenKind.Name || t.kind === TokenKind.Backslash;
     }
 
-    function namespaceUseClauseFunction(nsName: Phrase, leadingBackslash: Token) {
+    function namespaceUseClauseFunction(start:number, nsName: Phrase, leadingBackslash: Token) {
 
         return () => {
             let name = nsName;
@@ -3064,22 +3211,24 @@ export namespace Parser {
                 nsName = undefined;
                 leadingBackslash = undefined;
             } else {
+                start = startOffset();
                 bs = optional(TokenKind.Backslash);
                 name = namespaceName();
             }
 
             if (peek().kind !== TokenKind.As) {
-                return Phrase.create(PhraseKind.NamespaceUseClause, bs ? [bs, name] : [name]);
+                return Phrase.create(PhraseKind.NamespaceUseClause, lengthFrom(start), bs ? [bs, name] : [name]);
             }
 
             const alias = namespaceAliasingClause();
-            return Phrase.create(PhraseKind.NamespaceUseClause, bs ? [bs, name, alias] : [name, alias]);
+            return Phrase.create(PhraseKind.NamespaceUseClause, lengthFrom(start), bs ? [bs, name, alias] : [name, alias]);
         };
 
     }
 
     function delimitedList(phraseType: PhraseKind, elementFunction: () => Phrase | Token,
         elementStartPredicate: Predicate, delimiter: TokenKind, breakOn?: TokenKind[]) {
+        const start = startOffset();
         let t: Token;
         let delimitedListRecoverSet = breakOn ? breakOn.slice(0) : [];
         delimitedListRecoverSet.push(delimiter);
@@ -3103,8 +3252,9 @@ export namespace Parser {
                     continue;
                 } else {
                     //skip until recover set
+                    const errStart = startOffset();
                     let skipped = defaultSyncStrategy();
-                    children.push(Phrase.createParseError(skipped, t));
+                    children.push(Phrase.createParseError(skipped, t, undefined, lengthFrom(errStart)));
                     if (delimitedListRecoverSet.indexOf(peek().kind) > -1) {
                         continue;
                     }
@@ -3116,7 +3266,7 @@ export namespace Parser {
         }
 
         recoverSetStack.pop();
-        return Phrase.create(phraseType, children);
+        return Phrase.create(phraseType, lengthFrom(start), children);
     }
 
     function isNamespaceUseGroupClauseStartToken(t: Token) {
@@ -3131,25 +3281,27 @@ export namespace Parser {
     }
 
     function namespaceUseGroupClause() {
+        const start = startOffset();
         const kind = optionalOneOf([TokenKind.Function, TokenKind.Const]);
         const name = namespaceName();
 
         if (peek().kind !== TokenKind.As) {
-            return Phrase.create(PhraseKind.NamespaceUseGroupClause, kind ? [kind, name] : [name]);
+            return Phrase.create(PhraseKind.NamespaceUseGroupClause, lengthFrom(start), kind ? [kind, name] : [name]);
         }
 
         const alias = namespaceAliasingClause();
-        return Phrase.create(PhraseKind.NamespaceUseGroupClause, [kind, name, alias]);
+        return Phrase.create(PhraseKind.NamespaceUseGroupClause, lengthFrom(start), [kind, name, alias]);
     }
 
     function namespaceAliasingClause() {
+        const start = startOffset();
         const asToken = next();
         const name = expect(TokenKind.Name);
-        return Phrase.create(PhraseKind.NamespaceAliasingClause, [asToken, name]);
+        return Phrase.create(PhraseKind.NamespaceAliasingClause, lengthFrom(start), [asToken, name]);
     }
 
     function namespaceDefinition() {
-
+        const start = startOffset();
         const ns = next(); //namespace
         let name: Phrase;
 
@@ -3163,19 +3315,20 @@ export namespace Parser {
             if (!name) {
                 name = Phrase.createParseError([], peek(), TokenKind.OpenBrace);
             }
-            return Phrase.create(PhraseKind.NamespaceDefinition, [ns, name, t]);
+            return Phrase.create(PhraseKind.NamespaceDefinition, lengthFrom(start), [ns, name, t]);
         } else if (t.kind !== TokenKind.OpenBrace) {
             const err = Phrase.createParseError([], peek());
-            return Phrase.create(PhraseKind.NamespaceDefinition, name ? [ns, name, err] : [ns, err]);
+            return Phrase.create(PhraseKind.NamespaceDefinition, lengthFrom(start), name ? [ns, name, err] : [ns, err]);
         }
 
         const list = statementList([TokenKind.CloseBrace]);
         const close = expect(TokenKind.CloseBrace);
-        return Phrase.create(PhraseKind.NamespaceDefinition, name ? [ns, name, t, list, close] : [ns, t, list, close]);
+        return Phrase.create(PhraseKind.NamespaceDefinition, lengthFrom(start), name ? [ns, name, t, list, close] : [ns, t, list, close]);
 
     }
 
     function namespaceName() {
+        const start = startOffset();
         const children: (Phrase | Token)[] = [];
         children.push(expect(TokenKind.Name));
 
@@ -3183,7 +3336,7 @@ export namespace Parser {
             children.push(next(), next());
         }
 
-        return Phrase.create(PhraseKind.NamespaceName, children);
+        return Phrase.create(PhraseKind.NamespaceName, lengthFrom(start), children);
     }
 
     function isReservedToken(t: Token) {

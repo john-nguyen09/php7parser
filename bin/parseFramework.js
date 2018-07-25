@@ -23,8 +23,8 @@ if (!path.isAbsolute(pathToCodeRootDir)) {
 }
 
 function hasErrorRecurse(node, filepath) {
-    if (node.kind === 1062) {
-        //throw new Error(JSON.stringify(node, function(k,v){ return isNaN(k) && keys.indexOf(k) < 0 ? undefined : v; }, 4));
+    if (node.kind === 1061 /*error*/) {
+        throw new Error(JSON.stringify(node, function(k,v){ return k === 'previous' ? undefined : v; }, 4));
         console.log('ERROR');
         console.log(JSON.stringify(node, null, 4));
         //throw new Error();

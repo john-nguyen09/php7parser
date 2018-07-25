@@ -4,6 +4,8 @@
 
 'use strict';
 
+import { Node } from "./node";
+
 export const enum TokenKind {
     //Misc
     Unknown = 0,
@@ -195,19 +197,12 @@ export const enum LexerMode {
     LookingForVarName
 }
 
-export interface Token {
-    /**
-     * Token type
-     */
-    kind: TokenKind,
+export interface Token extends Node {
     /**
      * Offset within source were first char of token is found
+     * @deprecated
      */
     offset: number,
-    /**
-     * Length of token string
-     */
-    length: number,
     /**
      * The previous token
      */
