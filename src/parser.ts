@@ -373,24 +373,20 @@ export namespace Parser {
 
     function skip(until: Predicate, includeUntilTokenInSkipped?:boolean) {
 
-        let t: Token;
+        let t = peek();
         let skipped: Token[] = [];
 
-        do {
-            t = tokenBuffer.length ? tokenBuffer.shift() : Lexer.lex();
-            if(t.kind < TokenKind.Comment) {
-                skipped.push(t);
-            }
-        } while (!until(t) && t.kind !== TokenKind.EndOfFile);
-
-        //last skipped token should go back on buffer
-        if(t.kind === TokenKind.EndOfFile || !includeUntilTokenInSkipped){
-            tokenBuffer.unshift(skipped.pop());
+        while(!until(t) && t.kind !== TokenKind.EndOfFile) {
+            skipped.push(next());
+            t = peek();
         }
+
+        if(includeUntilTokenInSkipped && t.kind !== TokenKind.EndOfFile){
+            skipped.push(next());
+        }
+
         return skipped;
-
     }
-
 
     function list(phraseType: PhraseKind, elementFunction: () => Phrase | Token,
         elementStartPredicate: Predicate, breakOn?: TokenKind[], recoverSet?: TokenKind[], allowDocComment?: boolean) {
