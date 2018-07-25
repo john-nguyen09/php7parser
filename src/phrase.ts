@@ -155,6 +155,7 @@ export const enum PhraseKind {
     ScopedCallExpression,
     ScopedMemberName,
     ScopedPropertyAccessExpression,
+    Script,
     ShellCommandExpression,
     ShiftExpression,
     SimpleAssignmentExpression,
@@ -527,6 +528,8 @@ export function phraseKindToString(type: PhraseKind) {
             return 'ScopedPropertyAccessExpression';
         case PhraseKind.ShellCommandExpression:
             return 'ShellCommandExpression';
+        case PhraseKind.Script:
+            return 'Script';
         case PhraseKind.ShiftExpression:
             return 'ShiftExpression';
         case PhraseKind.SimpleAssignmentExpression:

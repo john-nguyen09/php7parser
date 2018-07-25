@@ -239,7 +239,7 @@ export namespace Lexer {
 
     export function lex(): Token {
         if (state.position >= state.input.length) {
-            return {
+            return state.previousToken = {
                 kind: TokenKind.EndOfFile,
                 offset: state.position,
                 length: 0,

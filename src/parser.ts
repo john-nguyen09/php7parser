@@ -262,7 +262,11 @@ export namespace Parser {
 
     export function parse(text: string): Phrase {
         init(text);
-        return topStatementList([TokenKind.EndOfFile]);
+        const start = startOffset();
+        const stmtList = topStatementList([TokenKind.EndOfFile]);
+        //need trailing trivia
+        const eof = next();
+        return Phrase.create(PhraseKind.Script, lengthFrom(start), [stmtList, eof]);
     }
 
     function init(text: string, lexerModeStack?: LexerMode[]) {
