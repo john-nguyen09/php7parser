@@ -511,13 +511,17 @@ export namespace Lexer {
                 return { kind: TokenKind.Backtick, offset: start, length: 1, previous: s.previousToken };
 
             case '\\':
-                return scriptingBackslash(s);
+                ++s.position;
+                return { kind: TokenKind.Backslash, offset: start, length: 1, previous: s.previousToken };
 
             case '\'':
                 return scriptingSingleQuote(s, start);
 
             case '"':
                 return scriptingDoubleQuote(s, start);
+
+            case 'b':
+                return scriptingB(s);
 
             default:
                 if (isLabelStart(c)) {
@@ -1059,7 +1063,7 @@ export namespace Lexer {
 
     function scriptingDoubleQuote(s: LexerState, start: number): Token {
 
-        //optional \ consumed
+        //optional b consumed
         //consume until unescaped "
         //if ${LABEL_START}, ${, {$ found or no match return " and consume none 
         ++s.position;
@@ -1104,7 +1108,7 @@ export namespace Lexer {
     }
 
     function scriptingSingleQuote(s: LexerState, start: number): Token {
-        //optional \ already consumed
+        //optional b already consumed
         //find first unescaped '
         let l = s.input.length;
         let c: string;
@@ -1123,9 +1127,9 @@ export namespace Lexer {
         return { kind: TokenKind.EncapsulatedAndWhitespace, offset: start, length: s.position - start, previous: s.previousToken };
     }
 
-    function scriptingBackslash(s: LexerState): Token {
+    function scriptingB(s: LexerState): Token {
 
-        //single quote, double quote and heredoc open have optional \
+        //single quote, double quote and heredoc open have optional b
 
         let start = s.position;
         ++s.position;
@@ -1144,13 +1148,12 @@ export namespace Lexer {
                     if (t) {
                         return t;
                     }
-
+                    //fall through
                 default:
-                    break;
+                    --s.position;
+                    return scriptingLabelStart(s);
             }
         }
-
-        return { kind: TokenKind.Backslash, offset: start, length: 1, previous: s.previousToken };
 
     }
 
