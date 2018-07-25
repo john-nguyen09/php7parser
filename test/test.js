@@ -16,7 +16,7 @@ describe("php7parser", function () {
             return;
         }
         var phpData = fs.readFileSync(filepath);
-        let actual = php7parser.Parser.parse(phpData.toString());
+        let actual = JSON.parse(JSON.stringify(php7parser.Parser.parse(phpData.toString()), (k,v) => k === 'previous' ? undefined : v));
 
         let jsonData = fs.readFileSync(filepath + '.json');
         let expected = JSON.parse(jsonData.toString());
