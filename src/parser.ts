@@ -321,7 +321,7 @@ export namespace Parser {
         }
     }
 
-    function peek(n?: number, allowDocComment?: boolean) {
+    function peek(n?: number) {
 
         n = n ? n + 1 : 1;
         let bufferPos = -1;
@@ -336,7 +336,7 @@ export namespace Parser {
 
             t = tokenBuffer[bufferPos];
 
-            if (t.kind < TokenKind.Comment || (allowDocComment && t.kind === TokenKind.DocumentComment)) {
+            if (t.kind < TokenKind.Comment) {
                 //not a hidden token
                 --n;
             }
@@ -382,7 +382,7 @@ export namespace Parser {
 
         while (true) {
 
-            t = peek(0, allowDocComment);
+            t = peek();
 
             if (elementStartPredicate(t)) {
                 children.push(elementFunction());
@@ -391,14 +391,14 @@ export namespace Parser {
             } else {
                 //error
                 //attempt to skip single token to sync
-                let t1 = peek(1, allowDocComment);
+                let t1 = peek(1);
                 if (elementStartPredicate(t1) || (breakOn && breakOn.indexOf(t1.kind) > -1)) {
                     children.push(Phrase.createParseError([next()], t));
                 } else {
                     //skip many to sync
                     children.push(Phrase.createParseError(defaultSyncStrategy(), t));
                     //only continue if recovered on a token in the listRecoverSet
-                    t = peek(0, allowDocComment);
+                    t = peek(0);
                     if (listRecoverSet.indexOf(t.kind) < 0) {
                         break;
                     }
@@ -990,7 +990,6 @@ export namespace Parser {
             case TokenKind.Var:
             case TokenKind.Const:
             case TokenKind.Use:
-            case TokenKind.DocumentComment:
                 return true;
             default:
                 return false;
@@ -999,7 +998,7 @@ export namespace Parser {
 
     function classMemberDeclaration() {
 
-        let t = peek(0, true);
+        let t = peek();
 
         switch (t.kind) {
             case TokenKind.Public:
@@ -1402,7 +1401,7 @@ export namespace Parser {
 
     function statement(): Phrase {
 
-        let t = peek(0, true);
+        let t = peek();
 
         switch (t.kind) {
             case TokenKind.Namespace:
@@ -3312,7 +3311,6 @@ export namespace Parser {
             case TokenKind.Text:
             case TokenKind.OpenTag:
             case TokenKind.OpenTagEcho:
-            case TokenKind.DocumentComment:
                 return true;
             default:
                 return isExpressionStart(t);
