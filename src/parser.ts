@@ -307,7 +307,7 @@ export namespace Parser {
 
     function triviaLength(t:Token) {
         let l = 0;
-        while((t = t.previous) && t.kind >= TokenKind.DocumentComment) {
+        while((t = t.previous) && t.kind >= TokenKind.Comment) {
             l += t.length;
         }
         return l;
