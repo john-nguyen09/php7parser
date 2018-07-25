@@ -29,7 +29,7 @@ fs.readFile(filepath, function (err, data) {
     let hrtimeDiff = process.hrtime(hrtime);
     let testFilepath = filepath + '.json';
 
-    fs.writeFile(testFilepath, JSON.stringify(tree, null, 4), function (err) {
+    fs.writeFile(testFilepath, JSON.stringify(tree, (k,v) => k === 'previous' ? undefined : v, 4), function (err) {
         if (err) {
             throw err;
         }
