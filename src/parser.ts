@@ -259,6 +259,7 @@ export namespace Parser {
     var recoverSetStack: TokenKind[][];
     //offset is always set to the next token start even if it is trivia
     var offset = 0;
+    var cachedStartOffset = -1;
 
     export function parse(text: string): Phrase {
         init(text);
@@ -293,11 +294,15 @@ export namespace Parser {
             t = tokenBuffer.length > 0 ? tokenBuffer.shift() : Lexer.lex();
             offset += t.length;
         } while (t.kind >= TokenKind.Comment);
+        cachedStartOffset = -1;
         return t;
     }
 
     function startOffset() {
-        return offset + triviaLength(peek());
+        if(cachedStartOffset < 0) {
+            cachedStartOffset = offset + triviaLength(peek());
+        }
+        return cachedStartOffset;
     }
 
     function triviaLength(t:Token) {
