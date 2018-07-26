@@ -3,16 +3,18 @@
 ## [2.0.0] - TBA
 #### Added
 - 7.3 features
-- TopStatementList kind
+- TopStatementList andScript kinds
+- length property to tokens and phrases
+- previous property to tokens
 
 #### Changed
 - Skip {} subscript contents on parse error
 - Removed additional error phrase kinds
-- Removed trivia tokens from tree
+- Removed trivia tokens from tree. Now accessible via Token.previous.
 - Renamed tokenType and phraseType to kind
-- DocComments are included in tree within statement and members lists only
 - Removed modestack from token
 - Revert 1.0.8 dont skip src after halt compiler
+- Deprecated Token.offset
 
 ## [1.0.8] - 2018-02-10
 #### Fixed
