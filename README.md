@@ -2,7 +2,8 @@
 
 A fast and forgiving PHP7 recursive descent parser implemented in Typescript. 
 
-The parser outputs a parse tree of phrases (branches) and tokens (leaves). The complete source code is represented by the tree including whitespace.
+The parser outputs a parse tree of phrases (branches) and tokens (leaves). 
+The full source code is represented by the tree. Trivia is accessible via `Token.previous`.
 
 ## Design Goals
 
@@ -29,48 +30,42 @@ The parser outputs a parse tree of phrases (branches) and tokens (leaves). The c
         function parse(text: string): Phrase;
     }
 
-    export interface Phrase {
+    export interface Node {
+        kind: number;
+        length: number;
+    }
+
+    export interface Phrase extends Node {
         /**
-         * Phrase type
-         */
-        phraseType: PhraseType;
-        /**
-         * Phrase and token child nodes
-         */
-        children: (Phrase | Token)[];
+        * Phrase and token child nodes
+        */
+        children: Node[];
     }
 
     export interface ParseError extends Phrase {
 
         /**
-         * The token that prompted the parse error
-         */
+        * The token that prompted the parse error
+        */
         unexpected: Token;
 
         /**
-         * The expected token type
-         */
-        expected?: TokenType;
+        * The expected token type
+        */
+        expected?: TokenKind;
 
     }
 
-    export interface Token {
+    export interface Token extends Node {
         /**
-         * Token type
-         */
-        tokenType: TokenType;
+        * Offset within source were first char of token is found
+        * @deprecated
+        */
+        offset: number,
         /**
-         * Offset within source where first char of token is found
-         */
-        offset: number;
-        /**
-         * Length of token string
-         */
-        length: number;
-        /**
-         * Lexer mode prior to this token being read.
-         */
-        modeStack: LexerMode[];
+        * The previous token
+        */
+        previous: Token
     }
 
 ```
