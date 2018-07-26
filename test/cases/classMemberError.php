@@ -1,4 +1,4 @@
 <?php
     class MyClass {
-        public
+        public 
     }

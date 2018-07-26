@@ -1,4 +1,16 @@
 {
-    "kind": 1177,
-    "children": []
+    "kind": 1147,
+    "length": 0,
+    "children": [
+        {
+            "kind": 1177,
+            "length": 0,
+            "children": []
+        },
+        {
+            "kind": 1,
+            "offset": 0,
+            "length": 0
+        }
+    ]
 }
