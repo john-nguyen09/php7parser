@@ -21,15 +21,17 @@
 
 import { Token as ImportedToken, TokenKind as ImportedTokenKind } from './lexer';
 import { PhraseKind as ImportedPhraseKind, Phrase as ImportedPhrase } from './phrase';
+import {Node as ImportedNode} from './node';
 
 export { Lexer, LexerMode, Token, TokenKind, tokenKindToString } from './lexer';
 export { Parser } from './parser';
 export  * from './phrase';
+export * from './node';
 
-export function isToken(node:{kind:number}): node is ImportedToken {
-    return node && node.kind !== undefined && node.kind <= ImportedTokenKind.Whitespace;
+export function isToken(node:ImportedNode): node is ImportedToken {
+    return node && (<ImportedPhrase>node).children === undefined;
 }
 
-export function isPhrase(node:{kind:number}): node is ImportedPhrase {
-    return node && node.kind >= ImportedPhraseKind.Unknown;
+export function isPhrase(node:ImportedNode): node is ImportedPhrase {
+    return node && (<ImportedPhrase>node).children !== undefined;
 }
