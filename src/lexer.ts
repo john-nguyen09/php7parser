@@ -920,7 +920,10 @@ export namespace Lexer {
                             s.position = n;
                             s.modeStack.pop();
                             s.modeStack.push(LexerMode.EndHereDoc);
-                            return { kind: TokenKind.EncapsulatedAndWhitespace, offset: start, length: s.position - start, previous: s.previousToken };
+                            let tLength = s.position - start;
+                            return tLength > 0 ? 
+                                { kind: TokenKind.EncapsulatedAndWhitespace, offset: start, length: s.position - start, previous: s.previousToken } : 
+                                undefined;
                         }
                     }
 
