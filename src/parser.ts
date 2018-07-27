@@ -1078,22 +1078,27 @@ export namespace Parser {
                     const modifiers = memberModifierList();
                     t = peek();
                     if (t.kind === TokenKind.VariableName) {
-                        return propertyDeclaration(modifiers);
+                        return propertyDeclaration(start, modifiers);
                     } else if (t.kind === TokenKind.Function) {
                         return methodDeclaration(start, modifiers);
                     } else if (t.kind === TokenKind.Const) {
-                        return classConstDeclaration(modifiers);
+                        return classConstDeclaration(start, modifiers);
                     } else {
                         //error
-                        return Phrase.createParseError([modifiers], t, undefined, lengthFrom(start));
+                        //assume it should be a method decl if modifiers abstract or final
+                        //otherwise assume property
+                        const assumeMethod = modifiers.children.findIndex(
+                            t => t.kind === TokenKind.Abstract || t.kind === TokenKind.Final
+                        ) > -1;
+                        return assumeMethod ? methodDeclaration(start, modifiers) : propertyDeclaration(start,modifiers);
                     }
                 }
             case TokenKind.Function:
                 return methodDeclaration(start);
             case TokenKind.Var:
-                return propertyDeclaration(next());
+                return propertyDeclaration(start, next());
             case TokenKind.Const:
-                return classConstDeclaration();
+                return classConstDeclaration(start);
             case TokenKind.Use:
                 return traitUseClause();
             default:
@@ -1223,7 +1228,7 @@ export namespace Parser {
         if (memberModifers) {
             children.push(memberModifers);
         }
-        children.push(next()); //function
+        children.push(expect(TokenKind.Function)); //function
         const ampersand = optional(TokenKind.Ampersand);
         if (ampersand) {
             children.push(ampersand);
@@ -2262,8 +2267,7 @@ export namespace Parser {
         return Phrase.create(PhraseKind.TypeDeclaration, lengthFrom(start), question ? [question, decl] : [decl]);
     }
 
-    function classConstDeclaration(modifiers?: Phrase) {
-        const start = startOffset();
+    function classConstDeclaration(start:number, modifiers?: Phrase) {
         const constToken = next();
         const delimList = delimitedList(
             PhraseKind.ClassConstElementList,
@@ -2354,8 +2358,7 @@ export namespace Parser {
         return t.kind === TokenKind.VariableName;
     }
 
-    function propertyDeclaration(modifiersOrVar: Phrase | Token) {
-        const start = startOffset();
+    function propertyDeclaration(start:number, modifiersOrVar: Phrase | Token) {
         const delimList = delimitedList(
             PhraseKind.PropertyElementList,
             propertyElement,
