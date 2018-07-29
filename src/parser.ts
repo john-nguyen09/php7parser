@@ -25,6 +25,7 @@ import {
     Phrase,
     PhraseKind,
 } from './phrase';
+import { Node } from './node';
 
 export namespace Parser {
 
@@ -304,7 +305,7 @@ export namespace Parser {
      * @param allowDocComment doc comments returned when true
      */
     function next(): Token {
-        let t:Token;
+        let t: Token;
         do {
             t = tokenBuffer.length > 0 ? tokenBuffer.shift() : Lexer.lex();
             offset += t.length;
@@ -314,22 +315,23 @@ export namespace Parser {
     }
 
     function startOffset() {
-        if(cachedStartOffset < 0) {
+        if (cachedStartOffset < 0) {
             cachedStartOffset = offset + triviaLength(peek());
         }
         return cachedStartOffset;
     }
 
-    function triviaLength(t:Token) {
+    function triviaLength(t: Token) {
         let l = 0;
-        while((t = t.previous) && t.kind >= TokenKind.Comment) {
+        while ((t = t.previous) && t.kind >= TokenKind.Comment) {
             l += t.length;
         }
         return l;
     }
 
-    function lengthFrom(start:number) {
-        return offset - start;
+    function lengthFrom(start: number) {
+        let l = offset - start;
+        return l > 0 ? l : 0;
     }
 
     function expect(tokenType: TokenKind) {
@@ -391,17 +393,17 @@ export namespace Parser {
         return t;
     }
 
-    function skip(until: Predicate, includeUntilTokenInSkipped?:boolean) {
+    function skip(until: Predicate, includeUntilTokenInSkipped?: boolean) {
 
         let t = peek();
         let skipped: Token[] = [];
 
-        while(!until(t) && t.kind !== TokenKind.EndOfFile) {
+        while (!until(t) && t.kind !== TokenKind.EndOfFile) {
             skipped.push(next());
             t = peek();
         }
 
-        if(includeUntilTokenInSkipped && t.kind !== TokenKind.EndOfFile){
+        if (includeUntilTokenInSkipped && t.kind !== TokenKind.EndOfFile) {
             skipped.push(next());
         }
 
@@ -580,7 +582,7 @@ export namespace Parser {
 
     }
 
-    function ternaryExpression(start:number, testExpr: Phrase | Token) {
+    function ternaryExpression(start: number, testExpr: Phrase | Token) {
 
         const question = next();
         let colon: Token | ParseError = optional(TokenKind.Colon);
@@ -636,11 +638,11 @@ export namespace Parser {
 
     }
 
-    function constantAccessExpression(start:number, qName: Phrase | Token) {
+    function constantAccessExpression(start: number, qName: Phrase | Token) {
         return Phrase.create(PhraseKind.ConstantAccessExpression, lengthFrom(start), [qName]);
     }
 
-    function postfixExpression(start:number, phraseType: PhraseKind, variableNode: Phrase) {
+    function postfixExpression(start: number, phraseType: PhraseKind, variableNode: Phrase) {
         const op = next();
         return Phrase.create(phraseType, lengthFrom(start), [variableNode, op]);
     }
@@ -1090,7 +1092,7 @@ export namespace Parser {
                         const assumeMethod = modifiers.children.findIndex(
                             t => t.kind === TokenKind.Abstract || t.kind === TokenKind.Final
                         ) > -1;
-                        return assumeMethod ? methodDeclaration(start, modifiers) : propertyDeclaration(start,modifiers);
+                        return assumeMethod ? methodDeclaration(start, modifiers) : propertyDeclaration(start, modifiers);
                     }
                 }
             case TokenKind.Function:
@@ -1189,7 +1191,7 @@ export namespace Parser {
         return traitAlias(start, children);
     }
 
-    function traitAlias(start:number, children: (Phrase | Token)[]) {
+    function traitAlias(start: number, children: (Phrase | Token)[]) {
         children.push(expect(TokenKind.As));
         let t = peek();
 
@@ -1209,7 +1211,7 @@ export namespace Parser {
         return Phrase.create(PhraseKind.TraitAlias, lengthFrom(start), children);
     }
 
-    function traitPrecedence(start:number, children: (Phrase | Token)[]) {
+    function traitPrecedence(start: number, children: (Phrase | Token)[]) {
         children.push(qualifiedNameList([TokenKind.Semicolon]));
         children.push(expect(TokenKind.Semicolon));
         return Phrase.create(PhraseKind.TraitPrecedence, lengthFrom(start), children);
@@ -1223,7 +1225,7 @@ export namespace Parser {
         return Phrase.create(PhraseKind.MethodReference, lengthFrom(start), [name, op, ident]);
     }
 
-    function methodDeclarationHeader(start:number, memberModifers?: Phrase) {
+    function methodDeclarationHeader(start: number, memberModifers?: Phrase) {
         const children: (Phrase | Token)[] = [];
         if (memberModifers) {
             children.push(memberModifers);
@@ -1255,7 +1257,7 @@ export namespace Parser {
         return Phrase.create(PhraseKind.MethodDeclarationHeader, lengthFrom(start), children);
     }
 
-    function methodDeclaration(start:number, memberModifers?: Phrase) {
+    function methodDeclaration(start: number, memberModifers?: Phrase) {
         const header = methodDeclarationHeader(start, memberModifers);
         const body = methodDeclarationBody();
         return Phrase.create(PhraseKind.MethodDeclaration, lengthFrom(start), [header, body]);
@@ -1717,7 +1719,7 @@ export namespace Parser {
             const endSwitch = expect(TokenKind.EndSwitch);
             const semicolon = expect(TokenKind.Semicolon);
             return Phrase.create(
-                PhraseKind.SwitchStatement, 
+                PhraseKind.SwitchStatement,
                 lengthFrom(start),
                 stmtList ? [keyword, open, expr, close, colonOrBrace, stmtList, endSwitch, semicolon] :
                     [keyword, open, expr, close, colonOrBrace, endSwitch, semicolon],
@@ -2267,7 +2269,7 @@ export namespace Parser {
         return Phrase.create(PhraseKind.TypeDeclaration, lengthFrom(start), question ? [question, decl] : [decl]);
     }
 
-    function classConstDeclaration(start:number, modifiers?: Phrase) {
+    function classConstDeclaration(start: number, modifiers?: Phrase) {
         const constToken = next();
         const delimList = delimitedList(
             PhraseKind.ClassConstElementList,
@@ -2358,7 +2360,7 @@ export namespace Parser {
         return t.kind === TokenKind.VariableName;
     }
 
-    function propertyDeclaration(start:number, modifiersOrVar: Phrase | Token) {
+    function propertyDeclaration(start: number, modifiersOrVar: Phrase | Token) {
         const delimList = delimitedList(
             PhraseKind.PropertyElementList,
             propertyElement,
@@ -2693,33 +2695,36 @@ export namespace Parser {
         return Phrase.create(PhraseKind.DefaultArgumentSpecifier, lengthFrom(start), [equals, expr]);
     }
 
-    function variable(start:number, variableAtomNode: Phrase | Token) {
-
-        let count = 0;
-
+    function variable(start: number, variableAtomNode: Phrase | Token) {
+        let t: Token;
         while (true) {
-            ++count;
-            switch (peek().kind) {
+            t = peek();
+            switch (t.kind) {
                 case TokenKind.ColonColon:
                     variableAtomNode = scopedAccessExpression(start, variableAtomNode);
                     continue;
+
                 case TokenKind.Arrow:
                     variableAtomNode = propertyOrMethodAccessExpression(start, variableAtomNode);
                     continue;
+
                 case TokenKind.OpenBracket:
-                    variableAtomNode = subscriptExpression(start, variableAtomNode, TokenKind.CloseBracket);
-                    continue;
                 case TokenKind.OpenBrace:
-                    variableAtomNode = subscriptExpression(start, variableAtomNode, TokenKind.CloseBrace);
+                    if (isNamePhrase(variableAtomNode)) {
+                        variableAtomNode = constantAccessExpression(start, variableAtomNode);
+                    }
+                    variableAtomNode = subscriptExpression(
+                        start,
+                        variableAtomNode,
+                        t.kind === TokenKind.OpenBracket ? TokenKind.CloseBracket : TokenKind.CloseBrace
+                    );
                     continue;
+
                 case TokenKind.OpenParenthesis:
                     variableAtomNode = functionCallExpression(start, variableAtomNode);
                     continue;
+
                 default:
-                    //only simple variable atoms qualify as variables on their own
-                    if (count === 1 && (<Phrase>variableAtomNode).kind !== PhraseKind.SimpleVariable) {
-                        variableAtomNode = Phrase.createParseError([variableAtomNode], peek(), undefined, lengthFrom(start));
-                    }
                     break;
             }
 
@@ -2729,7 +2734,18 @@ export namespace Parser {
         return variableAtomNode;
     }
 
-    function functionCallExpression(start:number, lhs: Phrase | Token) {
+    function isNamePhrase(node: Node) {
+        switch (node.kind) {
+            case PhraseKind.FullyQualifiedName:
+            case PhraseKind.RelativeQualifiedName:
+            case PhraseKind.QualifiedName:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    function functionCallExpression(start: number, lhs: Phrase | Token) {
         const open = expect(TokenKind.OpenParenthesis);
         if (!isArgumentStart(peek())) {
             const close = expect(TokenKind.CloseParenthesis);
@@ -2740,7 +2756,7 @@ export namespace Parser {
         return Phrase.create(PhraseKind.FunctionCallExpression, lengthFrom(start), [lhs, open, argList, close]);
     }
 
-    function scopedAccessExpression(start:number, lhs: Phrase | Token) {
+    function scopedAccessExpression(start: number, lhs: Phrase | Token) {
         const op = next() //::
         const memberNamePhraseTypeTuple = scopedMemberName();
         const open = optional(TokenKind.OpenParenthesis);
@@ -2800,7 +2816,7 @@ export namespace Parser {
         return tup;
     }
 
-    function propertyAccessExpression(start:number, lhs: Phrase | Token) {
+    function propertyAccessExpression(start: number, lhs: Phrase | Token) {
         const op = next(); //->
         const name = memberName();
         return Phrase.create(PhraseKind.PropertyAccessExpression, lengthFrom(start), [lhs, op, name]);
@@ -2810,7 +2826,7 @@ export namespace Parser {
         const op = next(); //->
         const name = memberName();
         const open = optional(TokenKind.OpenParenthesis);
-        
+
         if (!open) {
             return Phrase.create(PhraseKind.PropertyAccessExpression, lengthFrom(start), [lhs, op, name]);
         }
@@ -2860,7 +2876,7 @@ export namespace Parser {
         }
     }
 
-    function subscriptExpression(start:number, lhs: Phrase | Token, closeTokenType: TokenKind) {
+    function subscriptExpression(start: number, lhs: Phrase | Token, closeTokenType: TokenKind) {
         const open = next(); // [ or {
 
         if (open.kind === TokenKind.OpenBrace) {
@@ -2895,13 +2911,13 @@ export namespace Parser {
 
     function argumentList() {
         const start = startOffset();
-        let t:Token;
+        let t: Token;
         const children: (Phrase | Token)[] = [];
         let arrayInitialiserListRecoverSet = [TokenKind.CloseParenthesis, TokenKind.Comma];
-        
+
         recoverSetStack.push(arrayInitialiserListRecoverSet);
 
-        while(true) {
+        while (true) {
 
             children.push(argumentExpression());
             t = peek();
@@ -2910,7 +2926,7 @@ export namespace Parser {
                 children.push(next());
 
                 //7.3 trailing comma
-                if(peek().kind === TokenKind.CloseParenthesis) {
+                if (peek().kind === TokenKind.CloseParenthesis) {
                     break;
                 }
 
@@ -2927,7 +2943,7 @@ export namespace Parser {
                     if (peek().kind === TokenKind.Comma) {
                         skipped.push(next());
                         children.push(Phrase.createParseError(skipped, t, undefined, lengthFrom(errStart)));
-                        if(peek().kind === TokenKind.CloseParenthesis) {
+                        if (peek().kind === TokenKind.CloseParenthesis) {
                             break;
                         } else {
                             continue;
@@ -2976,7 +2992,7 @@ export namespace Parser {
             t = next();
             const bslash = expect(TokenKind.Backslash);
             name = namespaceName();
-            return Phrase.create(PhraseKind.RelativeQualifiedName, lengthFrom(start),  [t, bslash, name]);
+            return Phrase.create(PhraseKind.RelativeQualifiedName, lengthFrom(start), [t, bslash, name]);
         } else {
             name = namespaceName();
             return Phrase.create(PhraseKind.QualifiedName, lengthFrom(start), [name]);
@@ -3079,7 +3095,7 @@ export namespace Parser {
         const start = startOffset();
         const amp = optional(TokenKind.Ampersand)
         const expr = expression(0);
-        return Phrase.create(PhraseKind.ArrayValue, lengthFrom(start),  amp ? [amp, expr] : [expr]);
+        return Phrase.create(PhraseKind.ArrayValue, lengthFrom(start), amp ? [amp, expr] : [expr]);
     }
 
     function arrayKey() {
@@ -3230,7 +3246,7 @@ export namespace Parser {
         return t.kind === TokenKind.Name || t.kind === TokenKind.Backslash;
     }
 
-    function namespaceUseClauseFunction(start:number, nsName: Phrase, leadingBackslash: Token) {
+    function namespaceUseClauseFunction(start: number, nsName: Phrase, leadingBackslash: Token) {
 
         return () => {
             let name = nsName;
@@ -3283,13 +3299,13 @@ export namespace Parser {
                     //skip until recover set
                     const errStart = startOffset();
                     let skipped = defaultSyncStrategy();
-                    if(peek().kind === delimiter) {
+                    if (peek().kind === delimiter) {
                         //recovered on delim, continue
                         skipped.push(next());
                         children.push(Phrase.createParseError(skipped, t, undefined, lengthFrom(errStart)));
                         continue;
                     }
-                    
+
                     children.push(Phrase.createParseError(skipped, t, undefined, lengthFrom(errStart)));
                 }
 

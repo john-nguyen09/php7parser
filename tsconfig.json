@@ -5,7 +5,8 @@
 		"target": "ES6",
 		"module": "commonjs",
 		"outDir": "lib",
-		"declaration": true
+		"declaration": true,
+		"sourceMap": true
 	},
 	"exclude": [
 		"node_modules",

@@ -51,7 +51,7 @@
                                     "length": 6,
                                     "children": [
                                         {
-                                            "kind": 1061,
+                                            "kind": 1131,
                                             "length": 6,
                                             "children": [
                                                 {
@@ -64,13 +64,52 @@
                                                             "length": 6
                                                         }
                                                     ]
+                                                },
+                                                {
+                                                    "kind": 1133,
+                                                    "length": 0,
+                                                    "children": [
+                                                        {
+                                                            "kind": 1132,
+                                                            "length": 0,
+                                                            "children": [
+                                                                {
+                                                                    "kind": 1061,
+                                                                    "length": 0,
+                                                                    "children": [],
+                                                                    "unexpected": {
+                                                                        "kind": 119,
+                                                                        "offset": 46,
+                                                                        "length": 1
+                                                                    },
+                                                                    "expected": 84
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "kind": 1061,
+                                                            "length": 0,
+                                                            "children": [],
+                                                            "unexpected": {
+                                                                "kind": 119,
+                                                                "offset": 46,
+                                                                "length": 1
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "kind": 1061,
+                                                    "length": 0,
+                                                    "children": [],
+                                                    "unexpected": {
+                                                        "kind": 119,
+                                                        "offset": 46,
+                                                        "length": 1
+                                                    },
+                                                    "expected": 88
                                                 }
-                                            ],
-                                            "unexpected": {
-                                                "kind": 119,
-                                                "offset": 46,
-                                                "length": 1
-                                            }
+                                            ]
                                         }
                                     ]
                                 },
