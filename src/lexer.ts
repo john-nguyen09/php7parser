@@ -214,11 +214,6 @@ export const enum LexerMode {
 
 export interface Token extends Node {
     /**
-     * Offset within source were first char of token is found
-     * @deprecated
-     */
-    offset: number,
-    /**
      * The previous token
      */
     previous: Token
@@ -256,7 +251,6 @@ export namespace Lexer {
         if (state.position >= state.input.length) {
             return state.previousToken = {
                 kind: TokenKind.EndOfFile,
-                offset: state.position,
                 length: 0,
                 previous: state.previousToken
             };
@@ -368,7 +362,7 @@ export namespace Lexer {
                 s.position += 2;
             }
 
-            let t = { kind: kind, offset: start, length: s.position - start, previous: s.previousToken };
+            let t = { kind: kind, length: s.position - start, previous: s.previousToken };
             s.modeStack.pop();
             s.modeStack.push(LexerMode.Scripting);
             return t;
@@ -381,7 +375,7 @@ export namespace Lexer {
             }
         }
 
-        return { kind: TokenKind.Text, offset: start, length: s.position - start, previous: s.previousToken };
+        return { kind: TokenKind.Text, length: s.position - start, previous: s.previousToken };
 
     }
 
@@ -398,7 +392,7 @@ export namespace Lexer {
             case '\n':
             case '\r':
                 while (++s.position < l && isWhitespace(s.input[s.position])) { }
-                return { kind: TokenKind.Whitespace, offset: start, length: s.position - start, previous: s.previousToken };
+                return { kind: TokenKind.Whitespace, length: s.position - start, previous: s.previousToken };
 
             case '-':
                 return scriptingMinus(s);
@@ -406,9 +400,9 @@ export namespace Lexer {
             case ':':
                 if (++s.position < l && s.input[s.position] === ':') {
                     ++s.position;
-                    return { kind: TokenKind.ColonColon, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.ColonColon, length: 2, previous: s.previousToken };
                 }
-                return { kind: TokenKind.Colon, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.Colon, length: 1, previous: s.previousToken };
 
             case '.':
                 return scriptingDot(s);
@@ -437,9 +431,9 @@ export namespace Lexer {
             case '%':
                 if (++s.position < l && s.input[s.position] === '=') {
                     ++s.position;
-                    return { kind: TokenKind.PercentEquals, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.PercentEquals, length: 2, previous: s.previousToken };
                 }
-                return { kind: TokenKind.Percent, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.Percent, length: 1, previous: s.previousToken };
 
             case '&':
                 return scriptingAmpersand(s);
@@ -450,43 +444,43 @@ export namespace Lexer {
             case '^':
                 if (++s.position < l && s.input[s.position] === '=') {
                     ++s.position;
-                    return { kind: TokenKind.CaretEquals, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.CaretEquals, length: 2, previous: s.previousToken };
                 }
-                return { kind: TokenKind.Caret, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.Caret, length: 1, previous: s.previousToken };
 
             case ';':
                 ++s.position;
-                return { kind: TokenKind.Semicolon, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.Semicolon, length: 1, previous: s.previousToken };
 
             case ',':
                 ++s.position;
-                return { kind: TokenKind.Comma, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.Comma, length: 1, previous: s.previousToken };
 
             case '[':
                 ++s.position;
-                return { kind: TokenKind.OpenBracket, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.OpenBracket, length: 1, previous: s.previousToken };
 
             case ']':
                 ++s.position;
-                return { kind: TokenKind.CloseBracket, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.CloseBracket, length: 1, previous: s.previousToken };
 
             case '(':
                 return scriptingOpenParenthesis(s);
 
             case ')':
                 ++s.position;
-                return { kind: TokenKind.CloseParenthesis, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.CloseParenthesis, length: 1, previous: s.previousToken };
 
             case '~':
                 ++s.position;
-                return { kind: TokenKind.Tilde, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.Tilde, length: 1, previous: s.previousToken };
 
             case '?':
                 return scriptingQuestion(s);
 
             case '@':
                 ++s.position;
-                return { kind: TokenKind.AtSymbol, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.AtSymbol, length: 1, previous: s.previousToken };
 
             case '$':
                 return scriptingDollar(s);
@@ -510,24 +504,24 @@ export namespace Lexer {
             case '{':
                 ++s.position;
                 s.modeStack.push(LexerMode.Scripting);
-                return { kind: TokenKind.OpenBrace, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.OpenBrace, length: 1, previous: s.previousToken };
 
             case '}':
                 ++s.position;
                 if (s.modeStack.length > 1) {
                     s.modeStack.pop();
                 }
-                return { kind: TokenKind.CloseBrace, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.CloseBrace, length: 1, previous: s.previousToken };
 
             case '`':
                 ++s.position;
                 s.modeStack.pop();
                 s.modeStack.push(LexerMode.Backtick);
-                return { kind: TokenKind.Backtick, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.Backtick, length: 1, previous: s.previousToken };
 
             case '\\':
                 ++s.position;
-                return { kind: TokenKind.Backslash, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.Backslash, length: 1, previous: s.previousToken };
 
             case '\'':
                 return scriptingSingleQuote(s, start);
@@ -543,7 +537,7 @@ export namespace Lexer {
                     return scriptingLabelStart(s);
                 } else {
                     ++s.position;
-                    return { kind: TokenKind.Unknown, offset: start, length: 1, previous: s.previousToken };
+                    return { kind: TokenKind.Unknown, length: 1, previous: s.previousToken };
                 }
 
         }
@@ -562,18 +556,18 @@ export namespace Lexer {
             case '\n':
             case '\r':
                 while (++s.position < l && isWhitespace(s.input[s.position])) { }
-                return { kind: TokenKind.Whitespace, offset: start, length: s.position - start, previous: s.previousToken };
+                return { kind: TokenKind.Whitespace, length: s.position - start, previous: s.previousToken };
 
             default:
                 if (isLabelStart(c)) {
                     while (++s.position < l && isLabelChar(s.input[s.position])) { }
                     s.modeStack.pop();
-                    return { kind: TokenKind.Name, offset: start, length: s.position - start, previous: s.previousToken };
+                    return { kind: TokenKind.Name, length: s.position - start, previous: s.previousToken };
                 }
 
                 if (c === '-' && s.position + 1 < l && s.input[s.position + 1] === '>') {
                     s.position += 2;
-                    return { kind: TokenKind.Arrow, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.Arrow, length: 2, previous: s.previousToken };
                 }
 
                 s.modeStack.pop();
@@ -600,7 +594,7 @@ export namespace Lexer {
                 if (s.position + 1 < l && s.input[s.position + 1] === '$') {
                     s.modeStack.push(LexerMode.Scripting);
                     ++s.position;
-                    return { kind: TokenKind.CurlyOpen, offset: start, length: 1, previous: s.previousToken };
+                    return { kind: TokenKind.CurlyOpen, length: 1, previous: s.previousToken };
                 }
                 break;
 
@@ -608,7 +602,7 @@ export namespace Lexer {
                 s.modeStack.pop();
                 s.modeStack.push(LexerMode.Scripting);
                 ++s.position;
-                return { kind: TokenKind.DoubleQuote, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.DoubleQuote, length: 1, previous: s.previousToken };
 
             default:
                 break;
@@ -677,7 +671,7 @@ export namespace Lexer {
         }
 
         s.position = n;
-        return { kind: TokenKind.EncapsulatedAndWhitespace, offset: start, length: s.position - start, previous: s.previousToken };
+        return { kind: TokenKind.EncapsulatedAndWhitespace, length: s.position - start, previous: s.previousToken };
 
     }
 
@@ -699,7 +693,7 @@ export namespace Lexer {
                 if (s.position + 1 < l && s.input[s.position + 1] === '$') {
                     s.modeStack.push(LexerMode.Scripting);
                     ++s.position;
-                    return { kind: TokenKind.CurlyOpen, offset: start, length: 1, previous: s.previousToken };
+                    return { kind: TokenKind.CurlyOpen, length: 1, previous: s.previousToken };
                 }
                 break;
 
@@ -730,7 +724,7 @@ export namespace Lexer {
                 if (s.position + 1 < l && s.input[s.position + 1] === '$') {
                     s.modeStack.push(LexerMode.Scripting);
                     ++s.position;
-                    return { kind: TokenKind.CurlyOpen, offset: start, length: 1, previous: s.previousToken };
+                    return { kind: TokenKind.CurlyOpen, length: 1, previous: s.previousToken };
                 }
                 break;
 
@@ -738,7 +732,7 @@ export namespace Lexer {
                 s.modeStack.pop();
                 s.modeStack.push(LexerMode.Scripting);
                 ++s.position;
-                return { kind: TokenKind.Backtick, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.Backtick, length: 1, previous: s.previousToken };
 
             default:
                 break;
@@ -761,29 +755,29 @@ export namespace Lexer {
                 if (s.position + 1 < l && isLabelStart(s.input[s.position + 1])) {
                     ++s.position;
                     while (++s.position < l && isLabelChar(s.input[s.position])) { }
-                    return { kind: TokenKind.VariableName, offset: start, length: s.position - start, previous: s.previousToken };
+                    return { kind: TokenKind.VariableName, length: s.position - start, previous: s.previousToken };
                 }
                 break;
 
             case '[':
                 ++s.position;
-                return { kind: TokenKind.OpenBracket, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.OpenBracket, length: 1, previous: s.previousToken };
 
             case ']':
                 s.modeStack.pop();
                 ++s.position;
-                return { kind: TokenKind.CloseBracket, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.CloseBracket, length: 1, previous: s.previousToken };
 
             case '-':
                 ++s.position;
-                return { kind: TokenKind.Minus, offset: start, length: 1, previous: s.previousToken };
+                return { kind: TokenKind.Minus, length: 1, previous: s.previousToken };
 
             default:
                 if (c >= '0' && c <= '9') {
                     return varOffsetNumeric(s);
                 } else if (isLabelStart(c)) {
                     while (++s.position < l && isLabelChar(s.input[s.position])) { }
-                    return { kind: TokenKind.Name, offset: start, length: s.position - start, previous: s.previousToken };
+                    return { kind: TokenKind.Name, length: s.position - start, previous: s.previousToken };
                 }
                 break;
 
@@ -792,7 +786,7 @@ export namespace Lexer {
         //unexpected char
         s.modeStack.pop();
         ++s.position;
-        return { kind: TokenKind.Unknown, offset: start, length: 1, previous: s.previousToken };
+        return { kind: TokenKind.Unknown, length: 1, previous: s.previousToken };
 
     }
 
@@ -808,7 +802,7 @@ export namespace Lexer {
                 s.modeStack.pop();
                 s.modeStack.push(LexerMode.Scripting);
                 s.position = k;
-                return { kind: TokenKind.VariableName, offset: start, length: s.position - start, previous: s.previousToken };
+                return { kind: TokenKind.VariableName, length: s.position - start, previous: s.previousToken };
             }
         }
 
@@ -829,18 +823,18 @@ export namespace Lexer {
             if (k < l && s.input[k] === 'b' && ++k < l && (s.input[k] === '1' || s.input[k] === '0')) {
                 while (++k < l && (s.input[k] === '1' || s.input[k] === '0')) { }
                 s.position = k;
-                return { kind: TokenKind.IntegerLiteral, offset: start, length: s.position - start, previous: s.previousToken };
+                return { kind: TokenKind.IntegerLiteral, length: s.position - start, previous: s.previousToken };
             }
 
             if (k < l && s.input[k] === 'x' && ++k < l && isHexDigit(s.input[k])) {
                 while (++k < l && isHexDigit(s.input[k])) { }
                 s.position = k;
-                return { kind: TokenKind.IntegerLiteral, offset: start, length: s.position - start, previous: s.previousToken };
+                return { kind: TokenKind.IntegerLiteral, length: s.position - start, previous: s.previousToken };
             }
         }
 
         while (++s.position < l && s.input[s.position] >= '0' && s.input[s.position] <= '9') { }
-        return { kind: TokenKind.IntegerLiteral, offset: start, length: s.position - start, previous: s.previousToken };
+        return { kind: TokenKind.IntegerLiteral, length: s.position - start, previous: s.previousToken };
 
     }
 
@@ -884,7 +878,7 @@ export namespace Lexer {
         }
 
         s.position = n;
-        return { kind: TokenKind.EncapsulatedAndWhitespace, offset: start, length: s.position - start, previous: s.previousToken };
+        return { kind: TokenKind.EncapsulatedAndWhitespace, length: s.position - start, previous: s.previousToken };
 
     }
 
@@ -937,7 +931,7 @@ export namespace Lexer {
                             s.modeStack.push(LexerMode.EndHereDoc);
                             let tLength = s.position - start;
                             return tLength > 0 ? 
-                                { kind: TokenKind.EncapsulatedAndWhitespace, offset: start, length: s.position - start, previous: s.previousToken } : 
+                                { kind: TokenKind.EncapsulatedAndWhitespace, length: s.position - start, previous: s.previousToken } : 
                                 undefined;
                         }
                     }
@@ -967,7 +961,7 @@ export namespace Lexer {
         }
 
         s.position = n;
-        return { kind: TokenKind.EncapsulatedAndWhitespace, offset: start, length: s.position - start, previous: s.previousToken };
+        return { kind: TokenKind.EncapsulatedAndWhitespace, length: s.position - start, previous: s.previousToken };
     }
 
     function endHeredoc(s: LexerState) {
@@ -979,7 +973,7 @@ export namespace Lexer {
         s.heredocEndNewLineLength = 0;
         s.modeStack.pop();
         s.modeStack.push(LexerMode.Scripting);
-        return { kind: TokenKind.EndHeredoc, offset: start, length: s.position - start, previous: s.previousToken };
+        return { kind: TokenKind.EndHeredoc, length: s.position - start, previous: s.previousToken };
 
     }
 
@@ -1033,7 +1027,7 @@ export namespace Lexer {
             s.position = n;
         }
 
-        return { kind: TokenKind.EncapsulatedAndWhitespace, offset: start, length: s.position - start, previous: s.previousToken };
+        return { kind: TokenKind.EncapsulatedAndWhitespace, length: s.position - start, previous: s.previousToken };
 
     }
 
@@ -1050,7 +1044,7 @@ export namespace Lexer {
         if (s.input[k] === '{') {
             s.position += 2;
             s.modeStack.push(LexerMode.LookingForVarName);
-            return { kind: TokenKind.DollarCurlyOpen, offset: start, length: 2, previous: s.previousToken };
+            return { kind: TokenKind.DollarCurlyOpen, length: 2, previous: s.previousToken };
         }
 
         if (!isLabelStart(s.input[k])) {
@@ -1062,7 +1056,7 @@ export namespace Lexer {
         if (k < l && s.input[k] === '[') {
             s.modeStack.push(LexerMode.VarOffset);
             s.position = k;
-            return { kind: TokenKind.VariableName, offset: start, length: s.position - start, previous: s.previousToken };
+            return { kind: TokenKind.VariableName, length: s.position - start, previous: s.previousToken };
         }
 
         if (k < l && s.input[k] === '-') {
@@ -1070,12 +1064,12 @@ export namespace Lexer {
             if (n < l && s.input[n] === '>' && ++n < l && isLabelStart(s.input[n])) {
                 s.modeStack.push(LexerMode.LookingForProperty);
                 s.position = k;
-                return { kind: TokenKind.VariableName, offset: start, length: s.position - start, previous: s.previousToken };
+                return { kind: TokenKind.VariableName, length: s.position - start, previous: s.previousToken };
             }
         }
 
         s.position = k;
-        return { kind: TokenKind.VariableName, offset: start, length: s.position - start, previous: s.previousToken };
+        return { kind: TokenKind.VariableName, length: s.position - start, previous: s.previousToken };
 
     }
 
@@ -1094,7 +1088,7 @@ export namespace Lexer {
             switch (c) {
                 case '"':
                     s.position = n;
-                    return { kind: TokenKind.StringLiteral, offset: start, length: s.position - start, previous: s.previousToken };
+                    return { kind: TokenKind.StringLiteral, length: s.position - start, previous: s.previousToken };
                 case '$':
                     if (n < l && (isLabelStart(s.input[n]) || s.input[n] === '{')) {
                         break;
@@ -1121,7 +1115,7 @@ export namespace Lexer {
         s.doubleQuoteScannedLength = n;
         s.modeStack.pop();
         s.modeStack.push(LexerMode.DoubleQuotes);
-        return { kind: TokenKind.DoubleQuote, offset: start, length: s.position - start, previous: s.previousToken };
+        return { kind: TokenKind.DoubleQuote, length: s.position - start, previous: s.previousToken };
 
     }
 
@@ -1136,13 +1130,13 @@ export namespace Lexer {
             ++s.position;
 
             if (c === '\'') {
-                return { kind: TokenKind.StringLiteral, offset: start, length: s.position - start, previous: s.previousToken };
+                return { kind: TokenKind.StringLiteral, length: s.position - start, previous: s.previousToken };
             } else if (c === '\\' && s.position < l) {
                 ++s.position;
             }
         }
 
-        return { kind: TokenKind.EncapsulatedAndWhitespace, offset: start, length: s.position - start, previous: s.previousToken };
+        return { kind: TokenKind.EncapsulatedAndWhitespace, length: s.position - start, previous: s.previousToken };
     }
 
     function scriptingB(s: LexerState): Token {
@@ -1234,7 +1228,7 @@ export namespace Lexer {
 
         s.position = k;
         s.heredocLabel = s.input.slice(labelStart, labelEnd);
-        let t = { kind: TokenKind.StartHeredoc, offset: start, length: s.position - start, previous: s.previousToken };
+        let t = { kind: TokenKind.StartHeredoc, length: s.position - start, previous: s.previousToken };
         s.modeStack.pop();
 
         if (quote === '\'') {
@@ -1297,7 +1291,7 @@ export namespace Lexer {
             }
 
             if (kind > 0) {
-                return { kind: kind, offset: start, length: s.position - start, previous: s.previousToken };
+                return { kind: kind, length: s.position - start, previous: s.previousToken };
             }
         }
 
@@ -1512,7 +1506,7 @@ export namespace Lexer {
             kind = TokenKind.Name;
         }
 
-        return { kind: kind, offset: start, length: s.position - start, previous: s.previousToken };
+        return { kind: kind, length: s.position - start, previous: s.previousToken };
     }
 
     function scriptingYield(s: LexerState, start: number) {
@@ -1526,11 +1520,11 @@ export namespace Lexer {
             while (++k < l && isWhitespace(s.input[k])) { }
             if (s.input.substr(k, 4).toLowerCase() === 'from') {
                 s.position = k + 4;
-                return { kind: TokenKind.YieldFrom, offset: start, length: s.position - start, previous: s.previousToken };
+                return { kind: TokenKind.YieldFrom, length: s.position - start, previous: s.previousToken };
             }
         }
 
-        return { kind: TokenKind.Yield, offset: start, length: s.position - start, previous: s.previousToken };
+        return { kind: TokenKind.Yield, length: s.position - start, previous: s.previousToken };
 
     }
 
@@ -1543,15 +1537,15 @@ export namespace Lexer {
         if (s.position < l) {
             if (s.input[s.position] === '?') {
                 ++s.position;
-                return { kind: TokenKind.QuestionQuestion, offset: start, length: 2, previous: s.previousToken };
+                return { kind: TokenKind.QuestionQuestion, length: 2, previous: s.previousToken };
             } else if (s.input[s.position] === '>') {
                 ++s.position;
                 s.modeStack.pop();
                 s.modeStack.push(LexerMode.Initial);
-                return { kind: TokenKind.CloseTag, offset: start, length: s.position - start, previous: s.previousToken };
+                return { kind: TokenKind.CloseTag, length: s.position - start, previous: s.previousToken };
             }
         }
-        return { kind: TokenKind.Question, offset: start, length: 1, previous: s.previousToken };
+        return { kind: TokenKind.Question, length: 1, previous: s.previousToken };
     }
 
     function scriptingDollar(s: LexerState): Token {
@@ -1563,11 +1557,11 @@ export namespace Lexer {
         if (k < l && isLabelStart(s.input[k])) {
             while (++k < l && isLabelChar(s.input[k])) { }
             s.position = k;
-            return { kind: TokenKind.VariableName, offset: start, length: s.position - start, previous: s.previousToken };
+            return { kind: TokenKind.VariableName, length: s.position - start, previous: s.previousToken };
         }
 
         ++s.position;
-        return { kind: TokenKind.Dollar, offset: start, length: 1, previous: s.previousToken };
+        return { kind: TokenKind.Dollar, length: 1, previous: s.previousToken };
     }
 
     function scriptingOpenParenthesis(s: LexerState): Token {
@@ -1636,13 +1630,13 @@ export namespace Lexer {
 
             if (kind > 0) {
                 s.position = k + 1;
-                return { kind: kind, offset: start, length: s.position - start, previous: s.previousToken };
+                return { kind: kind, length: s.position - start, previous: s.previousToken };
             }
 
         }
 
         ++s.position;
-        return { kind: TokenKind.OpenParenthesis, offset: start, length: 1, previous: s.previousToken };
+        return { kind: TokenKind.OpenParenthesis, length: 1, previous: s.previousToken };
 
     }
 
@@ -1660,13 +1654,13 @@ export namespace Lexer {
             if (s.input[k] === 'b' && ++k < l && (s.input[k] === '0' || s.input[k] === '1')) {
                 while (++k < l && (s.input[k] === '0' || s.input[k] === '1')) { }
                 s.position = k;
-                return { kind: TokenKind.IntegerLiteral, offset: start, length: s.position - start, previous: s.previousToken };
+                return { kind: TokenKind.IntegerLiteral, length: s.position - start, previous: s.previousToken };
             }
             k = s.position + 1;
             if (s.input[k] === 'x' && ++k < l && isHexDigit(s.input[k])) {
                 while (++k < l && isHexDigit(s.input[k])) { }
                 s.position = k;
-                return { kind: TokenKind.IntegerLiteral, offset: start, length: s.position - start, previous: s.previousToken };
+                return { kind: TokenKind.IntegerLiteral, length: s.position - start, previous: s.previousToken };
             }
         }
 
@@ -1679,7 +1673,7 @@ export namespace Lexer {
             return scriptingNumericStartingWithDotOrE(s, start, false);
         }
 
-        return { kind: TokenKind.IntegerLiteral, offset: start, length: s.position - start, previous: s.previousToken };
+        return { kind: TokenKind.IntegerLiteral, length: s.position - start, previous: s.previousToken };
 
     }
 
@@ -1698,11 +1692,11 @@ export namespace Lexer {
             if (k < l && s.input[k] >= '0' && s.input[k] <= '9') {
                 while (++k < l && s.input[k] >= '0' && s.input[k] <= '9') { }
                 s.position = k;
-                return { kind: TokenKind.FloatingLiteral, offset: start, length: s.position - start, previous: s.previousToken };
+                return { kind: TokenKind.FloatingLiteral, length: s.position - start, previous: s.previousToken };
             }
         }
 
-        return { kind: hasDot ? TokenKind.FloatingLiteral : TokenKind.IntegerLiteral, offset: start, length: s.position - start, previous: s.previousToken };
+        return { kind: hasDot ? TokenKind.FloatingLiteral : TokenKind.IntegerLiteral, length: s.position - start, previous: s.previousToken };
 
     }
 
@@ -1714,18 +1708,18 @@ export namespace Lexer {
             switch (s.input[s.position]) {
                 case '=':
                     ++s.position;
-                    return { kind: TokenKind.BarEquals, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.BarEquals, length: 2, previous: s.previousToken };
 
                 case '|':
                     ++s.position;
-                    return { kind: TokenKind.BarBar, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.BarBar, length: 2, previous: s.previousToken };
 
                 default:
                     break;
             }
         }
 
-        return { kind: TokenKind.Bar, offset: start, length: 1, previous: s.previousToken };
+        return { kind: TokenKind.Bar, length: 1, previous: s.previousToken };
     }
 
     function scriptingAmpersand(s: LexerState): Token {
@@ -1738,11 +1732,11 @@ export namespace Lexer {
             switch (s.input[s.position]) {
                 case '=':
                     ++s.position;
-                    return { kind: TokenKind.AmpersandEquals, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.AmpersandEquals, length: 2, previous: s.previousToken };
 
                 case '&':
                     ++s.position;
-                    return { kind: TokenKind.AmpersandAmpersand, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.AmpersandAmpersand, length: 2, previous: s.previousToken };
 
                 default:
                     break;
@@ -1750,7 +1744,7 @@ export namespace Lexer {
 
         }
 
-        return { kind: TokenKind.Ampersand, offset: start, length: 1, previous: s.previousToken };
+        return { kind: TokenKind.Ampersand, length: 1, previous: s.previousToken };
 
     }
 
@@ -1778,7 +1772,7 @@ export namespace Lexer {
         }
 
         //todo WARN unterminated comment
-        return { kind: kind, offset: start, length: s.position - start, previous: s.previousToken };
+        return { kind: kind, length: s.position - start, previous: s.previousToken };
 
     }
 
@@ -1792,7 +1786,7 @@ export namespace Lexer {
             switch (s.input[s.position]) {
                 case '=':
                     ++s.position;
-                    return { kind: TokenKind.ForwardslashEquals, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.ForwardslashEquals, length: 2, previous: s.previousToken };
 
                 case '*':
                     ++s.position;
@@ -1808,7 +1802,7 @@ export namespace Lexer {
 
         }
 
-        return { kind: TokenKind.ForwardSlash, offset: start, length: 1, previous: s.previousToken };
+        return { kind: TokenKind.ForwardSlash, length: 1, previous: s.previousToken };
     }
 
     function scriptingComment(s: LexerState, start: number) {
@@ -1831,7 +1825,7 @@ export namespace Lexer {
             }
         }
 
-        return { kind: TokenKind.Comment, offset: start, length: s.position - start, previous: s.previousToken };
+        return { kind: TokenKind.Comment, length: s.position - start, previous: s.previousToken };
 
     }
 
@@ -1844,20 +1838,20 @@ export namespace Lexer {
                     ++s.position;
                     if (s.position < s.input.length && s.input[s.position] === '=') {
                         ++s.position;
-                        return { kind: TokenKind.AsteriskAsteriskEquals, offset: start, length: 3, previous: s.previousToken };
+                        return { kind: TokenKind.AsteriskAsteriskEquals, length: 3, previous: s.previousToken };
                     }
-                    return { kind: TokenKind.AsteriskAsterisk, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.AsteriskAsterisk, length: 2, previous: s.previousToken };
 
                 case '=':
                     ++s.position;
-                    return { kind: TokenKind.AsteriskEquals, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.AsteriskEquals, length: 2, previous: s.previousToken };
 
                 default:
                     break;
             }
         }
 
-        return { kind: TokenKind.Asterisk, offset: start, length: 1, previous: s.previousToken };
+        return { kind: TokenKind.Asterisk, length: 1, previous: s.previousToken };
     }
 
     function scriptingGreaterThan(s: LexerState) {
@@ -1870,18 +1864,18 @@ export namespace Lexer {
                     ++s.position;
                     if (s.position < s.input.length && s.input[s.position] === '=') {
                         ++s.position;
-                        return { kind: TokenKind.GreaterThanGreaterThanEquals, offset: start, length: 3, previous: s.previousToken };
+                        return { kind: TokenKind.GreaterThanGreaterThanEquals, length: 3, previous: s.previousToken };
                     }
-                    return { kind: TokenKind.GreaterThanGreaterThan, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.GreaterThanGreaterThan, length: 2, previous: s.previousToken };
                 case '=':
                     ++s.position;
-                    return { kind: TokenKind.GreaterThanEquals, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.GreaterThanEquals, length: 2, previous: s.previousToken };
                 default:
                     break;
             }
         }
 
-        return { kind: TokenKind.GreaterThan, offset: start, length: 1, previous: s.previousToken };
+        return { kind: TokenKind.GreaterThan, length: 1, previous: s.previousToken };
 
     }
 
@@ -1894,14 +1888,14 @@ export namespace Lexer {
             switch (s.input[s.position]) {
                 case '>':
                     ++s.position;
-                    return { kind: TokenKind.ExclamationEquals, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.ExclamationEquals, length: 2, previous: s.previousToken };
 
                 case '<':
                     ++s.position;
                     if (s.position < s.input.length) {
                         if (s.input[s.position] === '=') {
                             ++s.position;
-                            return { kind: TokenKind.LessThanLessThanEquals, offset: start, length: 3, previous: s.previousToken };
+                            return { kind: TokenKind.LessThanLessThanEquals, length: 3, previous: s.previousToken };
                         } else if (s.input[s.position] === '<') {
                             //go back to first <
                             s.position -= 2;
@@ -1914,14 +1908,14 @@ export namespace Lexer {
                         }
 
                     }
-                    return { kind: TokenKind.LessThanLessThan, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.LessThanLessThan, length: 2, previous: s.previousToken };
                 case '=':
                     ++s.position;
                     if (s.position < s.input.length && s.input[s.position] === '>') {
                         ++s.position;
-                        return { kind: TokenKind.Spaceship, offset: start, length: 3, previous: s.previousToken };
+                        return { kind: TokenKind.Spaceship, length: 3, previous: s.previousToken };
                     }
-                    return { kind: TokenKind.LessThanEquals, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.LessThanEquals, length: 2, previous: s.previousToken };
 
                 default:
                     break;
@@ -1930,7 +1924,7 @@ export namespace Lexer {
 
         }
 
-        return { kind: TokenKind.LessThan, offset: start, length: 1, previous: s.previousToken };
+        return { kind: TokenKind.LessThan, length: 1, previous: s.previousToken };
     }
 
     function scriptingExclamation(s: LexerState) {
@@ -1940,12 +1934,12 @@ export namespace Lexer {
         if (++s.position < s.input.length && s.input[s.position] === '=') {
             if (++s.position < s.input.length && s.input[s.position] === '=') {
                 ++s.position;
-                return { kind: TokenKind.ExclamationEqualsEquals, offset: start, length: 3, previous: s.previousToken };
+                return { kind: TokenKind.ExclamationEqualsEquals, length: 3, previous: s.previousToken };
             }
-            return { kind: TokenKind.ExclamationEquals, offset: start, length: 2, previous: s.previousToken };
+            return { kind: TokenKind.ExclamationEquals, length: 2, previous: s.previousToken };
         }
 
-        return { kind: TokenKind.Exclamation, offset: start, length: 1, previous: s.previousToken };
+        return { kind: TokenKind.Exclamation, length: 1, previous: s.previousToken };
     }
 
     function scriptingPlus(s: LexerState) {
@@ -1957,10 +1951,10 @@ export namespace Lexer {
             switch (s.input[s.position]) {
                 case '=':
                     ++s.position;
-                    return { kind: TokenKind.PlusEquals, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.PlusEquals, length: 2, previous: s.previousToken };
                 case '+':
                     ++s.position;
-                    return { kind: TokenKind.PlusPlus, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.PlusPlus, length: 2, previous: s.previousToken };
                 default:
                     break;
 
@@ -1968,7 +1962,7 @@ export namespace Lexer {
 
         }
 
-        return { kind: TokenKind.Plus, offset: start, length: 1, previous: s.previousToken };
+        return { kind: TokenKind.Plus, length: 1, previous: s.previousToken };
 
     }
 
@@ -1981,18 +1975,18 @@ export namespace Lexer {
                 case '=':
                     if (++s.position < s.input.length && s.input[s.position] === '=') {
                         ++s.position;
-                        return { kind: TokenKind.EqualsEqualsEquals, offset: start, length: 3, previous: s.previousToken };
+                        return { kind: TokenKind.EqualsEqualsEquals, length: 3, previous: s.previousToken };
                     }
-                    return { kind: TokenKind.EqualsEquals, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.EqualsEquals, length: 2, previous: s.previousToken };
                 case '>':
                     ++s.position;
-                    return { kind: TokenKind.FatArrow, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.FatArrow, length: 2, previous: s.previousToken };
                 default:
                     break;
             }
         }
 
-        return { kind: TokenKind.Equals, offset: start, length: 1, previous: s.previousToken };
+        return { kind: TokenKind.Equals, length: 1, previous: s.previousToken };
     }
 
     function scriptingDot(s: LexerState) {
@@ -2002,16 +1996,16 @@ export namespace Lexer {
             let c = s.input[s.position];
             if (c === '=') {
                 ++s.position;
-                return { kind: TokenKind.DotEquals, offset: start, length: 2, previous: s.previousToken };
+                return { kind: TokenKind.DotEquals, length: 2, previous: s.previousToken };
             } else if (c === '.' && s.position + 1 < s.input.length && s.input[s.position + 1] === '.') {
                 s.position += 2;
-                return { kind: TokenKind.Ellipsis, offset: start, length: 3, previous: s.previousToken };
+                return { kind: TokenKind.Ellipsis, length: 3, previous: s.previousToken };
             } else if (c >= '0' && c <= '9') {
                 //float
                 return scriptingNumericStartingWithDotOrE(s, start, true);
             }
         }
-        return { kind: TokenKind.Dot, offset: start, length: 1, previous: s.previousToken };
+        return { kind: TokenKind.Dot, length: 1, previous: s.previousToken };
     }
 
     function scriptingMinus(s: LexerState) {
@@ -2024,20 +2018,20 @@ export namespace Lexer {
                 case '>':
                     ++s.position;
                     s.modeStack.push(LexerMode.LookingForProperty);
-                    return { kind: TokenKind.Arrow, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.Arrow, length: 2, previous: s.previousToken };
                 case '-':
                     ++s.position;
-                    return { kind: TokenKind.MinusMinus, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.MinusMinus, length: 2, previous: s.previousToken };
                 case '=':
                     ++s.position;
-                    return { kind: TokenKind.MinusEquals, offset: start, length: 2, previous: s.previousToken };
+                    return { kind: TokenKind.MinusEquals, length: 2, previous: s.previousToken };
                 default:
                     break;
             }
 
         }
 
-        return { kind: TokenKind.Minus, offset: start, length: 1, previous: s.previousToken };
+        return { kind: TokenKind.Minus, length: 1, previous: s.previousToken };
     }
 
 }
