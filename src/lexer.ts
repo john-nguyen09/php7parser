@@ -2036,6 +2036,10 @@ export namespace Lexer {
 
 }
 
+export function isKeyword(type:TokenKind) {
+    return type >= TokenKind.Abstract && type <= TokenKind.YieldFrom;
+}
+
 export function tokenKindToString(type: TokenKind) {
     switch (type) {
         case TokenKind.Unknown:

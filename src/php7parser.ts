@@ -19,11 +19,11 @@
 
 'use strict';
 
-import { Token as ImportedToken, TokenKind as ImportedTokenKind } from './lexer';
-import { PhraseKind as ImportedPhraseKind, Phrase as ImportedPhrase } from './phrase';
+import { Token as ImportedToken } from './lexer';
+import { Phrase as ImportedPhrase } from './phrase';
 import {Node as ImportedNode} from './node';
 
-export { Lexer, LexerMode, Token, TokenKind, tokenKindToString } from './lexer';
+export { Lexer, LexerMode, Token, TokenKind, tokenKindToString, isKeyword } from './lexer';
 export { Parser } from './parser';
 export  * from './phrase';
 export * from './node';

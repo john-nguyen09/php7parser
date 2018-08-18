@@ -50,18 +50,13 @@ The full source code is represented by the tree. Trivia is accessible via `Token
         unexpected: Token;
 
         /**
-        * The expected token type
+        * The expected token kind
         */
         expected?: TokenKind;
 
     }
 
     export interface Token extends Node {
-        /**
-        * Offset within source were first char of token is found
-        * @deprecated
-        */
-        offset: number,
         /**
         * The previous token
         */
