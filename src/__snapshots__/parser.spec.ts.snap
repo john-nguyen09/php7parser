@@ -1,0 +1,3240 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`php7parser 1`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "kind": 2,
+                  "length": 8,
+                },
+                Object {
+                  "kind": 9,
+                  "length": 5,
+                },
+                Object {
+                  "kind": 83,
+                  "length": 3,
+                },
+              ],
+              "kind": 1030,
+              "length": 18,
+            },
+            Object {
+              "children": Array [
+                Object {
+                  "kind": 116,
+                  "length": 1,
+                },
+                Object {
+                  "kind": 119,
+                  "length": 1,
+                },
+              ],
+              "kind": 1029,
+              "length": 2,
+            },
+          ],
+          "kind": 1028,
+          "length": 21,
+        },
+      ],
+      "kind": 1177,
+      "length": 31,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 31,
+}
+`;
+
+exports[`php7parser 2`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 35,
+                      "length": 8,
+                    },
+                    Object {
+                      "kind": 118,
+                      "length": 1,
+                    },
+                    Object {
+                      "kind": 121,
+                      "length": 1,
+                    },
+                  ],
+                  "kind": 1005,
+                  "length": 11,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 116,
+                      "length": 1,
+                    },
+                    Object {
+                      "kind": 119,
+                      "length": 1,
+                    },
+                  ],
+                  "kind": 1081,
+                  "length": 3,
+                },
+              ],
+              "kind": 1004,
+              "length": 15,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 16,
+        },
+      ],
+      "kind": 1177,
+      "length": 22,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 22,
+}
+`;
+
+exports[`php7parser 3`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 84,
+                      "length": 2,
+                    },
+                  ],
+                  "kind": 1151,
+                  "length": 2,
+                },
+                Object {
+                  "kind": 85,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 52,
+                      "length": 3,
+                    },
+                    Object {
+                      "children": Array [
+                        Object {
+                          "children": Array [
+                            Object {
+                              "kind": 9,
+                              "length": 5,
+                            },
+                          ],
+                          "kind": 1003,
+                          "length": 5,
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "kind": 116,
+                              "length": 1,
+                            },
+                            Object {
+                              "kind": 119,
+                              "length": 1,
+                            },
+                          ],
+                          "kind": 1029,
+                          "length": 2,
+                        },
+                      ],
+                      "kind": 1002,
+                      "length": 8,
+                    },
+                  ],
+                  "kind": 1122,
+                  "length": 12,
+                },
+              ],
+              "kind": 1150,
+              "length": 17,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 18,
+        },
+      ],
+      "kind": 1177,
+      "length": 24,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 24,
+}
+`;
+
+exports[`php7parser 4`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "children": Array [
+                        Object {
+                          "kind": 83,
+                          "length": 3,
+                        },
+                      ],
+                      "kind": 1115,
+                      "length": 3,
+                    },
+                  ],
+                  "kind": 1135,
+                  "length": 3,
+                },
+                Object {
+                  "kind": 118,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "children": Array [
+                        Object {
+                          "kind": 84,
+                          "length": 2,
+                        },
+                      ],
+                      "kind": 1151,
+                      "length": 2,
+                    },
+                    Object {
+                      "kind": 93,
+                      "length": 1,
+                    },
+                  ],
+                  "kind": 1008,
+                  "length": 3,
+                },
+                Object {
+                  "kind": 121,
+                  "length": 1,
+                },
+              ],
+              "kind": 1079,
+              "length": 8,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 9,
+        },
+      ],
+      "kind": 1177,
+      "length": 15,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 15,
+}
+`;
+
+exports[`php7parser 5`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 84,
+                      "length": 6,
+                    },
+                  ],
+                  "kind": 1151,
+                  "length": 6,
+                },
+                Object {
+                  "kind": 85,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 117,
+                      "length": 1,
+                    },
+                    Object {
+                      "children": Array [
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 82,
+                                  "length": 1,
+                                },
+                              ],
+                              "kind": 1013,
+                              "length": 1,
+                            },
+                          ],
+                          "kind": 1010,
+                          "length": 1,
+                        },
+                        Object {
+                          "kind": 93,
+                          "length": 1,
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 82,
+                                  "length": 1,
+                                },
+                              ],
+                              "kind": 1013,
+                              "length": 1,
+                            },
+                          ],
+                          "kind": 1010,
+                          "length": 1,
+                        },
+                        Object {
+                          "kind": 93,
+                          "length": 1,
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 82,
+                                  "length": 1,
+                                },
+                              ],
+                              "kind": 1013,
+                              "length": 1,
+                            },
+                          ],
+                          "kind": 1010,
+                          "length": 1,
+                        },
+                        Object {
+                          "kind": 93,
+                          "length": 1,
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 82,
+                                  "length": 1,
+                                },
+                              ],
+                              "kind": 1013,
+                              "length": 1,
+                            },
+                          ],
+                          "kind": 1010,
+                          "length": 1,
+                        },
+                        Object {
+                          "kind": 93,
+                          "length": 1,
+                        },
+                      ],
+                      "kind": 1011,
+                      "length": 8,
+                    },
+                    Object {
+                      "kind": 120,
+                      "length": 1,
+                    },
+                  ],
+                  "kind": 1009,
+                  "length": 10,
+                },
+              ],
+              "kind": 1150,
+              "length": 19,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 20,
+        },
+      ],
+      "kind": 1177,
+      "length": 26,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 26,
+}
+`;
+
+exports[`php7parser 6`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 84,
+                      "length": 6,
+                    },
+                  ],
+                  "kind": 1151,
+                  "length": 6,
+                },
+                Object {
+                  "kind": 85,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 117,
+                      "length": 1,
+                    },
+                    Object {
+                      "children": Array [
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 78,
+                                  "length": 3,
+                                },
+                              ],
+                              "kind": 1013,
+                              "length": 3,
+                            },
+                          ],
+                          "kind": 1010,
+                          "length": 3,
+                        },
+                        Object {
+                          "children": Array [],
+                          "expected": 93,
+                          "kind": 1061,
+                          "length": 0,
+                          "unexpected": Object {
+                            "kind": 78,
+                            "length": 3,
+                          },
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 78,
+                                  "length": 3,
+                                },
+                              ],
+                              "kind": 1013,
+                              "length": 3,
+                            },
+                          ],
+                          "kind": 1010,
+                          "length": 3,
+                        },
+                        Object {
+                          "kind": 93,
+                          "length": 1,
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 78,
+                                  "length": 3,
+                                },
+                              ],
+                              "kind": 1013,
+                              "length": 3,
+                            },
+                          ],
+                          "kind": 1010,
+                          "length": 3,
+                        },
+                      ],
+                      "kind": 1011,
+                      "length": 10,
+                    },
+                    Object {
+                      "kind": 120,
+                      "length": 1,
+                    },
+                  ],
+                  "kind": 1009,
+                  "length": 12,
+                },
+              ],
+              "kind": 1150,
+              "length": 21,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 22,
+        },
+      ],
+      "kind": 1177,
+      "length": 28,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 28,
+}
+`;
+
+exports[`php7parser 7`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 84,
+                      "length": 6,
+                    },
+                  ],
+                  "kind": 1151,
+                  "length": 6,
+                },
+                Object {
+                  "kind": 85,
+                  "length": 1,
+                },
+                Object {
+                  "kind": 82,
+                  "length": 1,
+                },
+              ],
+              "kind": 1150,
+              "length": 10,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 11,
+        },
+      ],
+      "kind": 1177,
+      "length": 21,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 21,
+}
+`;
+
+exports[`php7parser 8`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "kind": 9,
+                  "length": 5,
+                },
+                Object {
+                  "kind": 83,
+                  "length": 7,
+                },
+              ],
+              "kind": 1030,
+              "length": 13,
+            },
+            Object {
+              "children": Array [
+                Object {
+                  "kind": 116,
+                  "length": 1,
+                },
+                Object {
+                  "kind": 119,
+                  "length": 1,
+                },
+              ],
+              "kind": 1029,
+              "length": 3,
+            },
+          ],
+          "kind": 1028,
+          "length": 17,
+        },
+      ],
+      "kind": 1177,
+      "length": 27,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 27,
+}
+`;
+
+exports[`php7parser 9`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "kind": 9,
+                  "length": 5,
+                },
+                Object {
+                  "kind": 83,
+                  "length": 7,
+                },
+              ],
+              "kind": 1030,
+              "length": 13,
+            },
+            Object {
+              "children": Array [
+                Object {
+                  "kind": 116,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "children": Array [
+                        Object {
+                          "children": Array [
+                            Object {
+                              "kind": 55,
+                              "length": 6,
+                            },
+                          ],
+                          "kind": 1104,
+                          "length": 6,
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "children": Array [],
+                                  "expected": 84,
+                                  "kind": 1061,
+                                  "length": 0,
+                                  "unexpected": Object {
+                                    "kind": 119,
+                                    "length": 1,
+                                  },
+                                },
+                              ],
+                              "kind": 1132,
+                              "length": 0,
+                            },
+                            Object {
+                              "children": Array [],
+                              "kind": 1061,
+                              "length": 0,
+                              "unexpected": Object {
+                                "kind": 119,
+                                "length": 1,
+                              },
+                            },
+                          ],
+                          "kind": 1133,
+                          "length": 0,
+                        },
+                        Object {
+                          "children": Array [],
+                          "expected": 88,
+                          "kind": 1061,
+                          "length": 0,
+                          "unexpected": Object {
+                            "kind": 119,
+                            "length": 1,
+                          },
+                        },
+                      ],
+                      "kind": 1131,
+                      "length": 6,
+                    },
+                  ],
+                  "kind": 1032,
+                  "length": 6,
+                },
+                Object {
+                  "kind": 119,
+                  "length": 1,
+                },
+              ],
+              "kind": 1029,
+              "length": 23,
+            },
+          ],
+          "kind": 1028,
+          "length": 37,
+        },
+      ],
+      "kind": 1177,
+      "length": 47,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 47,
+}
+`;
+
+exports[`php7parser 10`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 84,
+                      "length": 4,
+                    },
+                  ],
+                  "kind": 1151,
+                  "length": 4,
+                },
+                Object {
+                  "kind": 85,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 97,
+                      "length": 1,
+                    },
+                    Object {
+                      "children": Array [
+                        Object {
+                          "kind": 80,
+                          "length": 6,
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "kind": 131,
+                              "length": 2,
+                            },
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 97,
+                                  "length": 1,
+                                },
+                                Object {
+                                  "children": Array [
+                                    Object {
+                                      "kind": 80,
+                                      "length": 4,
+                                    },
+                                    Object {
+                                      "children": Array [
+                                        Object {
+                                          "kind": 84,
+                                          "length": 2,
+                                        },
+                                      ],
+                                      "kind": 1151,
+                                      "length": 2,
+                                    },
+                                  ],
+                                  "kind": 1059,
+                                  "length": 6,
+                                },
+                                Object {
+                                  "kind": 97,
+                                  "length": 1,
+                                },
+                              ],
+                              "kind": 1051,
+                              "length": 8,
+                            },
+                            Object {
+                              "kind": 119,
+                              "length": 1,
+                            },
+                          ],
+                          "kind": 1058,
+                          "length": 11,
+                        },
+                      ],
+                      "kind": 1059,
+                      "length": 17,
+                    },
+                    Object {
+                      "kind": 97,
+                      "length": 1,
+                    },
+                  ],
+                  "kind": 1051,
+                  "length": 19,
+                },
+              ],
+              "kind": 1150,
+              "length": 26,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 27,
+        },
+      ],
+      "kind": 1177,
+      "length": 37,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 37,
+}
+`;
+
+exports[`php7parser 11`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "children": Array [
+                        Object {
+                          "children": Array [
+                            Object {
+                              "kind": 83,
+                              "length": 3,
+                            },
+                          ],
+                          "kind": 1115,
+                          "length": 3,
+                        },
+                      ],
+                      "kind": 1135,
+                      "length": 3,
+                    },
+                  ],
+                  "kind": 1041,
+                  "length": 3,
+                },
+                Object {
+                  "kind": 117,
+                  "length": 1,
+                },
+                Object {
+                  "kind": 82,
+                  "length": 1,
+                },
+                Object {
+                  "kind": 120,
+                  "length": 1,
+                },
+              ],
+              "kind": 1155,
+              "length": 6,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 7,
+        },
+      ],
+      "kind": 1177,
+      "length": 13,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 13,
+}
+`;
+
+exports[`php7parser 12`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "kind": 90,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 116,
+                      "length": 1,
+                    },
+                    Object {
+                      "children": Array [
+                        Object {
+                          "children": Array [
+                            Object {
+                              "kind": 84,
+                              "length": 4,
+                            },
+                          ],
+                          "kind": 1151,
+                          "length": 4,
+                        },
+                        Object {
+                          "kind": 115,
+                          "length": 2,
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "kind": 83,
+                              "length": 3,
+                            },
+                          ],
+                          "kind": 1105,
+                          "length": 3,
+                        },
+                      ],
+                      "kind": 1130,
+                      "length": 9,
+                    },
+                    Object {
+                      "kind": 119,
+                      "length": 1,
+                    },
+                  ],
+                  "kind": 1057,
+                  "length": 11,
+                },
+              ],
+              "kind": 1151,
+              "length": 12,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 13,
+        },
+      ],
+      "kind": 1177,
+      "length": 19,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 19,
+}
+`;
+
+exports[`php7parser 13`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [],
+      "kind": 1177,
+      "length": 0,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 0,
+}
+`;
+
+exports[`php7parser 14`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "kind": 116,
+              "length": 1,
+            },
+            Object {
+              "kind": 119,
+              "length": 1,
+            },
+          ],
+          "kind": 1039,
+          "length": 8,
+        },
+      ],
+      "kind": 1177,
+      "length": 14,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 14,
+}
+`;
+
+exports[`php7parser 15`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "kind": 35,
+                  "length": 8,
+                },
+                Object {
+                  "kind": 83,
+                  "length": 10,
+                },
+                Object {
+                  "kind": 118,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "children": Array [
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "children": Array [
+                                    Object {
+                                      "kind": 83,
+                                      "length": 6,
+                                    },
+                                  ],
+                                  "kind": 1115,
+                                  "length": 6,
+                                },
+                              ],
+                              "kind": 1135,
+                              "length": 6,
+                            },
+                          ],
+                          "kind": 1168,
+                          "length": 6,
+                        },
+                        Object {
+                          "kind": 84,
+                          "length": 7,
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "kind": 85,
+                              "length": 1,
+                            },
+                            Object {
+                              "kind": 78,
+                              "length": 13,
+                            },
+                          ],
+                          "kind": 1048,
+                          "length": 15,
+                        },
+                      ],
+                      "kind": 1123,
+                      "length": 30,
+                    },
+                  ],
+                  "kind": 1124,
+                  "length": 30,
+                },
+                Object {
+                  "kind": 121,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 87,
+                      "length": 1,
+                    },
+                    Object {
+                      "children": Array [
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 83,
+                                  "length": 6,
+                                },
+                              ],
+                              "kind": 1115,
+                              "length": 6,
+                            },
+                          ],
+                          "kind": 1135,
+                          "length": 6,
+                        },
+                      ],
+                      "kind": 1168,
+                      "length": 6,
+                    },
+                  ],
+                  "kind": 1143,
+                  "length": 8,
+                },
+              ],
+              "kind": 1082,
+              "length": 60,
+            },
+            Object {
+              "children": Array [
+                Object {
+                  "kind": 116,
+                  "length": 1,
+                },
+                Object {
+                  "kind": 119,
+                  "length": 1,
+                },
+              ],
+              "kind": 1081,
+              "length": 3,
+            },
+          ],
+          "kind": 1080,
+          "length": 64,
+        },
+      ],
+      "kind": 1177,
+      "length": 95,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 95,
+}
+`;
+
+exports[`php7parser 16`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "kind": 106,
+              "length": 2,
+            },
+            Object {
+              "kind": 106,
+              "length": 2,
+            },
+            Object {
+              "kind": 154,
+              "length": 9,
+            },
+            Object {
+              "kind": 84,
+              "length": 4,
+            },
+            Object {
+              "kind": 80,
+              "length": 14,
+            },
+            Object {
+              "kind": 84,
+              "length": 4,
+            },
+            Object {
+              "kind": 80,
+              "length": 24,
+            },
+          ],
+          "kind": 1061,
+          "length": 59,
+          "unexpected": Object {
+            "kind": 106,
+            "length": 2,
+          },
+        },
+      ],
+      "kind": 1177,
+      "length": 66,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 66,
+}
+`;
+
+exports[`php7parser 17`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "kind": 66,
+              "length": 3,
+            },
+            Object {
+              "children": Array [
+                Object {
+                  "kind": 83,
+                  "length": 3,
+                },
+                Object {
+                  "kind": 147,
+                  "length": 1,
+                },
+                Object {
+                  "kind": 83,
+                  "length": 3,
+                },
+              ],
+              "kind": 1115,
+              "length": 7,
+            },
+            Object {
+              "kind": 147,
+              "length": 1,
+            },
+            Object {
+              "kind": 116,
+              "length": 1,
+            },
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "children": Array [
+                        Object {
+                          "kind": 83,
+                          "length": 3,
+                        },
+                      ],
+                      "kind": 1115,
+                      "length": 3,
+                    },
+                  ],
+                  "kind": 1119,
+                  "length": 3,
+                },
+              ],
+              "kind": 1120,
+              "length": 3,
+            },
+            Object {
+              "kind": 119,
+              "length": 1,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1118,
+          "length": 24,
+        },
+      ],
+      "kind": 1177,
+      "length": 30,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 30,
+}
+`;
+
+exports[`php7parser 18`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 84,
+                      "length": 4,
+                    },
+                  ],
+                  "kind": 1151,
+                  "length": 4,
+                },
+                Object {
+                  "kind": 85,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 154,
+                      "length": 7,
+                    },
+                    Object {
+                      "children": Array [
+                        Object {
+                          "kind": 80,
+                          "length": 6,
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "kind": 84,
+                              "length": 6,
+                            },
+                          ],
+                          "kind": 1151,
+                          "length": 6,
+                        },
+                      ],
+                      "kind": 1059,
+                      "length": 12,
+                    },
+                    Object {
+                      "kind": 27,
+                      "length": 4,
+                    },
+                  ],
+                  "kind": 1088,
+                  "length": 23,
+                },
+              ],
+              "kind": 1150,
+              "length": 30,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 31,
+        },
+      ],
+      "kind": 1177,
+      "length": 37,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 38,
+}
+`;
+
+exports[`php7parser 19`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 84,
+                      "length": 2,
+                    },
+                  ],
+                  "kind": 1151,
+                  "length": 2,
+                },
+                Object {
+                  "kind": 85,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 154,
+                      "length": 7,
+                    },
+                    Object {
+                      "children": Array [
+                        Object {
+                          "kind": 80,
+                          "length": 15,
+                        },
+                      ],
+                      "kind": 1059,
+                      "length": 15,
+                    },
+                    Object {
+                      "kind": 27,
+                      "length": 8,
+                    },
+                  ],
+                  "kind": 1088,
+                  "length": 30,
+                },
+              ],
+              "kind": 1150,
+              "length": 35,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 36,
+        },
+      ],
+      "kind": 1177,
+      "length": 42,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 42,
+}
+`;
+
+exports[`php7parser 20`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 84,
+                      "length": 4,
+                    },
+                  ],
+                  "kind": 1151,
+                  "length": 4,
+                },
+                Object {
+                  "kind": 43,
+                  "length": 10,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "children": Array [
+                        Object {
+                          "children": Array [
+                            Object {
+                              "kind": 83,
+                              "length": 3,
+                            },
+                          ],
+                          "kind": 1115,
+                          "length": 3,
+                        },
+                      ],
+                      "kind": 1135,
+                      "length": 3,
+                    },
+                  ],
+                  "kind": 1095,
+                  "length": 3,
+                },
+              ],
+              "kind": 1094,
+              "length": 19,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 20,
+        },
+      ],
+      "kind": 1177,
+      "length": 26,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 26,
+}
+`;
+
+exports[`php7parser 21`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 47,
+                      "length": 4,
+                    },
+                    Object {
+                      "kind": 118,
+                      "length": 1,
+                    },
+                    Object {
+                      "children": Array [
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 103,
+                                  "length": 1,
+                                },
+                                Object {
+                                  "children": Array [
+                                    Object {
+                                      "kind": 84,
+                                      "length": 2,
+                                    },
+                                  ],
+                                  "kind": 1151,
+                                  "length": 2,
+                                },
+                              ],
+                              "kind": 1013,
+                              "length": 3,
+                            },
+                          ],
+                          "kind": 1010,
+                          "length": 3,
+                        },
+                      ],
+                      "kind": 1011,
+                      "length": 3,
+                    },
+                    Object {
+                      "kind": 121,
+                      "length": 1,
+                    },
+                  ],
+                  "kind": 1102,
+                  "length": 9,
+                },
+                Object {
+                  "kind": 85,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 117,
+                      "length": 1,
+                    },
+                    Object {
+                      "children": Array [
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "children": Array [
+                                    Object {
+                                      "kind": 84,
+                                      "length": 2,
+                                    },
+                                  ],
+                                  "kind": 1151,
+                                  "length": 2,
+                                },
+                              ],
+                              "kind": 1013,
+                              "length": 2,
+                            },
+                          ],
+                          "kind": 1010,
+                          "length": 2,
+                        },
+                      ],
+                      "kind": 1011,
+                      "length": 2,
+                    },
+                    Object {
+                      "kind": 120,
+                      "length": 1,
+                    },
+                  ],
+                  "kind": 1009,
+                  "length": 4,
+                },
+              ],
+              "kind": 1150,
+              "length": 16,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 17,
+        },
+      ],
+      "kind": 1177,
+      "length": 23,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 23,
+}
+`;
+
+exports[`php7parser 22`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "kind": 9,
+                  "length": 5,
+                },
+                Object {
+                  "kind": 83,
+                  "length": 3,
+                },
+              ],
+              "kind": 1030,
+              "length": 9,
+            },
+            Object {
+              "children": Array [
+                Object {
+                  "kind": 116,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "children": Array [
+                        Object {
+                          "children": Array [
+                            Object {
+                              "kind": 35,
+                              "length": 8,
+                            },
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 83,
+                                  "length": 1,
+                                },
+                              ],
+                              "kind": 1089,
+                              "length": 1,
+                            },
+                            Object {
+                              "kind": 118,
+                              "length": 1,
+                            },
+                            Object {
+                              "kind": 121,
+                              "length": 1,
+                            },
+                          ],
+                          "kind": 1109,
+                          "length": 12,
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 116,
+                                  "length": 1,
+                                },
+                                Object {
+                                  "children": Array [
+                                    Object {
+                                      "children": Array [
+                                        Object {
+                                          "children": Array [
+                                            Object {
+                                              "children": Array [
+                                                Object {
+                                                  "children": Array [
+                                                    Object {
+                                                      "kind": 84,
+                                                      "length": 5,
+                                                    },
+                                                  ],
+                                                  "kind": 1151,
+                                                  "length": 5,
+                                                },
+                                                Object {
+                                                  "kind": 115,
+                                                  "length": 2,
+                                                },
+                                                Object {
+                                                  "children": Array [
+                                                    Object {
+                                                      "kind": 83,
+                                                      "length": 2,
+                                                    },
+                                                  ],
+                                                  "kind": 1105,
+                                                  "length": 2,
+                                                },
+                                                Object {
+                                                  "kind": 118,
+                                                  "length": 1,
+                                                },
+                                                Object {
+                                                  "children": Array [
+                                                    Object {
+                                                      "children": Array [
+                                                        Object {
+                                                          "children": Array [
+                                                            Object {
+                                                              "children": Array [
+                                                                Object {
+                                                                  "kind": 83,
+                                                                  "length": 4,
+                                                                },
+                                                              ],
+                                                              "kind": 1115,
+                                                              "length": 4,
+                                                            },
+                                                          ],
+                                                          "kind": 1135,
+                                                          "length": 4,
+                                                        },
+                                                      ],
+                                                      "kind": 1041,
+                                                      "length": 4,
+                                                    },
+                                                  ],
+                                                  "kind": 1008,
+                                                  "length": 4,
+                                                },
+                                                Object {
+                                                  "kind": 121,
+                                                  "length": 1,
+                                                },
+                                              ],
+                                              "kind": 1106,
+                                              "length": 24,
+                                            },
+                                            Object {
+                                              "kind": 116,
+                                              "length": 1,
+                                            },
+                                            Object {
+                                              "children": Array [],
+                                              "kind": 1061,
+                                              "length": 0,
+                                              "unexpected": Object {
+                                                "kind": 59,
+                                                "length": 6,
+                                              },
+                                            },
+                                            Object {
+                                              "children": Array [
+                                                Object {
+                                                  "kind": 59,
+                                                  "length": 6,
+                                                },
+                                                Object {
+                                                  "kind": 82,
+                                                  "length": 1,
+                                                },
+                                                Object {
+                                                  "kind": 88,
+                                                  "length": 1,
+                                                },
+                                                Object {
+                                                  "kind": 119,
+                                                  "length": 1,
+                                                },
+                                              ],
+                                              "expected": 119,
+                                              "kind": 1061,
+                                              "length": 19,
+                                              "unexpected": Object {
+                                                "kind": 59,
+                                                "length": 6,
+                                              },
+                                            },
+                                          ],
+                                          "kind": 1155,
+                                          "length": 58,
+                                        },
+                                        Object {
+                                          "children": Array [],
+                                          "expected": 88,
+                                          "kind": 1061,
+                                          "length": 0,
+                                          "unexpected": Object {
+                                            "kind": 119,
+                                            "length": 1,
+                                          },
+                                        },
+                                      ],
+                                      "kind": 1067,
+                                      "length": 58,
+                                    },
+                                  ],
+                                  "kind": 1152,
+                                  "length": 58,
+                                },
+                                Object {
+                                  "kind": 119,
+                                  "length": 1,
+                                },
+                              ],
+                              "kind": 1039,
+                              "length": 74,
+                            },
+                          ],
+                          "kind": 1108,
+                          "length": 74,
+                        },
+                      ],
+                      "kind": 1107,
+                      "length": 87,
+                    },
+                    Object {
+                      "children": Array [
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 55,
+                                  "length": 6,
+                                },
+                              ],
+                              "kind": 1104,
+                              "length": 6,
+                            },
+                            Object {
+                              "kind": 35,
+                              "length": 8,
+                            },
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 83,
+                                  "length": 1,
+                                },
+                              ],
+                              "kind": 1089,
+                              "length": 1,
+                            },
+                            Object {
+                              "kind": 118,
+                              "length": 1,
+                            },
+                            Object {
+                              "kind": 121,
+                              "length": 1,
+                            },
+                          ],
+                          "kind": 1109,
+                          "length": 19,
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 116,
+                                  "length": 1,
+                                },
+                                Object {
+                                  "kind": 119,
+                                  "length": 1,
+                                },
+                              ],
+                              "kind": 1039,
+                              "length": 2,
+                            },
+                          ],
+                          "kind": 1108,
+                          "length": 2,
+                        },
+                      ],
+                      "kind": 1107,
+                      "length": 22,
+                    },
+                  ],
+                  "kind": 1032,
+                  "length": 115,
+                },
+                Object {
+                  "kind": 119,
+                  "length": 1,
+                },
+              ],
+              "kind": 1029,
+              "length": 123,
+            },
+          ],
+          "kind": 1028,
+          "length": 133,
+        },
+      ],
+      "kind": 1177,
+      "length": 139,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 139,
+}
+`;
+
+exports[`php7parser 23`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "kind": 52,
+                  "length": 3,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "children": Array [
+                        Object {
+                          "children": Array [
+                            Object {
+                              "kind": 83,
+                              "length": 3,
+                            },
+                          ],
+                          "kind": 1115,
+                          "length": 3,
+                        },
+                      ],
+                      "kind": 1135,
+                      "length": 3,
+                    },
+                  ],
+                  "kind": 1034,
+                  "length": 3,
+                },
+                Object {
+                  "kind": 118,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "children": Array [
+                        Object {
+                          "kind": 84,
+                          "length": 2,
+                        },
+                      ],
+                      "kind": 1151,
+                      "length": 2,
+                    },
+                  ],
+                  "kind": 1008,
+                  "length": 2,
+                },
+                Object {
+                  "kind": 121,
+                  "length": 1,
+                },
+              ],
+              "kind": 1122,
+              "length": 11,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 12,
+        },
+      ],
+      "kind": 1177,
+      "length": 18,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 18,
+}
+`;
+
+exports[`php7parser 24`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 157,
+              "length": 3,
+            },
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 84,
+                      "length": 2,
+                    },
+                  ],
+                  "kind": 1151,
+                  "length": 2,
+                },
+                Object {
+                  "kind": 93,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 84,
+                      "length": 2,
+                    },
+                  ],
+                  "kind": 1151,
+                  "length": 2,
+                },
+              ],
+              "kind": 1066,
+              "length": 6,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1052,
+          "length": 11,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 84,
+                      "length": 2,
+                    },
+                  ],
+                  "kind": 1151,
+                  "length": 2,
+                },
+                Object {
+                  "kind": 85,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 84,
+                      "length": 2,
+                    },
+                  ],
+                  "kind": 1151,
+                  "length": 2,
+                },
+              ],
+              "kind": 1150,
+              "length": 7,
+            },
+            Object {
+              "kind": 158,
+              "length": 2,
+            },
+          ],
+          "kind": 1067,
+          "length": 10,
+        },
+      ],
+      "kind": 1177,
+      "length": 22,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 22,
+}
+`;
+
+exports[`php7parser 25`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 2,
+            },
+          ],
+          "kind": 1093,
+          "length": 2,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "children": Array [
+                        Object {
+                          "kind": 83,
+                          "length": 1,
+                        },
+                      ],
+                      "kind": 1115,
+                      "length": 1,
+                    },
+                  ],
+                  "kind": 1135,
+                  "length": 1,
+                },
+              ],
+              "kind": 1041,
+              "length": 1,
+            },
+            Object {
+              "children": Array [],
+              "expected": 88,
+              "kind": 1061,
+              "length": 0,
+              "unexpected": Object {
+                "kind": 1,
+                "length": 0,
+              },
+            },
+          ],
+          "kind": 1067,
+          "length": 1,
+        },
+      ],
+      "kind": 1177,
+      "length": 3,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 3,
+}
+`;
+
+exports[`php7parser 26`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 117,
+                      "length": 1,
+                    },
+                    Object {
+                      "children": Array [
+                        Object {
+                          "kind": 93,
+                          "length": 1,
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "children": Array [
+                                    Object {
+                                      "kind": 84,
+                                      "length": 2,
+                                    },
+                                  ],
+                                  "kind": 1151,
+                                  "length": 2,
+                                },
+                              ],
+                              "kind": 1013,
+                              "length": 2,
+                            },
+                          ],
+                          "kind": 1010,
+                          "length": 2,
+                        },
+                      ],
+                      "kind": 1011,
+                      "length": 3,
+                    },
+                    Object {
+                      "kind": 120,
+                      "length": 1,
+                    },
+                  ],
+                  "kind": 1009,
+                  "length": 5,
+                },
+                Object {
+                  "kind": 85,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 117,
+                      "length": 1,
+                    },
+                    Object {
+                      "children": Array [
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 82,
+                                  "length": 1,
+                                },
+                              ],
+                              "kind": 1013,
+                              "length": 1,
+                            },
+                          ],
+                          "kind": 1010,
+                          "length": 1,
+                        },
+                        Object {
+                          "kind": 93,
+                          "length": 1,
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "kind": 82,
+                                  "length": 1,
+                                },
+                              ],
+                              "kind": 1013,
+                              "length": 1,
+                            },
+                          ],
+                          "kind": 1010,
+                          "length": 1,
+                        },
+                      ],
+                      "kind": 1011,
+                      "length": 3,
+                    },
+                    Object {
+                      "kind": 120,
+                      "length": 1,
+                    },
+                  ],
+                  "kind": 1009,
+                  "length": 5,
+                },
+              ],
+              "kind": 1150,
+              "length": 13,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 14,
+        },
+      ],
+      "kind": 1177,
+      "length": 20,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 20,
+}
+`;
+
+exports[`php7parser 27`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "kind": 120,
+              "length": 1,
+            },
+            Object {
+              "kind": 93,
+              "length": 1,
+            },
+          ],
+          "kind": 1061,
+          "length": 2,
+          "unexpected": Object {
+            "kind": 120,
+            "length": 1,
+          },
+        },
+      ],
+      "kind": 1177,
+      "length": 8,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 8,
+}
+`;
+
+exports[`php7parser 28`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 84,
+                      "length": 2,
+                    },
+                  ],
+                  "kind": 1151,
+                  "length": 2,
+                },
+                Object {
+                  "kind": 140,
+                  "length": 3,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 84,
+                      "length": 2,
+                    },
+                  ],
+                  "kind": 1151,
+                  "length": 2,
+                },
+              ],
+              "kind": 1060,
+              "length": 9,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 10,
+        },
+      ],
+      "kind": 1177,
+      "length": 16,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 16,
+}
+`;
+
+exports[`php7parser 29`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 84,
+                      "length": 4,
+                    },
+                  ],
+                  "kind": 1151,
+                  "length": 4,
+                },
+                Object {
+                  "kind": 85,
+                  "length": 1,
+                },
+                Object {
+                  "kind": 82,
+                  "length": 1,
+                },
+              ],
+              "kind": 1150,
+              "length": 8,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 9,
+        },
+      ],
+      "kind": 1177,
+      "length": 15,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 16,
+}
+`;
+
+exports[`php7parser 30`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "kind": 66,
+              "length": 3,
+            },
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "children": Array [
+                        Object {
+                          "kind": 83,
+                          "length": 6,
+                        },
+                      ],
+                      "kind": 1115,
+                      "length": 6,
+                    },
+                    Object {
+                      "children": Array [
+                        Object {
+                          "kind": 4,
+                          "length": 2,
+                        },
+                        Object {
+                          "children": Array [],
+                          "expected": 83,
+                          "kind": 1061,
+                          "length": 0,
+                          "unexpected": Object {
+                            "kind": 51,
+                            "length": 9,
+                          },
+                        },
+                      ],
+                      "kind": 1113,
+                      "length": 2,
+                    },
+                  ],
+                  "kind": 1116,
+                  "length": 13,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 51,
+                      "length": 9,
+                    },
+                  ],
+                  "kind": 1061,
+                  "length": 9,
+                  "unexpected": Object {
+                    "kind": 51,
+                    "length": 9,
+                  },
+                },
+              ],
+              "kind": 1117,
+              "length": 12,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1118,
+          "length": 24,
+        },
+      ],
+      "kind": 1177,
+      "length": 34,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 34,
+}
+`;
+
+exports[`php7parser 31`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "kind": 66,
+              "length": 3,
+            },
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "children": Array [
+                        Object {
+                          "kind": 83,
+                          "length": 3,
+                        },
+                        Object {
+                          "kind": 147,
+                          "length": 1,
+                        },
+                        Object {
+                          "kind": 83,
+                          "length": 3,
+                        },
+                      ],
+                      "kind": 1115,
+                      "length": 7,
+                    },
+                    Object {
+                      "children": Array [
+                        Object {
+                          "kind": 4,
+                          "length": 2,
+                        },
+                        Object {
+                          "kind": 83,
+                          "length": 3,
+                        },
+                      ],
+                      "kind": 1113,
+                      "length": 6,
+                    },
+                  ],
+                  "kind": 1116,
+                  "length": 18,
+                },
+              ],
+              "kind": 1117,
+              "length": 6,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1118,
+          "length": 19,
+        },
+      ],
+      "kind": 1177,
+      "length": 25,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 25,
+}
+`;
+
+exports[`php7parser 32`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "kind": 9,
+                  "length": 5,
+                },
+                Object {
+                  "kind": 83,
+                  "length": 3,
+                },
+              ],
+              "kind": 1030,
+              "length": 9,
+            },
+            Object {
+              "children": Array [
+                Object {
+                  "kind": 116,
+                  "length": 1,
+                },
+                Object {
+                  "children": Array [
+                    Object {
+                      "children": Array [
+                        Object {
+                          "kind": 66,
+                          "length": 3,
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "children": Array [
+                                Object {
+                                  "children": Array [
+                                    Object {
+                                      "kind": 83,
+                                      "length": 3,
+                                    },
+                                  ],
+                                  "kind": 1115,
+                                  "length": 3,
+                                },
+                              ],
+                              "kind": 1135,
+                              "length": 3,
+                            },
+                          ],
+                          "kind": 1136,
+                          "length": 3,
+                        },
+                        Object {
+                          "children": Array [
+                            Object {
+                              "kind": 88,
+                              "length": 1,
+                            },
+                          ],
+                          "kind": 1166,
+                          "length": 1,
+                        },
+                      ],
+                      "kind": 1165,
+                      "length": 8,
+                    },
+                  ],
+                  "kind": 1032,
+                  "length": 8,
+                },
+                Object {
+                  "kind": 119,
+                  "length": 1,
+                },
+              ],
+              "kind": 1029,
+              "length": 24,
+            },
+          ],
+          "kind": 1028,
+          "length": 34,
+        },
+      ],
+      "kind": 1177,
+      "length": 44,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 44,
+}
+`;
+
+exports[`php7parser 33`] = `
+Object {
+  "children": Array [
+    Object {
+      "children": Array [
+        Object {
+          "children": Array [
+            Object {
+              "kind": 156,
+              "length": 6,
+            },
+          ],
+          "kind": 1093,
+          "length": 6,
+        },
+        Object {
+          "children": Array [
+            Object {
+              "children": Array [
+                Object {
+                  "children": Array [
+                    Object {
+                      "kind": 84,
+                      "length": 5,
+                    },
+                  ],
+                  "kind": 1151,
+                  "length": 5,
+                },
+                Object {
+                  "kind": 85,
+                  "length": 1,
+                },
+                Object {
+                  "kind": 82,
+                  "length": 1,
+                },
+              ],
+              "kind": 1150,
+              "length": 9,
+            },
+            Object {
+              "kind": 88,
+              "length": 1,
+            },
+          ],
+          "kind": 1067,
+          "length": 10,
+        },
+      ],
+      "kind": 1177,
+      "length": 16,
+    },
+    Object {
+      "kind": 1,
+      "length": 0,
+    },
+  ],
+  "kind": 1147,
+  "length": 16,
+}
+`;
