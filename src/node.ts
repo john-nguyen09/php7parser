@@ -21,5 +21,4 @@
 
 export interface Node {
     kind: number;
-    length: number;
 }

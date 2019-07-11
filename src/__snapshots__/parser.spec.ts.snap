@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`php7parser 1`] = `
+exports[`php7parser: abstractClass.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -10,6 +10,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -22,14 +23,17 @@ Object {
                 Object {
                   "kind": 2,
                   "length": 8,
+                  "offset": 10,
                 },
                 Object {
                   "kind": 9,
                   "length": 5,
+                  "offset": 19,
                 },
                 Object {
                   "kind": 83,
                   "length": 3,
+                  "offset": 25,
                 },
               ],
               "kind": 1030,
@@ -40,10 +44,12 @@ Object {
                 Object {
                   "kind": 116,
                   "length": 1,
+                  "offset": 29,
                 },
                 Object {
                   "kind": 119,
                   "length": 1,
+                  "offset": 30,
                 },
               ],
               "kind": 1029,
@@ -60,6 +66,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 31,
     },
   ],
   "kind": 1147,
@@ -67,7 +74,7 @@ Object {
 }
 `;
 
-exports[`php7parser 2`] = `
+exports[`php7parser: anonFunctionNoAssignment.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -77,6 +84,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -91,14 +99,17 @@ Object {
                     Object {
                       "kind": 35,
                       "length": 8,
+                      "offset": 6,
                     },
                     Object {
                       "kind": 118,
                       "length": 1,
+                      "offset": 15,
                     },
                     Object {
                       "kind": 121,
                       "length": 1,
+                      "offset": 16,
                     },
                   ],
                   "kind": 1005,
@@ -109,10 +120,12 @@ Object {
                     Object {
                       "kind": 116,
                       "length": 1,
+                      "offset": 18,
                     },
                     Object {
                       "kind": 119,
                       "length": 1,
+                      "offset": 20,
                     },
                   ],
                   "kind": 1081,
@@ -125,6 +138,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 21,
             },
           ],
           "kind": 1067,
@@ -137,6 +151,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 22,
     },
   ],
   "kind": 1147,
@@ -144,7 +159,7 @@ Object {
 }
 `;
 
-exports[`php7parser 3`] = `
+exports[`php7parser: anonymousClass.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -154,6 +169,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -168,6 +184,7 @@ Object {
                     Object {
                       "kind": 84,
                       "length": 2,
+                      "offset": 6,
                     },
                   ],
                   "kind": 1151,
@@ -176,12 +193,14 @@ Object {
                 Object {
                   "kind": 85,
                   "length": 1,
+                  "offset": 9,
                 },
                 Object {
                   "children": Array [
                     Object {
                       "kind": 52,
                       "length": 3,
+                      "offset": 11,
                     },
                     Object {
                       "children": Array [
@@ -190,6 +209,7 @@ Object {
                             Object {
                               "kind": 9,
                               "length": 5,
+                              "offset": 15,
                             },
                           ],
                           "kind": 1003,
@@ -200,10 +220,12 @@ Object {
                             Object {
                               "kind": 116,
                               "length": 1,
+                              "offset": 21,
                             },
                             Object {
                               "kind": 119,
                               "length": 1,
+                              "offset": 22,
                             },
                           ],
                           "kind": 1029,
@@ -224,6 +246,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 23,
             },
           ],
           "kind": 1067,
@@ -236,6 +259,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 24,
     },
   ],
   "kind": 1147,
@@ -243,7 +267,7 @@ Object {
 }
 `;
 
-exports[`php7parser 4`] = `
+exports[`php7parser: argumentListTrailingComma.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -253,6 +277,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -269,6 +294,7 @@ Object {
                         Object {
                           "kind": 83,
                           "length": 3,
+                          "offset": 6,
                         },
                       ],
                       "kind": 1115,
@@ -281,6 +307,7 @@ Object {
                 Object {
                   "kind": 118,
                   "length": 1,
+                  "offset": 9,
                 },
                 Object {
                   "children": Array [
@@ -289,6 +316,7 @@ Object {
                         Object {
                           "kind": 84,
                           "length": 2,
+                          "offset": 10,
                         },
                       ],
                       "kind": 1151,
@@ -297,6 +325,7 @@ Object {
                     Object {
                       "kind": 93,
                       "length": 1,
+                      "offset": 12,
                     },
                   ],
                   "kind": 1008,
@@ -305,6 +334,7 @@ Object {
                 Object {
                   "kind": 121,
                   "length": 1,
+                  "offset": 13,
                 },
               ],
               "kind": 1079,
@@ -313,6 +343,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 14,
             },
           ],
           "kind": 1067,
@@ -325,6 +356,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 15,
     },
   ],
   "kind": 1147,
@@ -332,7 +364,7 @@ Object {
 }
 `;
 
-exports[`php7parser 5`] = `
+exports[`php7parser: array.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -342,6 +374,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -356,6 +389,7 @@ Object {
                     Object {
                       "kind": 84,
                       "length": 6,
+                      "offset": 6,
                     },
                   ],
                   "kind": 1151,
@@ -364,12 +398,14 @@ Object {
                 Object {
                   "kind": 85,
                   "length": 1,
+                  "offset": 13,
                 },
                 Object {
                   "children": Array [
                     Object {
                       "kind": 117,
                       "length": 1,
+                      "offset": 15,
                     },
                     Object {
                       "children": Array [
@@ -380,6 +416,7 @@ Object {
                                 Object {
                                   "kind": 82,
                                   "length": 1,
+                                  "offset": 16,
                                 },
                               ],
                               "kind": 1013,
@@ -392,6 +429,7 @@ Object {
                         Object {
                           "kind": 93,
                           "length": 1,
+                          "offset": 17,
                         },
                         Object {
                           "children": Array [
@@ -400,6 +438,7 @@ Object {
                                 Object {
                                   "kind": 82,
                                   "length": 1,
+                                  "offset": 18,
                                 },
                               ],
                               "kind": 1013,
@@ -412,6 +451,7 @@ Object {
                         Object {
                           "kind": 93,
                           "length": 1,
+                          "offset": 19,
                         },
                         Object {
                           "children": Array [
@@ -420,6 +460,7 @@ Object {
                                 Object {
                                   "kind": 82,
                                   "length": 1,
+                                  "offset": 20,
                                 },
                               ],
                               "kind": 1013,
@@ -432,6 +473,7 @@ Object {
                         Object {
                           "kind": 93,
                           "length": 1,
+                          "offset": 21,
                         },
                         Object {
                           "children": Array [
@@ -440,6 +482,7 @@ Object {
                                 Object {
                                   "kind": 82,
                                   "length": 1,
+                                  "offset": 22,
                                 },
                               ],
                               "kind": 1013,
@@ -452,6 +495,7 @@ Object {
                         Object {
                           "kind": 93,
                           "length": 1,
+                          "offset": 23,
                         },
                       ],
                       "kind": 1011,
@@ -460,6 +504,7 @@ Object {
                     Object {
                       "kind": 120,
                       "length": 1,
+                      "offset": 24,
                     },
                   ],
                   "kind": 1009,
@@ -472,6 +517,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 25,
             },
           ],
           "kind": 1067,
@@ -484,6 +530,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 26,
     },
   ],
   "kind": 1147,
@@ -491,7 +538,7 @@ Object {
 }
 `;
 
-exports[`php7parser 6`] = `
+exports[`php7parser: arrayError.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -501,6 +548,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -515,6 +563,7 @@ Object {
                     Object {
                       "kind": 84,
                       "length": 6,
+                      "offset": 6,
                     },
                   ],
                   "kind": 1151,
@@ -523,12 +572,14 @@ Object {
                 Object {
                   "kind": 85,
                   "length": 1,
+                  "offset": 13,
                 },
                 Object {
                   "children": Array [
                     Object {
                       "kind": 117,
                       "length": 1,
+                      "offset": 15,
                     },
                     Object {
                       "children": Array [
@@ -539,6 +590,7 @@ Object {
                                 Object {
                                   "kind": 78,
                                   "length": 3,
+                                  "offset": 16,
                                 },
                               ],
                               "kind": 1013,
@@ -556,6 +608,7 @@ Object {
                           "unexpected": Object {
                             "kind": 78,
                             "length": 3,
+                            "offset": 19,
                           },
                         },
                         Object {
@@ -565,6 +618,7 @@ Object {
                                 Object {
                                   "kind": 78,
                                   "length": 3,
+                                  "offset": 19,
                                 },
                               ],
                               "kind": 1013,
@@ -577,6 +631,7 @@ Object {
                         Object {
                           "kind": 93,
                           "length": 1,
+                          "offset": 22,
                         },
                         Object {
                           "children": Array [
@@ -585,6 +640,7 @@ Object {
                                 Object {
                                   "kind": 78,
                                   "length": 3,
+                                  "offset": 23,
                                 },
                               ],
                               "kind": 1013,
@@ -601,6 +657,7 @@ Object {
                     Object {
                       "kind": 120,
                       "length": 1,
+                      "offset": 26,
                     },
                   ],
                   "kind": 1009,
@@ -613,6 +670,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 27,
             },
           ],
           "kind": 1067,
@@ -625,6 +683,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 28,
     },
   ],
   "kind": 1147,
@@ -632,7 +691,7 @@ Object {
 }
 `;
 
-exports[`php7parser 7`] = `
+exports[`php7parser: assignment.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -642,6 +701,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -656,6 +716,7 @@ Object {
                     Object {
                       "kind": 84,
                       "length": 6,
+                      "offset": 10,
                     },
                   ],
                   "kind": 1151,
@@ -664,10 +725,12 @@ Object {
                 Object {
                   "kind": 85,
                   "length": 1,
+                  "offset": 17,
                 },
                 Object {
                   "kind": 82,
                   "length": 1,
+                  "offset": 19,
                 },
               ],
               "kind": 1150,
@@ -676,6 +739,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 20,
             },
           ],
           "kind": 1067,
@@ -688,6 +752,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 21,
     },
   ],
   "kind": 1147,
@@ -695,7 +760,7 @@ Object {
 }
 `;
 
-exports[`php7parser 8`] = `
+exports[`php7parser: class.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -705,6 +770,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -717,10 +783,12 @@ Object {
                 Object {
                   "kind": 9,
                   "length": 5,
+                  "offset": 10,
                 },
                 Object {
                   "kind": 83,
                   "length": 7,
+                  "offset": 16,
                 },
               ],
               "kind": 1030,
@@ -731,10 +799,12 @@ Object {
                 Object {
                   "kind": 116,
                   "length": 1,
+                  "offset": 24,
                 },
                 Object {
                   "kind": 119,
                   "length": 1,
+                  "offset": 26,
                 },
               ],
               "kind": 1029,
@@ -751,6 +821,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 27,
     },
   ],
   "kind": 1147,
@@ -758,7 +829,7 @@ Object {
 }
 `;
 
-exports[`php7parser 9`] = `
+exports[`php7parser: classMemberError.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -768,6 +839,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -780,10 +852,12 @@ Object {
                 Object {
                   "kind": 9,
                   "length": 5,
+                  "offset": 10,
                 },
                 Object {
                   "kind": 83,
                   "length": 7,
+                  "offset": 16,
                 },
               ],
               "kind": 1030,
@@ -794,6 +868,7 @@ Object {
                 Object {
                   "kind": 116,
                   "length": 1,
+                  "offset": 24,
                 },
                 Object {
                   "children": Array [
@@ -804,6 +879,7 @@ Object {
                             Object {
                               "kind": 55,
                               "length": 6,
+                              "offset": 34,
                             },
                           ],
                           "kind": 1104,
@@ -821,6 +897,7 @@ Object {
                                   "unexpected": Object {
                                     "kind": 119,
                                     "length": 1,
+                                    "offset": 46,
                                   },
                                 },
                               ],
@@ -834,6 +911,7 @@ Object {
                               "unexpected": Object {
                                 "kind": 119,
                                 "length": 1,
+                                "offset": 46,
                               },
                             },
                           ],
@@ -848,6 +926,7 @@ Object {
                           "unexpected": Object {
                             "kind": 119,
                             "length": 1,
+                            "offset": 46,
                           },
                         },
                       ],
@@ -861,6 +940,7 @@ Object {
                 Object {
                   "kind": 119,
                   "length": 1,
+                  "offset": 46,
                 },
               ],
               "kind": 1029,
@@ -877,6 +957,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 47,
     },
   ],
   "kind": 1147,
@@ -884,7 +965,7 @@ Object {
 }
 `;
 
-exports[`php7parser 10`] = `
+exports[`php7parser: complexString.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -894,6 +975,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -908,6 +990,7 @@ Object {
                     Object {
                       "kind": 84,
                       "length": 4,
+                      "offset": 10,
                     },
                   ],
                   "kind": 1151,
@@ -916,42 +999,49 @@ Object {
                 Object {
                   "kind": 85,
                   "length": 1,
+                  "offset": 15,
                 },
                 Object {
                   "children": Array [
                     Object {
                       "kind": 97,
                       "length": 1,
+                      "offset": 17,
                     },
                     Object {
                       "children": Array [
                         Object {
                           "kind": 80,
                           "length": 6,
+                          "offset": 18,
                         },
                         Object {
                           "children": Array [
                             Object {
                               "kind": 131,
                               "length": 2,
+                              "offset": 24,
                             },
                             Object {
                               "children": Array [
                                 Object {
                                   "kind": 97,
                                   "length": 1,
+                                  "offset": 26,
                                 },
                                 Object {
                                   "children": Array [
                                     Object {
                                       "kind": 80,
                                       "length": 4,
+                                      "offset": 27,
                                     },
                                     Object {
                                       "children": Array [
                                         Object {
                                           "kind": 84,
                                           "length": 2,
+                                          "offset": 31,
                                         },
                                       ],
                                       "kind": 1151,
@@ -964,6 +1054,7 @@ Object {
                                 Object {
                                   "kind": 97,
                                   "length": 1,
+                                  "offset": 33,
                                 },
                               ],
                               "kind": 1051,
@@ -972,6 +1063,7 @@ Object {
                             Object {
                               "kind": 119,
                               "length": 1,
+                              "offset": 34,
                             },
                           ],
                           "kind": 1058,
@@ -984,6 +1076,7 @@ Object {
                     Object {
                       "kind": 97,
                       "length": 1,
+                      "offset": 35,
                     },
                   ],
                   "kind": 1051,
@@ -996,6 +1089,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 36,
             },
           ],
           "kind": 1067,
@@ -1008,6 +1102,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 37,
     },
   ],
   "kind": 1147,
@@ -1015,7 +1110,7 @@ Object {
 }
 `;
 
-exports[`php7parser 11`] = `
+exports[`php7parser: constantArrayAccess.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1025,6 +1120,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -1043,6 +1139,7 @@ Object {
                             Object {
                               "kind": 83,
                               "length": 3,
+                              "offset": 6,
                             },
                           ],
                           "kind": 1115,
@@ -1059,14 +1156,17 @@ Object {
                 Object {
                   "kind": 117,
                   "length": 1,
+                  "offset": 9,
                 },
                 Object {
                   "kind": 82,
                   "length": 1,
+                  "offset": 10,
                 },
                 Object {
                   "kind": 120,
                   "length": 1,
+                  "offset": 11,
                 },
               ],
               "kind": 1155,
@@ -1075,6 +1175,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 12,
             },
           ],
           "kind": 1067,
@@ -1087,6 +1188,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 13,
     },
   ],
   "kind": 1147,
@@ -1094,7 +1196,7 @@ Object {
 }
 `;
 
-exports[`php7parser 12`] = `
+exports[`php7parser: dynamicVar.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1104,6 +1206,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -1116,12 +1219,14 @@ Object {
                 Object {
                   "kind": 90,
                   "length": 1,
+                  "offset": 6,
                 },
                 Object {
                   "children": Array [
                     Object {
                       "kind": 116,
                       "length": 1,
+                      "offset": 7,
                     },
                     Object {
                       "children": Array [
@@ -1130,6 +1235,7 @@ Object {
                             Object {
                               "kind": 84,
                               "length": 4,
+                              "offset": 8,
                             },
                           ],
                           "kind": 1151,
@@ -1138,12 +1244,14 @@ Object {
                         Object {
                           "kind": 115,
                           "length": 2,
+                          "offset": 12,
                         },
                         Object {
                           "children": Array [
                             Object {
                               "kind": 83,
                               "length": 3,
+                              "offset": 14,
                             },
                           ],
                           "kind": 1105,
@@ -1156,6 +1264,7 @@ Object {
                     Object {
                       "kind": 119,
                       "length": 1,
+                      "offset": 17,
                     },
                   ],
                   "kind": 1057,
@@ -1168,6 +1277,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 18,
             },
           ],
           "kind": 1067,
@@ -1180,6 +1290,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 19,
     },
   ],
   "kind": 1147,
@@ -1187,7 +1298,7 @@ Object {
 }
 `;
 
-exports[`php7parser 13`] = `
+exports[`php7parser: empty.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1198,6 +1309,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 0,
     },
   ],
   "kind": 1147,
@@ -1205,7 +1317,7 @@ Object {
 }
 `;
 
-exports[`php7parser 14`] = `
+exports[`php7parser: emptyInlineComment.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1215,6 +1327,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -1225,10 +1338,12 @@ Object {
             Object {
               "kind": 116,
               "length": 1,
+              "offset": 6,
             },
             Object {
               "kind": 119,
               "length": 1,
+              "offset": 13,
             },
           ],
           "kind": 1039,
@@ -1241,6 +1356,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 14,
     },
   ],
   "kind": 1147,
@@ -1248,7 +1364,7 @@ Object {
 }
 `;
 
-exports[`php7parser 15`] = `
+exports[`php7parser: function.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1258,6 +1374,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -1270,14 +1387,17 @@ Object {
                 Object {
                   "kind": 35,
                   "length": 8,
+                  "offset": 31,
                 },
                 Object {
                   "kind": 83,
                   "length": 10,
+                  "offset": 40,
                 },
                 Object {
                   "kind": 118,
                   "length": 1,
+                  "offset": 50,
                 },
                 Object {
                   "children": Array [
@@ -1292,6 +1412,7 @@ Object {
                                     Object {
                                       "kind": 83,
                                       "length": 6,
+                                      "offset": 51,
                                     },
                                   ],
                                   "kind": 1115,
@@ -1308,16 +1429,19 @@ Object {
                         Object {
                           "kind": 84,
                           "length": 7,
+                          "offset": 58,
                         },
                         Object {
                           "children": Array [
                             Object {
                               "kind": 85,
                               "length": 1,
+                              "offset": 66,
                             },
                             Object {
                               "kind": 78,
                               "length": 13,
+                              "offset": 68,
                             },
                           ],
                           "kind": 1048,
@@ -1334,12 +1458,14 @@ Object {
                 Object {
                   "kind": 121,
                   "length": 1,
+                  "offset": 81,
                 },
                 Object {
                   "children": Array [
                     Object {
                       "kind": 87,
                       "length": 1,
+                      "offset": 83,
                     },
                     Object {
                       "children": Array [
@@ -1350,6 +1476,7 @@ Object {
                                 Object {
                                   "kind": 83,
                                   "length": 6,
+                                  "offset": 85,
                                 },
                               ],
                               "kind": 1115,
@@ -1376,10 +1503,12 @@ Object {
                 Object {
                   "kind": 116,
                   "length": 1,
+                  "offset": 92,
                 },
                 Object {
                   "kind": 119,
                   "length": 1,
+                  "offset": 94,
                 },
               ],
               "kind": 1081,
@@ -1396,6 +1525,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 95,
     },
   ],
   "kind": 1147,
@@ -1403,7 +1533,7 @@ Object {
 }
 `;
 
-exports[`php7parser 16`] = `
+exports[`php7parser: gitMergeConflict.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1413,6 +1543,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -1423,30 +1554,37 @@ Object {
             Object {
               "kind": 106,
               "length": 2,
+              "offset": 7,
             },
             Object {
               "kind": 106,
               "length": 2,
+              "offset": 9,
             },
             Object {
               "kind": 154,
               "length": 9,
+              "offset": 11,
             },
             Object {
               "kind": 84,
               "length": 4,
+              "offset": 20,
             },
             Object {
               "kind": 80,
               "length": 14,
+              "offset": 24,
             },
             Object {
               "kind": 84,
               "length": 4,
+              "offset": 38,
             },
             Object {
               "kind": 80,
               "length": 24,
+              "offset": 42,
             },
           ],
           "kind": 1061,
@@ -1454,6 +1592,7 @@ Object {
           "unexpected": Object {
             "kind": 106,
             "length": 2,
+            "offset": 7,
           },
         },
       ],
@@ -1463,6 +1602,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 66,
     },
   ],
   "kind": 1147,
@@ -1470,7 +1610,7 @@ Object {
 }
 `;
 
-exports[`php7parser 17`] = `
+exports[`php7parser: groupUseDeclaration.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1480,6 +1620,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -1490,20 +1631,24 @@ Object {
             Object {
               "kind": 66,
               "length": 3,
+              "offset": 6,
             },
             Object {
               "children": Array [
                 Object {
                   "kind": 83,
                   "length": 3,
+                  "offset": 10,
                 },
                 Object {
                   "kind": 147,
                   "length": 1,
+                  "offset": 13,
                 },
                 Object {
                   "kind": 83,
                   "length": 3,
+                  "offset": 14,
                 },
               ],
               "kind": 1115,
@@ -1512,10 +1657,12 @@ Object {
             Object {
               "kind": 147,
               "length": 1,
+              "offset": 17,
             },
             Object {
               "kind": 116,
               "length": 1,
+              "offset": 18,
             },
             Object {
               "children": Array [
@@ -1526,6 +1673,7 @@ Object {
                         Object {
                           "kind": 83,
                           "length": 3,
+                          "offset": 24,
                         },
                       ],
                       "kind": 1115,
@@ -1542,10 +1690,12 @@ Object {
             Object {
               "kind": 119,
               "length": 1,
+              "offset": 28,
             },
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 29,
             },
           ],
           "kind": 1118,
@@ -1558,6 +1708,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 30,
     },
   ],
   "kind": 1147,
@@ -1565,7 +1716,7 @@ Object {
 }
 `;
 
-exports[`php7parser 18`] = `
+exports[`php7parser: heredoc.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1575,6 +1726,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -1589,6 +1741,7 @@ Object {
                     Object {
                       "kind": 84,
                       "length": 4,
+                      "offset": 6,
                     },
                   ],
                   "kind": 1151,
@@ -1597,24 +1750,28 @@ Object {
                 Object {
                   "kind": 85,
                   "length": 1,
+                  "offset": 11,
                 },
                 Object {
                   "children": Array [
                     Object {
                       "kind": 154,
                       "length": 7,
+                      "offset": 13,
                     },
                     Object {
                       "children": Array [
                         Object {
                           "kind": 80,
                           "length": 6,
+                          "offset": 20,
                         },
                         Object {
                           "children": Array [
                             Object {
                               "kind": 84,
                               "length": 6,
+                              "offset": 26,
                             },
                           ],
                           "kind": 1151,
@@ -1627,6 +1784,7 @@ Object {
                     Object {
                       "kind": 27,
                       "length": 4,
+                      "offset": 32,
                     },
                   ],
                   "kind": 1088,
@@ -1639,6 +1797,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 36,
             },
           ],
           "kind": 1067,
@@ -1651,6 +1810,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 38,
     },
   ],
   "kind": 1147,
@@ -1658,7 +1818,7 @@ Object {
 }
 `;
 
-exports[`php7parser 19`] = `
+exports[`php7parser: heredocIndent.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1668,6 +1828,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -1682,6 +1843,7 @@ Object {
                     Object {
                       "kind": 84,
                       "length": 2,
+                      "offset": 6,
                     },
                   ],
                   "kind": 1151,
@@ -1690,18 +1852,21 @@ Object {
                 Object {
                   "kind": 85,
                   "length": 1,
+                  "offset": 9,
                 },
                 Object {
                   "children": Array [
                     Object {
                       "kind": 154,
                       "length": 7,
+                      "offset": 11,
                     },
                     Object {
                       "children": Array [
                         Object {
                           "kind": 80,
                           "length": 15,
+                          "offset": 18,
                         },
                       ],
                       "kind": 1059,
@@ -1710,6 +1875,7 @@ Object {
                     Object {
                       "kind": 27,
                       "length": 8,
+                      "offset": 33,
                     },
                   ],
                   "kind": 1088,
@@ -1722,6 +1888,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 41,
             },
           ],
           "kind": 1067,
@@ -1734,6 +1901,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 42,
     },
   ],
   "kind": 1147,
@@ -1741,7 +1909,7 @@ Object {
 }
 `;
 
-exports[`php7parser 20`] = `
+exports[`php7parser: instanceof.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1751,6 +1919,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -1765,6 +1934,7 @@ Object {
                     Object {
                       "kind": 84,
                       "length": 4,
+                      "offset": 6,
                     },
                   ],
                   "kind": 1151,
@@ -1773,6 +1943,7 @@ Object {
                 Object {
                   "kind": 43,
                   "length": 10,
+                  "offset": 11,
                 },
                 Object {
                   "children": Array [
@@ -1783,6 +1954,7 @@ Object {
                             Object {
                               "kind": 83,
                               "length": 3,
+                              "offset": 22,
                             },
                           ],
                           "kind": 1115,
@@ -1803,6 +1975,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 25,
             },
           ],
           "kind": 1067,
@@ -1815,6 +1988,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 26,
     },
   ],
   "kind": 1147,
@@ -1822,7 +1996,7 @@ Object {
 }
 `;
 
-exports[`php7parser 21`] = `
+exports[`php7parser: listWithReference.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1832,6 +2006,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -1846,10 +2021,12 @@ Object {
                     Object {
                       "kind": 47,
                       "length": 4,
+                      "offset": 6,
                     },
                     Object {
                       "kind": 118,
                       "length": 1,
+                      "offset": 10,
                     },
                     Object {
                       "children": Array [
@@ -1860,12 +2037,14 @@ Object {
                                 Object {
                                   "kind": 103,
                                   "length": 1,
+                                  "offset": 11,
                                 },
                                 Object {
                                   "children": Array [
                                     Object {
                                       "kind": 84,
                                       "length": 2,
+                                      "offset": 12,
                                     },
                                   ],
                                   "kind": 1151,
@@ -1886,6 +2065,7 @@ Object {
                     Object {
                       "kind": 121,
                       "length": 1,
+                      "offset": 14,
                     },
                   ],
                   "kind": 1102,
@@ -1894,12 +2074,14 @@ Object {
                 Object {
                   "kind": 85,
                   "length": 1,
+                  "offset": 16,
                 },
                 Object {
                   "children": Array [
                     Object {
                       "kind": 117,
                       "length": 1,
+                      "offset": 18,
                     },
                     Object {
                       "children": Array [
@@ -1912,6 +2094,7 @@ Object {
                                     Object {
                                       "kind": 84,
                                       "length": 2,
+                                      "offset": 19,
                                     },
                                   ],
                                   "kind": 1151,
@@ -1932,6 +2115,7 @@ Object {
                     Object {
                       "kind": 120,
                       "length": 1,
+                      "offset": 21,
                     },
                   ],
                   "kind": 1009,
@@ -1944,6 +2128,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 22,
             },
           ],
           "kind": 1067,
@@ -1956,6 +2141,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 23,
     },
   ],
   "kind": 1147,
@@ -1963,7 +2149,7 @@ Object {
 }
 `;
 
-exports[`php7parser 22`] = `
+exports[`php7parser: memberAccessErrorControlStmt.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -1973,6 +2159,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -1985,10 +2172,12 @@ Object {
                 Object {
                   "kind": 9,
                   "length": 5,
+                  "offset": 6,
                 },
                 Object {
                   "kind": 83,
                   "length": 3,
+                  "offset": 12,
                 },
               ],
               "kind": 1030,
@@ -1999,6 +2188,7 @@ Object {
                 Object {
                   "kind": 116,
                   "length": 1,
+                  "offset": 16,
                 },
                 Object {
                   "children": Array [
@@ -2009,12 +2199,14 @@ Object {
                             Object {
                               "kind": 35,
                               "length": 8,
+                              "offset": 22,
                             },
                             Object {
                               "children": Array [
                                 Object {
                                   "kind": 83,
                                   "length": 1,
+                                  "offset": 31,
                                 },
                               ],
                               "kind": 1089,
@@ -2023,10 +2215,12 @@ Object {
                             Object {
                               "kind": 118,
                               "length": 1,
+                              "offset": 32,
                             },
                             Object {
                               "kind": 121,
                               "length": 1,
+                              "offset": 33,
                             },
                           ],
                           "kind": 1109,
@@ -2039,6 +2233,7 @@ Object {
                                 Object {
                                   "kind": 116,
                                   "length": 1,
+                                  "offset": 35,
                                 },
                                 Object {
                                   "children": Array [
@@ -2053,6 +2248,7 @@ Object {
                                                     Object {
                                                       "kind": 84,
                                                       "length": 5,
+                                                      "offset": 45,
                                                     },
                                                   ],
                                                   "kind": 1151,
@@ -2061,12 +2257,14 @@ Object {
                                                 Object {
                                                   "kind": 115,
                                                   "length": 2,
+                                                  "offset": 50,
                                                 },
                                                 Object {
                                                   "children": Array [
                                                     Object {
                                                       "kind": 83,
                                                       "length": 2,
+                                                      "offset": 61,
                                                     },
                                                   ],
                                                   "kind": 1105,
@@ -2075,6 +2273,7 @@ Object {
                                                 Object {
                                                   "kind": 118,
                                                   "length": 1,
+                                                  "offset": 63,
                                                 },
                                                 Object {
                                                   "children": Array [
@@ -2087,6 +2286,7 @@ Object {
                                                                 Object {
                                                                   "kind": 83,
                                                                   "length": 4,
+                                                                  "offset": 64,
                                                                 },
                                                               ],
                                                               "kind": 1115,
@@ -2107,6 +2307,7 @@ Object {
                                                 Object {
                                                   "kind": 121,
                                                   "length": 1,
+                                                  "offset": 68,
                                                 },
                                               ],
                                               "kind": 1106,
@@ -2115,6 +2316,7 @@ Object {
                                             Object {
                                               "kind": 116,
                                               "length": 1,
+                                              "offset": 70,
                                             },
                                             Object {
                                               "children": Array [],
@@ -2123,6 +2325,7 @@ Object {
                                               "unexpected": Object {
                                                 "kind": 59,
                                                 "length": 6,
+                                                "offset": 84,
                                               },
                                             },
                                             Object {
@@ -2130,18 +2333,22 @@ Object {
                                                 Object {
                                                   "kind": 59,
                                                   "length": 6,
+                                                  "offset": 84,
                                                 },
                                                 Object {
                                                   "kind": 82,
                                                   "length": 1,
+                                                  "offset": 91,
                                                 },
                                                 Object {
                                                   "kind": 88,
                                                   "length": 1,
+                                                  "offset": 92,
                                                 },
                                                 Object {
                                                   "kind": 119,
                                                   "length": 1,
+                                                  "offset": 102,
                                                 },
                                               ],
                                               "expected": 119,
@@ -2150,6 +2357,7 @@ Object {
                                               "unexpected": Object {
                                                 "kind": 59,
                                                 "length": 6,
+                                                "offset": 84,
                                               },
                                             },
                                           ],
@@ -2164,6 +2372,7 @@ Object {
                                           "unexpected": Object {
                                             "kind": 119,
                                             "length": 1,
+                                            "offset": 108,
                                           },
                                         },
                                       ],
@@ -2177,6 +2386,7 @@ Object {
                                 Object {
                                   "kind": 119,
                                   "length": 1,
+                                  "offset": 108,
                                 },
                               ],
                               "kind": 1039,
@@ -2199,6 +2409,7 @@ Object {
                                 Object {
                                   "kind": 55,
                                   "length": 6,
+                                  "offset": 115,
                                 },
                               ],
                               "kind": 1104,
@@ -2207,12 +2418,14 @@ Object {
                             Object {
                               "kind": 35,
                               "length": 8,
+                              "offset": 122,
                             },
                             Object {
                               "children": Array [
                                 Object {
                                   "kind": 83,
                                   "length": 1,
+                                  "offset": 131,
                                 },
                               ],
                               "kind": 1089,
@@ -2221,10 +2434,12 @@ Object {
                             Object {
                               "kind": 118,
                               "length": 1,
+                              "offset": 132,
                             },
                             Object {
                               "kind": 121,
                               "length": 1,
+                              "offset": 133,
                             },
                           ],
                           "kind": 1109,
@@ -2237,10 +2452,12 @@ Object {
                                 Object {
                                   "kind": 116,
                                   "length": 1,
+                                  "offset": 135,
                                 },
                                 Object {
                                   "kind": 119,
                                   "length": 1,
+                                  "offset": 136,
                                 },
                               ],
                               "kind": 1039,
@@ -2261,6 +2478,7 @@ Object {
                 Object {
                   "kind": 119,
                   "length": 1,
+                  "offset": 138,
                 },
               ],
               "kind": 1029,
@@ -2277,6 +2495,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 139,
     },
   ],
   "kind": 1147,
@@ -2284,7 +2503,7 @@ Object {
 }
 `;
 
-exports[`php7parser 23`] = `
+exports[`php7parser: objectCreation.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2294,6 +2513,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -2306,6 +2526,7 @@ Object {
                 Object {
                   "kind": 52,
                   "length": 3,
+                  "offset": 6,
                 },
                 Object {
                   "children": Array [
@@ -2316,6 +2537,7 @@ Object {
                             Object {
                               "kind": 83,
                               "length": 3,
+                              "offset": 10,
                             },
                           ],
                           "kind": 1115,
@@ -2332,6 +2554,7 @@ Object {
                 Object {
                   "kind": 118,
                   "length": 1,
+                  "offset": 13,
                 },
                 Object {
                   "children": Array [
@@ -2340,6 +2563,7 @@ Object {
                         Object {
                           "kind": 84,
                           "length": 2,
+                          "offset": 14,
                         },
                       ],
                       "kind": 1151,
@@ -2352,6 +2576,7 @@ Object {
                 Object {
                   "kind": 121,
                   "length": 1,
+                  "offset": 16,
                 },
               ],
               "kind": 1122,
@@ -2360,6 +2585,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 17,
             },
           ],
           "kind": 1067,
@@ -2372,6 +2598,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 18,
     },
   ],
   "kind": 1147,
@@ -2379,7 +2606,7 @@ Object {
 }
 `;
 
-exports[`php7parser 24`] = `
+exports[`php7parser: openTagEcho.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2389,6 +2616,7 @@ Object {
             Object {
               "kind": 157,
               "length": 3,
+              "offset": 0,
             },
             Object {
               "children": Array [
@@ -2397,6 +2625,7 @@ Object {
                     Object {
                       "kind": 84,
                       "length": 2,
+                      "offset": 4,
                     },
                   ],
                   "kind": 1151,
@@ -2405,12 +2634,14 @@ Object {
                 Object {
                   "kind": 93,
                   "length": 1,
+                  "offset": 6,
                 },
                 Object {
                   "children": Array [
                     Object {
                       "kind": 84,
                       "length": 2,
+                      "offset": 8,
                     },
                   ],
                   "kind": 1151,
@@ -2423,6 +2654,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 10,
             },
           ],
           "kind": 1052,
@@ -2437,6 +2669,7 @@ Object {
                     Object {
                       "kind": 84,
                       "length": 2,
+                      "offset": 12,
                     },
                   ],
                   "kind": 1151,
@@ -2445,12 +2678,14 @@ Object {
                 Object {
                   "kind": 85,
                   "length": 1,
+                  "offset": 15,
                 },
                 Object {
                   "children": Array [
                     Object {
                       "kind": 84,
                       "length": 2,
+                      "offset": 17,
                     },
                   ],
                   "kind": 1151,
@@ -2463,6 +2698,7 @@ Object {
             Object {
               "kind": 158,
               "length": 2,
+              "offset": 20,
             },
           ],
           "kind": 1067,
@@ -2475,6 +2711,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 22,
     },
   ],
   "kind": 1147,
@@ -2482,7 +2719,7 @@ Object {
 }
 `;
 
-exports[`php7parser 25`] = `
+exports[`php7parser: openTagError.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2492,6 +2729,7 @@ Object {
             Object {
               "kind": 156,
               "length": 2,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -2508,6 +2746,7 @@ Object {
                         Object {
                           "kind": 83,
                           "length": 1,
+                          "offset": 2,
                         },
                       ],
                       "kind": 1115,
@@ -2529,6 +2768,7 @@ Object {
               "unexpected": Object {
                 "kind": 1,
                 "length": 0,
+                "offset": 3,
               },
             },
           ],
@@ -2542,6 +2782,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 3,
     },
   ],
   "kind": 1147,
@@ -2549,7 +2790,7 @@ Object {
 }
 `;
 
-exports[`php7parser 26`] = `
+exports[`php7parser: shortListWithLeadingComma.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2559,6 +2800,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -2573,12 +2815,14 @@ Object {
                     Object {
                       "kind": 117,
                       "length": 1,
+                      "offset": 6,
                     },
                     Object {
                       "children": Array [
                         Object {
                           "kind": 93,
                           "length": 1,
+                          "offset": 7,
                         },
                         Object {
                           "children": Array [
@@ -2589,6 +2833,7 @@ Object {
                                     Object {
                                       "kind": 84,
                                       "length": 2,
+                                      "offset": 8,
                                     },
                                   ],
                                   "kind": 1151,
@@ -2609,6 +2854,7 @@ Object {
                     Object {
                       "kind": 120,
                       "length": 1,
+                      "offset": 10,
                     },
                   ],
                   "kind": 1009,
@@ -2617,12 +2863,14 @@ Object {
                 Object {
                   "kind": 85,
                   "length": 1,
+                  "offset": 12,
                 },
                 Object {
                   "children": Array [
                     Object {
                       "kind": 117,
                       "length": 1,
+                      "offset": 14,
                     },
                     Object {
                       "children": Array [
@@ -2633,6 +2881,7 @@ Object {
                                 Object {
                                   "kind": 82,
                                   "length": 1,
+                                  "offset": 15,
                                 },
                               ],
                               "kind": 1013,
@@ -2645,6 +2894,7 @@ Object {
                         Object {
                           "kind": 93,
                           "length": 1,
+                          "offset": 16,
                         },
                         Object {
                           "children": Array [
@@ -2653,6 +2903,7 @@ Object {
                                 Object {
                                   "kind": 82,
                                   "length": 1,
+                                  "offset": 17,
                                 },
                               ],
                               "kind": 1013,
@@ -2669,6 +2920,7 @@ Object {
                     Object {
                       "kind": 120,
                       "length": 1,
+                      "offset": 18,
                     },
                   ],
                   "kind": 1009,
@@ -2681,6 +2933,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 19,
             },
           ],
           "kind": 1067,
@@ -2693,6 +2946,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 20,
     },
   ],
   "kind": 1147,
@@ -2700,7 +2954,7 @@ Object {
 }
 `;
 
-exports[`php7parser 27`] = `
+exports[`php7parser: skippedTokens.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2710,6 +2964,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -2720,10 +2975,12 @@ Object {
             Object {
               "kind": 120,
               "length": 1,
+              "offset": 6,
             },
             Object {
               "kind": 93,
               "length": 1,
+              "offset": 7,
             },
           ],
           "kind": 1061,
@@ -2731,6 +2988,7 @@ Object {
           "unexpected": Object {
             "kind": 120,
             "length": 1,
+            "offset": 6,
           },
         },
       ],
@@ -2740,6 +2998,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 8,
     },
   ],
   "kind": 1147,
@@ -2747,7 +3006,7 @@ Object {
 }
 `;
 
-exports[`php7parser 28`] = `
+exports[`php7parser: strictNotEqual.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2757,6 +3016,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -2771,6 +3031,7 @@ Object {
                     Object {
                       "kind": 84,
                       "length": 2,
+                      "offset": 6,
                     },
                   ],
                   "kind": 1151,
@@ -2779,12 +3040,14 @@ Object {
                 Object {
                   "kind": 140,
                   "length": 3,
+                  "offset": 9,
                 },
                 Object {
                   "children": Array [
                     Object {
                       "kind": 84,
                       "length": 2,
+                      "offset": 13,
                     },
                   ],
                   "kind": 1151,
@@ -2797,6 +3060,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 15,
             },
           ],
           "kind": 1067,
@@ -2809,6 +3073,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 16,
     },
   ],
   "kind": 1147,
@@ -2816,7 +3081,7 @@ Object {
 }
 `;
 
-exports[`php7parser 29`] = `
+exports[`php7parser: trailingWhitespace.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2826,6 +3091,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -2840,6 +3106,7 @@ Object {
                     Object {
                       "kind": 84,
                       "length": 4,
+                      "offset": 6,
                     },
                   ],
                   "kind": 1151,
@@ -2848,10 +3115,12 @@ Object {
                 Object {
                   "kind": 85,
                   "length": 1,
+                  "offset": 11,
                 },
                 Object {
                   "kind": 82,
                   "length": 1,
+                  "offset": 13,
                 },
               ],
               "kind": 1150,
@@ -2860,6 +3129,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 14,
             },
           ],
           "kind": 1067,
@@ -2872,6 +3142,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 16,
     },
   ],
   "kind": 1147,
@@ -2879,7 +3150,7 @@ Object {
 }
 `;
 
-exports[`php7parser 30`] = `
+exports[`php7parser: useAsNamespaceKeywordError.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2889,6 +3160,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -2899,6 +3171,7 @@ Object {
             Object {
               "kind": 66,
               "length": 3,
+              "offset": 10,
             },
             Object {
               "children": Array [
@@ -2909,6 +3182,7 @@ Object {
                         Object {
                           "kind": 83,
                           "length": 6,
+                          "offset": 14,
                         },
                       ],
                       "kind": 1115,
@@ -2919,6 +3193,7 @@ Object {
                         Object {
                           "kind": 4,
                           "length": 2,
+                          "offset": 21,
                         },
                         Object {
                           "children": Array [],
@@ -2928,6 +3203,7 @@ Object {
                           "unexpected": Object {
                             "kind": 51,
                             "length": 9,
+                            "offset": 24,
                           },
                         },
                       ],
@@ -2943,6 +3219,7 @@ Object {
                     Object {
                       "kind": 51,
                       "length": 9,
+                      "offset": 24,
                     },
                   ],
                   "kind": 1061,
@@ -2950,6 +3227,7 @@ Object {
                   "unexpected": Object {
                     "kind": 51,
                     "length": 9,
+                    "offset": 24,
                   },
                 },
               ],
@@ -2959,6 +3237,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 33,
             },
           ],
           "kind": 1118,
@@ -2971,6 +3250,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 34,
     },
   ],
   "kind": 1147,
@@ -2978,7 +3258,7 @@ Object {
 }
 `;
 
-exports[`php7parser 31`] = `
+exports[`php7parser: useDeclaration.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -2988,6 +3268,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -2998,6 +3279,7 @@ Object {
             Object {
               "kind": 66,
               "length": 3,
+              "offset": 6,
             },
             Object {
               "children": Array [
@@ -3008,14 +3290,17 @@ Object {
                         Object {
                           "kind": 83,
                           "length": 3,
+                          "offset": 10,
                         },
                         Object {
                           "kind": 147,
                           "length": 1,
+                          "offset": 13,
                         },
                         Object {
                           "kind": 83,
                           "length": 3,
+                          "offset": 14,
                         },
                       ],
                       "kind": 1115,
@@ -3026,10 +3311,12 @@ Object {
                         Object {
                           "kind": 4,
                           "length": 2,
+                          "offset": 18,
                         },
                         Object {
                           "kind": 83,
                           "length": 3,
+                          "offset": 21,
                         },
                       ],
                       "kind": 1113,
@@ -3046,6 +3333,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 24,
             },
           ],
           "kind": 1118,
@@ -3058,6 +3346,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 25,
     },
   ],
   "kind": 1147,
@@ -3065,7 +3354,7 @@ Object {
 }
 `;
 
-exports[`php7parser 32`] = `
+exports[`php7parser: useTrait.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -3075,6 +3364,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -3087,10 +3377,12 @@ Object {
                 Object {
                   "kind": 9,
                   "length": 5,
+                  "offset": 10,
                 },
                 Object {
                   "kind": 83,
                   "length": 3,
+                  "offset": 16,
                 },
               ],
               "kind": 1030,
@@ -3101,6 +3393,7 @@ Object {
                 Object {
                   "kind": 116,
                   "length": 1,
+                  "offset": 20,
                 },
                 Object {
                   "children": Array [
@@ -3109,6 +3402,7 @@ Object {
                         Object {
                           "kind": 66,
                           "length": 3,
+                          "offset": 30,
                         },
                         Object {
                           "children": Array [
@@ -3119,6 +3413,7 @@ Object {
                                     Object {
                                       "kind": 83,
                                       "length": 3,
+                                      "offset": 34,
                                     },
                                   ],
                                   "kind": 1115,
@@ -3137,6 +3432,7 @@ Object {
                             Object {
                               "kind": 88,
                               "length": 1,
+                              "offset": 37,
                             },
                           ],
                           "kind": 1166,
@@ -3153,6 +3449,7 @@ Object {
                 Object {
                   "kind": 119,
                   "length": 1,
+                  "offset": 43,
                 },
               ],
               "kind": 1029,
@@ -3169,6 +3466,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 44,
     },
   ],
   "kind": 1147,
@@ -3176,7 +3474,7 @@ Object {
 }
 `;
 
-exports[`php7parser 33`] = `
+exports[`php7parser: utf8names.php 1`] = `
 Object {
   "children": Array [
     Object {
@@ -3186,6 +3484,7 @@ Object {
             Object {
               "kind": 156,
               "length": 6,
+              "offset": 0,
             },
           ],
           "kind": 1093,
@@ -3200,6 +3499,7 @@ Object {
                     Object {
                       "kind": 84,
                       "length": 5,
+                      "offset": 6,
                     },
                   ],
                   "kind": 1151,
@@ -3208,10 +3508,12 @@ Object {
                 Object {
                   "kind": 85,
                   "length": 1,
+                  "offset": 12,
                 },
                 Object {
                   "kind": 82,
                   "length": 1,
+                  "offset": 14,
                 },
               ],
               "kind": 1150,
@@ -3220,6 +3522,7 @@ Object {
             Object {
               "kind": 88,
               "length": 1,
+              "offset": 15,
             },
           ],
           "kind": 1067,
@@ -3232,6 +3535,7 @@ Object {
     Object {
       "kind": 1,
       "length": 0,
+      "offset": 16,
     },
   ],
   "kind": 1147,

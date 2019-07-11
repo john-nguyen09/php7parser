@@ -20,7 +20,7 @@
 'use strict';
 
 import { Token as ImportedToken } from './lexer';
-import { Phrase as ImportedPhrase } from './phrase';
+import { Phrase as ImportedPhrase, PhraseKind } from './phrase';
 import {Node as ImportedNode} from './node';
 
 export { Lexer, LexerMode, Token, TokenKind, tokenKindToString, isKeyword } from './lexer';
@@ -29,9 +29,9 @@ export  * from './phrase';
 export * from './node';
 
 export function isToken(node:ImportedNode): node is ImportedToken {
-    return node && (<ImportedPhrase>node).children === undefined;
+    return node && node.kind < PhraseKind.Unknown;
 }
 
 export function isPhrase(node:ImportedNode): node is ImportedPhrase {
-    return node && (<ImportedPhrase>node).children !== undefined;
+    return node && node.kind >= PhraseKind.Unknown;
 }
